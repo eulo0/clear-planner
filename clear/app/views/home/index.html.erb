@@ -11,7 +11,7 @@
   <div>
     <section class="relative">
       <div class="relative border-y" style="border-color: var(--studs-border);">
-        <div class="relative h-[calc(100vh-4.5rem)]">
+        <div class="landing-video-lock relative h-[calc(100vh-4.5rem)]">
           <iframe
             class="pointer-events-none h-full w-full object-cover"
             src="https://www.youtube.com/embed/<%= hero_video_ids.first %>?playlist=<%= hero_playlist %>&autoplay=1&mute=1&loop=1&controls=0&modestbranding=1&rel=0&playsinline=1&disablekb=1"
@@ -107,7 +107,7 @@
             </div>
 
             <div class="<%= index.odd? ? 'lg:order-1' : '' %>">
-              <div class="relative overflow-hidden rounded-2xl shadow-xl shadow-black/35" style="border: 1px solid var(--studs-border); background-color: #09090b;">
+              <div class="landing-video-lock relative overflow-hidden rounded-2xl shadow-xl shadow-black/35" style="border: 1px solid var(--studs-border); background-color: #09090b;">
                 <iframe
                   class="pointer-events-none h-52 w-full sm:h-72"
                   src="https://www.youtube.com/embed/<%= feature[:video_id] %>?autoplay=1&mute=1&loop=1&playlist=<%= feature[:video_id] %>&controls=0&modestbranding=1&rel=0&playsinline=1&disablekb=1"

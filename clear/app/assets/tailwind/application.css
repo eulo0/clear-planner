@@ -1187,6 +1187,14 @@ body[data-theme="cyan"] .studs-today-badge {
   }
 }
 
+/* To prevent accidently highlighting on video embeds */
+.landing-video-lock,
+.landing-video-lock * {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
 /* Old Scrollbar Styles (kept for easy rollback)
 @layer base {
   :root {
