@@ -1,10 +1,27 @@
 <div class="relative overflow-hidden">
+  <% hero_video_ids = %w[
+    DC_mNhhz--Q
+    e9GtBjeOb7s
+    67pOiB3-TvA
+    0-GRuqbcXwk
+    SOQX2KLTOro
+  ] %>
+  <% hero_playlist = hero_video_ids.join(",") %>
 
   <div>
     <section class="relative">
       <div class="relative border-y" style="border-color: var(--studs-border);">
         <div class="relative h-[calc(100vh-4.5rem)]">
-          <%= image_tag "Preview.gif", alt: "Clear app preview", class: "h-full w-full object-cover" %>
+          <iframe
+            class="pointer-events-none h-full w-full object-cover"
+            src="https://www.youtube.com/embed/<%= hero_video_ids.first %>?playlist=<%= hero_playlist %>&autoplay=1&mute=1&loop=1&controls=0&modestbranding=1&rel=0&playsinline=1&disablekb=1"
+            title="Clear app preview videos"
+            tabindex="-1"
+            allow="autoplay; encrypted-media; picture-in-picture"
+            referrerpolicy="strict-origin-when-cross-origin"
+            allowfullscreen>
+          </iframe>
+          <div class="pointer-events-none absolute inset-0 bg-black" style="animation: landing-video-cover-hide 0.35s ease 2.2s forwards;"></div>
           <div class="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/10 via-black/24 to-black/72"></div>
 
           <div class="absolute inset-x-0 mx-auto w-full max-w-7xl px-6"
@@ -55,23 +72,28 @@
       <% features = [
         {
           title: "Plan Easily",
-          body: "Simplicity is our philosophy. There is no clutter or learning curve. Everything you need is right where you expect it."
+          body: "Simplicity is our philosophy. There is no clutter or learning curve. Everything you need is right where you expect it.",
+          video_id: "DC_mNhhz--Q"
         },
         {
           title: "Plan Fast",
-          body: "Tired of schedululing your class times or assignments each time on your planner? Our syllabus parser can take care of that in seconds."
+          body: "Tired of schedululing your class times or assignments each time on your planner? Our syllabus parser can take care of that in seconds.",
+          video_id: "e9GtBjeOb7s"
         },
         {
           title: "Plan Ahead",
-          body: "Stay ahead of deadlines. Our AI prepares study sessions before exams and assignment due dates, so you can stay on track without cramming."
+          body: "Stay ahead of deadlines. Our AI prepares study sessions before exams and assignment due dates, so you can stay on track without cramming.",
+          video_id: "67pOiB3-TvA"
         },
         {
           title: "Plan Together",
-          body: "Whether it's group projects or a hobby together, collaborate with your classmates in one shared space without any hassle."
+          body: "Whether it's group projects or a hobby together, collaborate with your classmates in one shared space without any hassle.",
+          video_id: "0-GRuqbcXwk"
         },
         {
           title: "Plan Beyond",
-          body: "Life happens. Plans change. Use our draft system to make alternative schedules as backups when life gets unpredictable."
+          body: "Life happens. Plans change. Use our draft system to make alternative schedules as backups when life gets unpredictable.",
+          video_id: "SOQX2KLTOro"
         }
       ] %>
 
@@ -85,10 +107,19 @@
             </div>
 
             <div class="<%= index.odd? ? 'lg:order-1' : '' %>">
-              <div class="overflow-hidden rounded-2xl shadow-xl shadow-black/35" style="border: 1px solid var(--studs-border); background-color: #09090b;">
-                <%= image_tag "Preview.gif", alt: "Feature GIF placeholder", class: "h-52 w-full object-cover sm:h-72" %>
+              <div class="relative overflow-hidden rounded-2xl shadow-xl shadow-black/35" style="border: 1px solid var(--studs-border); background-color: #09090b;">
+                <iframe
+                  class="pointer-events-none h-52 w-full sm:h-72"
+                  src="https://www.youtube.com/embed/<%= feature[:video_id] %>?autoplay=1&mute=1&loop=1&playlist=<%= feature[:video_id] %>&controls=0&modestbranding=1&rel=0&playsinline=1&disablekb=1"
+                  title="<%= "#{feature[:title]} preview video" %>"
+                  loading="lazy"
+                  tabindex="-1"
+                  allow="autoplay; encrypted-media; picture-in-picture"
+                  referrerpolicy="strict-origin-when-cross-origin"
+                  allowfullscreen>
+                </iframe>
+                <div class="pointer-events-none absolute inset-0 bg-black" style="animation: landing-video-cover-hide 0.35s ease 2.2s forwards;"></div>
               </div>
-              <p class="mt-2 text-xs text-zinc-400">GIF placeholder for this feature section</p>
             </div>
           </article>
         <% end %>
@@ -117,3 +148,10 @@
     </section>
   </div>
 </div>
+
+<style>
+  @keyframes landing-video-cover-hide {
+    from { opacity: 1; visibility: visible; }
+    to { opacity: 0; visibility: hidden; }
+  }
+</style>
