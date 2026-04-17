@@ -19,24 +19,21 @@
   <% end %>
   <% if @mode == :pdf %>
     <%# PDF upload form %>
-    <div data-controller="pdf-preview">
-      <%= form_with url: university_calendar_pdf_preview_path, method: :post, multipart: true, data: { turbo: false } do |f| %>
-        <div class="flex items-center gap-3 mb-6">
-          <%= f.file_field :pdf_file,
-                accept: "application/pdf",
-                class: "flex-1 rounded-xl border px-3 py-2 text-sm text-zinc-300 bg-transparent focus:outline-none focus:ring-1 file:mr-3 file:rounded-lg file:border-0 file:bg-zinc-700 file:px-3 file:py-1 file:text-xs file:font-medium file:text-zinc-200 hover:file:bg-zinc-600",
-                style: "border-color: var(--studs-border);",
-                data: { pdf_preview_target: "input", action: "change->pdf-preview#select" } %>
-          <%= f.submit "Preview",
-                class: "studs-btn-accent" %>
-          <%= link_to "Cancel", events_path, class: "studs-nav-btn" %>
-        </div>
-      <% end %>
-      <iframe data-pdf-preview-target="viewer"
-              class="hidden w-full rounded-2xl mb-6"
-              style="height: 600px; border: 1px solid var(--studs-border);">
-      </iframe>
-    </div>
+    <%= form_with url: university_calendar_pdf_preview_path, method: :post, multipart: true, data: { turbo: false }, class: "space-y-5" do |f| %>
+      <% label_classes = "block text-[10px] font-bold uppercase tracking-widest text-zinc-300" %>
+      <% label_style = "color: var(--studs-accent); opacity: 0.8;" %>
+      <%= f.label :pdf_file, "Upload file", class: label_classes, style: label_style %>
+      <div class="mt-1 filepond-host" data-controller="filepond">
+        <%= f.file_field :pdf_file,
+              accept: ".pdf",
+              style: "position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;",
+              data: { filepond_target: "input" } %>
+      </div>
+      <div class="flex items-center gap-2 pt-4" style="border-top: 1px solid var(--studs-divider);">
+        <%= f.submit "Preview", class: "studs-btn-accent" %>
+        <%= link_to "Cancel", events_path, class: "studs-nav-btn" %>
+      </div>
+    <% end %>
   <% else %>
     <%# RSS URL form %>
     <%= form_with url: university_calendar_preview_path, method: :get do |f| %>
