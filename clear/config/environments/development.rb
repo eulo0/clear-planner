@@ -15,13 +15,22 @@ Rails.application.configure do
   # Enable server timing.
   config.server_timing = true
 
-  config.action_mailer.default_url_options = { host: "localhost", port: 3000 }
+  # Use this Section for Testing with Letter Opener
+  # config.action_mailer.raise_delivery_errors = false
+  # config.action_mailer.delivery_method = :letter_opener_web
+  # config.action_mailer.perform_deliveries = true
 
-  config.action_mailer.delivery_method = :letter_opener_web
-  config.action_mailer.perform_deliveries = true
-  config.action_mailer.raise_delivery_errors = true
-
-
+  # Use this Section for Testing with SMTP
+  # config.action_mailer.raise_delivery_errors = true
+  # config.action_mailer.delivery_method = :smtp
+  # config.action_mailer.smtp_settings = {
+  # address: ENV.fetch("SMTP_ADDR"),
+  # port: ENV.fetch("SMTP_PORT").to_i,
+  # user_name: ENV.fetch("SMTP_USER"),
+  # password: ENV.fetch("SMTP_PASS"),
+  # authentication: "plain",
+  # enable_starttls_auto: true
+  # }
 
 
   # Enable/disable Action Controller caching. By default Action Controller caching is disabled.
@@ -39,9 +48,6 @@ Rails.application.configure do
 
   # Store uploaded files on the local file system (see config/storage.yml for options).
   config.active_storage.service = :local
-
-  # Don't care if the mailer can't send.
-  config.action_mailer.raise_delivery_errors = false
 
   # Make template changes take effect immediately.
   config.action_mailer.perform_caching = false
