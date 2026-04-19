@@ -14,8 +14,16 @@
       PDF Upload
     <% end %>
   </div>
-  <% if flash[:alert].present? || flash.now[:alert].present? %>
-    <p class="mb-4 text-sm text-red-400"><%= flash[:alert] || flash.now[:alert] %></p>
+  <% if @pdf_errors.present? %>
+    <div class="rounded-2xl p-4 text-red-200 mb-6"
+         style="border: 1px solid rgba(239,68,68,0.3); background-color: rgba(127,29,29,0.2);">
+      <p class="font-medium">Please fix the following:</p>
+      <ul class="mt-2 list-disc pl-6 text-sm">
+        <% @pdf_errors.each do |msg| %>
+          <li><%= msg %></li>
+        <% end %>
+      </ul>
+    </div>
   <% end %>
   <% if @mode == :pdf %>
     <%# PDF upload form %>
