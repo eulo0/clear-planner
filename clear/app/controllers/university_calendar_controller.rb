@@ -51,7 +51,7 @@ class UniversityCalendarController < ApplicationController
     @existing_keys = existing_event_keys
     render :preview
   rescue => e
-    @pdf_errors = ["Could not parse PDF: #{e.message}"]
+    @pdf_errors = [ "Could not parse PDF: #{e.message}" ]
     @items = []
     @existing_keys = Set.new
     render :preview
