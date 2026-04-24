@@ -1,0 +1,66 @@
+<%= turbo_frame_tag "profile_modal" do %>
+  <%= form_with url: theme_path, method: :post,
+        data: { controller: "custom-theme",
+                custom_theme_profile_path_value: profile_path } do |f| %>
+    <div class="flex h-[85vh] flex-col">
+      <!-- Header -->
+      <div class="flex items-start justify-between border-b border-zinc-800 bg-zinc-950/50 px-6 py-4">
+        <div>
+          <div class="text-sm font-semibold text-zinc-100">Custom Theme</div>
+          <div class="text-xs text-zinc-500">Customize your color variables</div>
+        </div>
+        <button type="button"
+                data-action="custom-theme#cancel"
+                class="studs-nav-btn">✕</button>
+      </div>
+      <!-- Body -->
+      <div class="flex-1 overflow-y-auto p-6 space-y-4">
+        <!-- Name -->
+        <div class="rounded-xl border border-zinc-800 bg-zinc-900/40 px-4 py-3">
+          <label class="text-sm text-zinc-200 block mb-1">Theme Name<span class="text-red-400">*</span></label>
+          <%= f.text_field :name,
+                name: "custom_theme[name]",
+                placeholder: "e.g. My Dark Blue",
+                required: true,
+                class: "w-full rounded-md px-2.5 py-1 text-sm text-zinc-100 placeholder:text-zinc-600 bg-zinc-950/60 focus:outline-none focus:ring-2 transition-all duration-150 border",
+                style: "border-color: var(--studs-border); --tw-ring-color: var(--studs-accent);" %>
+        </div>
+        <!-- Color Variables -->
+        <% [
+          { key: "--studs-accent",           label: "Accent"         },
+          { key: "--studs-accent-secondary", label: "Accent Secondary" },
+          { key: "--studs-accent-text",      label: "Accent Text"    },
+          { key: "--studs-sidebar-bg",       label: "Sidebar BG"     },
+          { key: "--studs-panel-bg",         label: "Panel BG"       },
+          { key: "--studs-panel-bg-2",       label: "Panel BG 2"     },
+          { key: "--studs-panel-hover",      label: "Panel Hover"    },
+          { key: "--studs-panel-header",     label: "Panel Header"   },
+          { key: "--studs-border",           label: "Border"         },
+          { key: "--studs-border-subtle",    label: "Border Subtle"  },
+          { key: "--studs-divider",          label: "Divider"        },
+        ].each do |var| %>
+          <div class="flex items-center justify-between gap-4 rounded-xl border border-zinc-800 bg-zinc-900/40 px-4 py-3">
+            <div>
+              <div class="text-sm text-zinc-200"><%= var[:label] %></div>
+              <div class="text-xs text-zinc-500 font-mono"><%= var[:key] %></div>
+            </div>
+            <input type="color"
+                   name="custom_theme[variables][<%= var[:key] %>]"
+                   data-css-var="<%= var[:key] %>"
+                   data-action="input->custom-theme#update"
+            class="h-9 w-9 cursor-pointer rounded-full border-0 bg-transparent p-0.5" />
+          </div>
+        <% end %>
+      </div>
+      <!-- Footer -->
+      <div class="shrink-0 flex items-center justify-between border-t border-zinc-800 px-6 py-4">
+        <button type="button"
+                data-action="custom-theme#cancel"
+                class="studs-nav-btn">
+          Cancel
+        </button>
+        <%= f.submit "Save Theme", class: "studs-btn-accent cursor-pointer" %>
+      </div>
+    </div>
+  <% end %>
+<% end %>

@@ -15,6 +15,15 @@
     <%= javascript_include_tag "application", "data-turbo-track": "reload", type: "module" %>
   </head>
   <body data-theme="<%= user_signed_in? ? current_user.theme : 'green' %>" class="h-full overflow-hidden bg-zinc-950 text-zinc-100">
+    <% if user_signed_in? && current_user.custom_theme? %>
+      <style>
+        body {
+          <% current_user.current_custom_theme_variables.each do |key, value| %>
+            <%= key %>: <%= value %>;
+          <% end %>
+        }
+      </style>
+    <% end %>
     <div data-controller="sidebar drawer ai-chat-drawer"
          data-ai-chat-drawer-url-value="<%= panel_ai_chat_index_path %>"
          class="flex h-full min-h-0 overflow-hidden">
@@ -105,8 +114,8 @@
                 <div class="mx-1 h-5 w-px rounded-full" style="background-color: var(--studs-border);"></div>
                 <button type="button"
                         data-action="click->ai-chat-drawer#toggle"
-                        class="studs-topbar-icon-btn studs-topbar-icon-btn--ai"
-                        aria-label="Open AI Chat">
+                  class="studs-topbar-icon-btn studs-topbar-icon-btn--ai"
+                  aria-label="Open AI Chat">
                   <span class="[&>svg]:h-5 [&>svg]:w-5">
                     <%= icon "chat-bot-stroke-rounded" %>
                   </span>

@@ -9,7 +9,6 @@
       color: rgb(244 244 245);
     }
   </style>
-
   <div class="flex h-[85vh] flex-col" data-controller="profile-nav">
     <!-- Header -->
     <div class="flex items-start justify-between border-b border-zinc-800 bg-zinc-950/50 px-6 py-4">
@@ -114,7 +113,7 @@
                       data-action="click->username-edit#edit"
                       type="button"
                       class="studs-nav-btn px-3 py-1.5 text-xs"
-                    >
+                      >
                       Edit
                     </button>
                     <div id="username_actions" data-username-edit-target="actions" class="hidden items-center gap-2">
@@ -123,7 +122,7 @@
                         data-action="click->username-edit#cancel"
                         type="button"
                         class="studs-nav-btn px-3 py-1.5 text-xs"
-                      >
+                        >
                         Cancel
                       </button>
                     </div>
@@ -235,6 +234,49 @@
                       </span>
                     </label>
                   <% end %>
+                </div>
+                <%# CUSTOM THEMES %>
+                <div class="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 mt-5 mb-2">Custom</div>
+                <div class="flex flex-wrap gap-4">
+                  <% current_user.custom_themes.each do |name, variables| %>
+                    <div class="relative flex flex-col items-center gap-2 group">
+                      <label class="cursor-pointer flex flex-col items-center gap-2 group relative">
+                        <input type="radio" name="theme[theme]" value="<%= name %>"
+                    <%= "checked" if current_user.theme == name %>
+                    class="sr-only peer" />
+                        <div class="h-9 w-9 rounded-full ring-2 ring-transparent peer-checked:ring-white peer-checked:scale-110 transition-all overflow-hidden"
+                  title="<%= name.capitalize %>"
+                  style="background: conic-gradient(<%= variables['--studs-accent'] || '#888' %> 0deg 180deg, <%= variables['--studs-accent-secondary'] || '#555' %> 180deg 360deg);">
+                        </div>
+                        <span class="text-[10px] capitalize text-zinc-500 group-hover:text-zinc-300 transition">
+                          <%= name %>
+                        </span>
+                      </label>
+                      <%# Delete button — outside the label so the form is valid HTML %>
+                      <%= link_to "✕", theme_path(id: name),
+                      data: {
+                        turbo_method: :delete,
+                        turbo_confirm: "Delete \"#{name}\"?",
+                        turbo_frame: "_top"
+                      },
+                      class: "absolute -top-1 -right-1 h-4 w-4 rounded-full bg-zinc-700 hover:bg-red-500 transition opacity-0 group-hover:opacity-100 flex items-center justify-center text-[8px] text-white leading-none" %>
+                    </div>
+                  <% end %>
+                  <%# CREATE BUTTON ##################################################################################################################%>
+                  <div class="flex flex-col items-center gap-2 group">
+                    <%= link_to theme_path,
+        data: { turbo_frame: "profile_modal", turbo_prefetch: false } do %>
+                      <div class="h-9 w-9 rounded-full ring-2 ring-transparent group-hover:ring-white group-hover:scale-110 transition-all theme-swatch--slate flex items-center justify-center cursor-pointer"
+         title="Create" />
+                        <span class="[&>svg]:h-5 [&>svg]:w-5">
+                          <%= icon "add-01-stroke-rounded" %>
+                        </span>
+                      </div>
+                    <% end %>
+                    <span class="text-[10px] capitalize text-zinc-500 group-hover:text-zinc-300 transition">
+                      Create
+                    </span>
+                  </div>
                 </div>
                 <div class="mt-5 flex items-center justify-between">
                   <%= link_to reset_theme_path,

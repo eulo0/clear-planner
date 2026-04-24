@@ -20,8 +20,10 @@ Rails.application.routes.draw do
   end
 
   # Theme
-  resource :theme, only: [ :update ] do
+  resource :theme, only: [ :new, :update, :create, :destroy ] do
+    get :new, on: :collection
     delete :reset, on: :member
+    delete :destroy, on: :member
   end
 
   resources :events do
