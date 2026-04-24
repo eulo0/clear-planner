@@ -46,8 +46,8 @@ class Syllabus < ApplicationRecord
       if !file.content_type.in?(ALLOWED_CONTENT_TYPES)
         errors.add(:file, "must be a PDF or DOCX file")
       end
-      if file.byte_size > 400000
-        errors.add(:file, "size is over 400 KB")
+      if file.byte_size > 800_000
+        errors.add(:file, "size is over 800 KB")
       end
     end
   end
