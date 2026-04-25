@@ -38,6 +38,11 @@ class WorkShiftsController < ApplicationController
 
     @work_shift = current_user.work_shifts.new(work_shift_params)
 
+    if @work_shift.auto_schedule? && !apply_auto_schedule(@work_shift)
+      render :new, status: :unprocessable_entity
+      return
+    end
+
     if @work_shift.save
       redirect_to work_shifts_path, notice: "Shift created."
     else
@@ -186,8 +191,26 @@ class WorkShiftsController < ApplicationController
     params.require(:work_shift).permit(
       :title, :location, :start_time, :end_time, :start_date,
       :color, :description, :recurring, :repeat_until, :duration_minutes,
-      repeat_days: []
+      :auto_schedule, repeat_days: []
     )
+  end
+
+  def apply_auto_schedule(work_shift)
+    slot = Scheduling::AutoScheduler.new(
+      user: current_user,
+      duration_minutes: work_shift.duration_minutes
+    ).find_slot
+
+    if slot
+      work_shift.start_date = slot.starts_at.to_date
+      work_shift.start_time = slot.starts_at
+      work_shift.end_time   = slot.ends_at
+      work_shift.recurring  = false
+      true
+    else
+      work_shift.errors.add(:base, "No open slot found in the next 7 days for that duration. Try a shorter duration or pick a time manually.")
+      false
+    end
   end
 
   def parse_start_date(raw)

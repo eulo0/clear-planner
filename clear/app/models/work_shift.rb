@@ -1,6 +1,12 @@
 class WorkShift < ApplicationRecord
   belongs_to :user
 
+  attr_accessor :auto_schedule
+
+  def auto_schedule?
+    ActiveModel::Type::Boolean.new.cast(auto_schedule)
+  end
+
   validates :title, presence: true
   validates :color, presence: true
   validates :start_date, presence: true

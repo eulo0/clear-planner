@@ -11,7 +11,7 @@
 <%= form_with model: event,
               url: form_url,
               class: "space-y-5",
-              data: { drawer_close_on_success: "false", turbo: turbo_enabled, controller: "duration-fill" } do |f| %>
+              data: { drawer_close_on_success: "false", turbo: turbo_enabled, controller: "duration-fill auto-schedule-toggle" } do |f| %>
   <%= hidden_field_tag :start_date, start_date_param if start_date_param.present? %>
   <%= f.hidden_field :project_id, value: @event.project_id || params[:project_id] %>
   <% if event.errors.any? %>
@@ -38,8 +38,23 @@
           style: input_style,
           placeholder: "e.g. Gym session, Study group…" %>
   </div>
+  <!-- Auto Schedule -->
+  <div class="relative rounded-2xl p-4"
+       style="border: 1px solid var(--studs-border); background-color: var(--studs-panel-bg-2);">
+    <%= f.check_box :auto_schedule,
+          { class: "absolute top-4 right-4 h-5 w-5 rounded cursor-pointer",
+            style: "accent-color: var(--studs-accent);",
+            data: { auto_schedule_toggle_target: "toggle", action: "change->auto-schedule-toggle#toggle" } } %>
+    <div class="pr-10">
+      <div class="text-sm font-semibold text-zinc-200">Auto Schedule</div>
+      <div class="text-xs text-zinc-500 mt-0.5">Let CLEAR pick the next open slot in your week using the duration below</div>
+      <div data-auto-schedule-toggle-target="preview"
+           class="hidden mt-3 text-xs font-medium"
+           style="color: var(--studs-accent);"></div>
+    </div>
+  </div>
   <!-- Time -->
-  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2" data-auto-schedule-toggle-target="manual">
     <div>
       <%= f.label :starts_at, class: label_classes, style: label_style do %>Start time <span class="text-red-400">*</span><% end %>
       <%= f.datetime_local_field :starts_at,
@@ -59,7 +74,7 @@
   <!-- Duration -->
   <div>
     <%= f.label :duration_minutes, "Duration", class: label_classes, style: label_style %>
-    <div data-action="dropdown:select->duration-fill#fill">
+    <div data-action="dropdown:select->duration-fill#fill dropdown:select->auto-schedule-toggle#previewIfReady">
       <%= render Studs::DropdownComponent.new(
         label: "— select duration —",
         variant: :duration,

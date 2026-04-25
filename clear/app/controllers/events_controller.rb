@@ -49,6 +49,20 @@ class EventsController < ApplicationController
       @event.project = current_user.projects.find(params[:event][:project_id])
     end
 
+    if @event.auto_schedule? && !apply_auto_schedule(@event)
+      respond_to do |format|
+        format.html { render :new, status: :unprocessable_entity }
+        format.turbo_stream do
+          render turbo_stream: turbo_stream.replace(
+            "event_drawer",
+            partial: "events/drawer_edit",
+            locals: { event: @event, start_date: params[:start_date] }
+          ), status: :unprocessable_entity
+        end
+      end
+      return
+    end
+
     if @event.save
       respond_to do |format|
         format.html { redirect_to event_path(@event), notice: "Event created." }
@@ -280,8 +294,25 @@ class EventsController < ApplicationController
   def event_params
     params.require(:event).permit(
       :title, :starts_at, :ends_at, :duration_minutes, :location, :priority,
-      :description, :color, :recurring, :repeat_until, :project_id,
+      :description, :color, :recurring, :repeat_until, :project_id, :auto_schedule,
       repeat_days: []
     )
+  end
+
+  def apply_auto_schedule(event)
+    slot = Scheduling::AutoScheduler.new(
+      user: current_user,
+      duration_minutes: event.duration_minutes
+    ).find_slot
+
+    if slot
+      event.starts_at = slot.starts_at
+      event.ends_at   = slot.ends_at
+      event.recurring = false
+      true
+    else
+      event.errors.add(:base, "No open slot found in the next 7 days for that duration. Try a shorter duration or pick a time manually.")
+      false
+    end
   end
 end
