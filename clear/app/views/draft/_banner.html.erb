@@ -6,8 +6,8 @@
     <div class="mb-3 flex items-center gap-3 rounded-xl border border-amber-300/65 bg-amber-500/16 px-4 py-2.5 text-sm text-amber-100 shadow-[0_0_0_1px_rgba(251,191,36,0.26)]"
          data-controller="draft-cache">
       <span class="flex items-center gap-2 font-semibold">
-        <span class="inline-block h-1.5 w-1.5 rounded-full bg-amber-300 ring-2 ring-amber-300/25"></span>
-        Draft Mode
+        <span class="inline-block h-1.5 w-1.5 rounded-full bg-amber-300"></span>
+        <%= draft.name %>
       </span>
       <span class="inline-flex items-center rounded-lg border border-amber-300/65 bg-amber-500/16 px-2 py-0.5 text-[11px] font-medium text-amber-100">
         <%= draft.operation_count %> pending <%= "change".pluralize(draft.operation_count) %>
