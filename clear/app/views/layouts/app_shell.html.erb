@@ -14,8 +14,7 @@
     <%= stylesheet_link_tag "application", "data-turbo-track": "reload" %>
     <%= javascript_include_tag "application", "data-turbo-track": "reload", type: "module" %>
   </head>
-  <body data-theme="<%= user_signed_in? ? current_user.theme : 'green' %>" class="h-full overflow-hidden bg-zinc-950 text-zinc-100">
-    <% if user_signed_in? && current_user.custom_theme? %>
+  <body data-theme="<%= user_signed_in? ? current_user.theme : 'green' %>" class="h-full overflow-hidden text-zinc-100">    <% if user_signed_in? && current_user.custom_theme? %>
       <style>
         body {
           <% current_user.current_custom_theme_variables.each do |key, value| %>

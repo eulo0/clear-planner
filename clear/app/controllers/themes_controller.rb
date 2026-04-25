@@ -7,11 +7,30 @@ class ThemesController < ApplicationController
   end
 
   def update
-    if current_user.update_theme(theme_params)
-      redirect_back fallback_location: authenticated_root_path, notice: "Theme saved!"
+    if params[:custom_theme].present?
+      original_name = params[:custom_theme][:original_name]
+      new_name = params[:custom_theme][:name].strip
+      variables = params[:custom_theme][:variables].to_unsafe_h
+
+      updated = current_user.custom_themes.except(original_name).merge(new_name => variables)
+      current_user.update(
+        custom_themes: updated,
+        theme: new_name
+      )
+      redirect_to profile_path, notice: "Theme updated!"
     else
-      redirect_back fallback_location: authenticated_root_path, alert: "Couldn't save theme."
+      if current_user.update_theme(theme_params)
+        redirect_back fallback_location: authenticated_root_path, notice: "Theme saved!"
+      else
+        redirect_back fallback_location: authenticated_root_path, alert: "Couldn't save theme."
+      end
     end
+  end
+
+  def edit
+    name = params[:id]
+    variables = current_user.custom_themes[name] || {}
+    render partial: "profiles/custom_theme_form", locals: { edit_name: name, edit_variables: variables }
   end
 
   def create
@@ -49,6 +68,6 @@ class ThemesController < ApplicationController
   end
 
   def custom_theme_params
-    params.require(:custom_theme).permit(:name, variables: {})
+    params.require(:custom_theme).permit(:name, :original_name, variables: {})
   end
 end

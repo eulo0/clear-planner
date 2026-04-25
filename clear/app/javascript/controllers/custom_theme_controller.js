@@ -4,34 +4,27 @@ export default class extends Controller {
   static values = { snapshot: Object, profilePath: String }
 
   connect() {
-    // Snapshot all current CSS variable values before user changes anything
-    const vars = [
-      "--studs-accent",
-      "--studs-accent-secondary",
-      "--studs-accent-text",
-      "--studs-sidebar-bg",
-      "--studs-panel-bg",
-      "--studs-panel-bg-2",
-      "--studs-panel-hover",
-      "--studs-panel-header",
-      "--studs-border",
-      "--studs-border-subtle",
-      "--studs-divider",
-    ]
+  const style = getComputedStyle(document.body)
+  this.snapshot = {}
+  const vars = [
+    "--studs-accent", "--studs-accent-secondary", "--studs-accent-text",
+    "--studs-sidebar-bg", "--studs-panel-bg", "--studs-panel-bg-2",
+    "--studs-panel-hover", "--studs-panel-header", "--studs-border",
+    "--studs-border-subtle", "--studs-divider"
+  ]
 
-    const style = getComputedStyle(document.body)
-    this.snapshot = {}
-    vars.forEach(v => {
-      this.snapshot[v] = style.getPropertyValue(v).trim()
-    })
+  // Snapshot current theme first so cancel can restore it
+  vars.forEach(v => {
+    this.snapshot[v] = style.getPropertyValue(v).trim()
+  })
 
-    // Set each color input's initial value from the current CSS variable
-    this.element.querySelectorAll("[data-css-var]").forEach(input => {
-      const current = style.getPropertyValue(input.dataset.cssVar).trim()
-      // Convert to hex if possible for the color picker
-      input.value = this.toHex(current) || "#000000"
-    })
-  }
+  // Apply the edited theme's values to the page immediately
+  this.element.querySelectorAll("[data-css-var]").forEach(input => {
+    if (input.value && input.value !== "#000000") {
+      document.body.style.setProperty(input.dataset.cssVar, input.value)
+    }
+  })
+}
 
   update(event) {
     const input = event.target
