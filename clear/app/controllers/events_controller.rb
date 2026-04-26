@@ -236,7 +236,7 @@ class EventsController < ApplicationController
   end
 
   def in_draft_mode?
-    session[:calendar_draft_mode] && current_user_draft.present?
+    current_user_draft.present?
   end
 
   def render_draft_calendar_update

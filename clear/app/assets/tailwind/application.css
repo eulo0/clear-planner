@@ -592,6 +592,53 @@ body {
   transform: scale(0.95);
 }
 
+.studs-topbar-icon-btn--draft {
+  background-color: color-mix(in srgb, var(--studs-accent) 22%, var(--studs-panel-bg));
+  border-color: color-mix(in srgb, var(--studs-accent) 55%, transparent);
+  color: #ffffff;
+  transform: scale(1);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--studs-accent) 20%, transparent);
+  transition:
+    transform 0.15s ease,
+    filter 0.15s ease,
+    box-shadow 0.15s ease,
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.studs-topbar-icon-btn--draft:hover {
+  background-color: color-mix(in srgb, var(--studs-accent) 30%, var(--studs-panel-hover));
+  border-color: color-mix(in srgb, var(--studs-accent) 70%, transparent);
+  color: #ffffff;
+  transform: scale(1.03);
+  filter: brightness(1.05);
+}
+
+.studs-topbar-icon-btn--draft:active {
+  transform: scale(0.97);
+}
+
+.studs-topbar-icon-btn--draft-active {
+  border-color: rgba(252, 211, 77, 0.65);
+  background-color: rgba(245, 158, 11, 0.16);
+  color: #fef3c7;
+  box-shadow:
+    0 0 0 1px rgba(251, 191, 36, 0.26),
+    0 0 24px rgba(251, 191, 36, 0.52),
+    0 0 40px rgba(251, 191, 36, 0.28);
+}
+
+.studs-topbar-icon-btn--draft-active:hover {
+  border-color: rgba(252, 211, 77, 0.65);
+  background-color: rgba(245, 158, 11, 0.16);
+  color: #fef3c7;
+  box-shadow:
+    0 0 0 1px rgba(251, 191, 36, 0.26),
+    0 0 30px rgba(251, 191, 36, 0.64),
+    0 0 52px rgba(251, 191, 36, 0.34);
+}
+
 body[data-theme="mono"] .studs-topbar-icon-btn--ai {
   color: #000000;
 }

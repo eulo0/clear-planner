@@ -86,7 +86,16 @@
               ) do |t| %>
             <% t.with_actions do %>
               <% unread_count = user_signed_in? ? current_user.notifications.unread.count : 0 %>
+              <% draft_start_date = params[:start_date].presence || Date.current.iso8601 %>
+              <% active_draft = user_signed_in? ? current_user_draft : nil %>
+              <% drafts = user_signed_in? ? current_user_drafts : [] %>
               <div class="flex items-center gap-2">
+                <%= render "draft/toggle",
+                      start_date: draft_start_date,
+                      active_draft: active_draft,
+                      drafts: drafts,
+                      max_drafts: CalendarDraft::MAX_DRAFTS_PER_USER %>
+                <div class="mx-1 h-5 w-px rounded-full" style="background-color: var(--studs-border);"></div>
                 <button type="button"
                         data-action="click->ai-chat-drawer#toggle"
                         class="studs-topbar-icon-btn studs-topbar-icon-btn--ai"
@@ -95,11 +104,12 @@
                     <%= icon "chat-bot-stroke-rounded" %>
                   </span>
                 </button>
+                <div class="mx-1 h-5 w-px rounded-full" style="background-color: var(--studs-border);"></div>
                 <div class="relative" data-controller="notifications-dropdown">
                   <button
                   type="button"
                   data-action="click->notifications-dropdown#toggle"
-                    class="studs-topbar-icon-btn"
+                    class="studs-topbar-icon-btn studs-topbar-icon-btn--draft"
                     aria-label="Notifications"
                     >
                     <span class="[&>svg]:h-5 [&>svg]:w-5">

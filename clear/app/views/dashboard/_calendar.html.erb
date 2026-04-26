@@ -106,29 +106,7 @@
   }
 </style>
 <div class="flex h-full min-h-0 flex-col" data-controller="agenda-highlight event-popover" data-calendar-view-target="weeklyContent">
-  <%# Draft mode banner %>
-  <% if in_draft %>
-    <div class="mb-3 flex items-center gap-3 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-2.5 text-sm text-amber-100">
-      <span class="flex items-center gap-2 font-semibold">
-        <span class="inline-block h-2 w-2 rounded-full bg-amber-400 animate-pulse"></span>
-        Draft Mode
-      </span>
-      <span class="text-amber-200/70">
-        <%= draft.operation_count %> pending <%= "change".pluralize(draft.operation_count) %>
-      </span>
-      <div class="ml-auto flex items-center gap-2">
-        <%= button_to "Apply",
-              apply_draft_path(start_date: week_start_date.iso8601),
-              method: :patch,
-              class: "inline-flex items-center rounded-lg border border-emerald-500/40 bg-emerald-500/20 px-3 py-1.5 text-xs font-semibold text-emerald-100 hover:bg-emerald-500/30 transition cursor-pointer" %>
-        <%= button_to "Discard",
-              discard_draft_path(start_date: week_start_date.iso8601),
-              method: :delete,
-              data: { turbo_confirm: "Discard all #{draft.operation_count} pending changes?" },
-              class: "inline-flex items-center rounded-lg border border-red-500/40 bg-red-500/15 px-3 py-1.5 text-xs font-semibold text-red-200 hover:bg-red-500/25 transition cursor-pointer" %>
-      </div>
-    </div>
-  <% end %>
+  <%= render "draft/banner", start_date: week_start_date.iso8601, active_draft: draft %>
   <!-- Toolbar -->
   <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
     <div>
@@ -246,13 +224,6 @@
           </svg>
         <% end %>
         <div class="mx-1 h-5 w-px rounded-full" style="background-color: var(--studs-border);"></div>
-        <% unless in_draft %>
-          <%= button_to enter_draft_path(start_date: week_start_date.iso8601),
-                method: :post,
-                class: nav_btn do %>
-            Draft Mode
-          <% end %>
-        <% end %>
         <button
           type="button"
           class="<%= nav_btn %>"
@@ -270,6 +241,7 @@
   <!-- Calendar shell -->
   <div class="min-h-0 flex-1 overflow-auto rounded-2xl relative"
        style="border: 1px solid var(--studs-border); background-color: var(--studs-panel-bg-2); box-shadow: 0 1px 3px rgba(0,0,0,0.3), 0 4px 20px rgba(0,0,0,0.15), inset 0 0 0 1px rgba(255,255,255,0.04);"
+       style="border: <%= in_draft ? '1px solid rgba(252,211,77,0.65)' : '1px solid var(--studs-border)' %>; background-color: var(--studs-panel-bg-2); box-shadow: <%= in_draft ? '0 0 0 1px rgba(251,191,36,0.26)' : '0 1px 3px rgba(0,0,0,0.3), 0 4px 20px rgba(0,0,0,0.15), inset 0 0 0 1px rgba(255,255,255,0.04)' %>;"
        data-controller="current-time"
        data-current-time-hour-height-value="<%= hour_height_px %>">
     <!-- Event popover -->

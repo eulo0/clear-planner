@@ -3,7 +3,7 @@ class User < ApplicationRecord
   has_many :syllabuses, dependent: :destroy
   has_many :documents, dependent: :destroy
   has_many :work_shifts, dependent: :destroy
-  has_one :calendar_draft, dependent: :destroy
+  has_many :calendar_drafts, dependent: :destroy
   has_many :notifications, dependent: :destroy
   has_many :owned_projects, class_name: "Project", dependent: :destroy
   has_many :courses, dependent: :destroy

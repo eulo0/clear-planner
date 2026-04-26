@@ -1,7 +1,12 @@
 # frozen_string_literal: true
 
 class CalendarDraft < ApplicationRecord
+  MAX_DRAFTS_PER_USER = 5
   belongs_to :user
+  scope :recent, -> { order(created_at: :asc, id: :asc) }
+
+  validates :name, presence: true, length: { maximum: 32 }
+  validate :user_draft_limit, on: :create
 
   # Operations format (model can be "event" or "course"):
   #   create: { "type" => "create", "model" => "event"|"course", "temp_id" => "d_abc", "data" => {...} }
@@ -274,5 +279,14 @@ class CalendarDraft < ApplicationRecord
     end
 
     result.sort_by(&:starts_at)
+  end
+
+  private
+
+  def user_draft_limit
+    return unless user.present?
+    return if user.calendar_drafts.where.not(id: id).size < MAX_DRAFTS_PER_USER
+
+    errors.add(:base, "You can only have up to #{MAX_DRAFTS_PER_USER} drafts.")
   end
 end

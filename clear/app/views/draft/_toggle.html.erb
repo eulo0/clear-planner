@@ -1,0 +1,131 @@
+<%= turbo_frame_tag "draft_toggle", data: { controller: "draft-cache draft-dropdown" } do %>
+  <% draft_start_date = local_assigns[:start_date].presence || Date.current.iso8601 %>
+  <% active_draft = local_assigns[:active_draft] %>
+  <% drafts = Array(local_assigns[:drafts]) %>
+  <% max_drafts = local_assigns[:max_drafts] || 5 %>
+  <% max_reached = drafts.size >= max_drafts %>
+
+  <div class="relative inline-block dropdown-wrapper">
+    <button
+      type="button"
+      class="studs-topbar-icon-btn studs-topbar-icon-btn--draft <%= 'studs-topbar-icon-btn--draft-active' if active_draft.present? %> dropdown-toggle inline-flex items-center justify-center"
+      data-action="click->draft-dropdown#toggle">
+      <span class="[&>svg]:h-5 [&>svg]:w-5">
+        <%= icon "pencil-edit-02-stroke-rounded" %>
+      </span>
+    </button>
+
+    <div
+      class="dropdown-menu absolute right-0 left-auto z-50 mt-2 w-[320px] max-h-80 overflow-y-auto rounded-none border shadow-lg backdrop-blur-md hidden"
+      style="border-color: rgb(63 63 70); background-color: rgba(24, 24, 27, 0.97); box-shadow: 0 0 0 1px color-mix(in srgb, var(--studs-accent) 90%, transparent), 0 0 32px color-mix(in srgb, var(--studs-accent) 52%, transparent), 0 14px 34px rgba(0, 0, 0, 0.48);"
+      data-draft-dropdown-target="menu">
+      <div class="p-2 border-b border-zinc-700/60">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2 leading-none">
+            <div class="text-sm font-semibold tracking-tight text-zinc-100">Drafts</div>
+            <div class="inline-flex items-center rounded-full border border-zinc-700/80 bg-zinc-800/80 px-2 py-0.5 text-[11px] font-medium text-zinc-300">
+              <%= drafts.size %>/<%= max_drafts %>
+            </div>
+          </div>
+          <button
+            type="button"
+            class="inline-flex h-7 items-center justify-center gap-1 rounded-md border border-zinc-700 px-2.5 text-xs font-medium text-zinc-200 transition-all duration-150 hover:-translate-y-px hover:bg-zinc-800/70 hover:shadow-[0_6px_14px_rgba(0,0,0,0.35),0_0_0_1px_rgba(255,255,255,0.06)] disabled:opacity-40 disabled:cursor-not-allowed"
+            data-action="click->draft-dropdown#toggleNewForm"
+            <%= "disabled" if max_reached %>>
+            <span aria-hidden="true">+</span>
+            <span>New Draft</span>
+          </button>
+        </div>
+
+        <%= form_with url: create_draft_path, method: :post, class: "mt-2 hidden", data: { draft_dropdown_target: "newForm", turbo_stream: true } do |f| %>
+          <%= f.hidden_field :start_date, value: draft_start_date %>
+          <div class="py-1">
+            <div class="flex items-center gap-2 rounded-md px-2 py-1.5">
+              <%= f.text_field :name,
+                    placeholder: "New draft name",
+                    class: "flex-1 rounded-md border border-zinc-700 bg-zinc-900/70 px-2 py-1.5 text-sm text-zinc-100 focus:outline-none focus:ring-2",
+                    style: "--tw-ring-color: var(--studs-accent);",
+                    data: { draft_dropdown_target: "newInput" } %>
+              <button type="submit"
+                      class="inline-flex h-7 w-7 items-center justify-center rounded-md border border-zinc-700 text-emerald-300 transition-all duration-150 hover:-translate-y-px hover:bg-emerald-950/30 hover:shadow-[0_6px_14px_rgba(0,0,0,0.35),0_0_0_1px_rgba(52,211,153,0.28)]">✓</button>
+              <button type="button"
+                      class="inline-flex h-7 w-7 items-center justify-center rounded-md border border-zinc-700 text-rose-300 transition-all duration-150 hover:-translate-y-px hover:bg-rose-950/30 hover:shadow-[0_6px_14px_rgba(0,0,0,0.35),0_0_0_1px_rgba(244,63,94,0.28)]"
+                      data-action="click->draft-dropdown#cancelNewForm">×</button>
+            </div>
+          </div>
+        <% end %>
+      </div>
+
+      <div class="py-1">
+        <% if drafts.empty? %>
+          <div class="px-3 py-3 text-sm text-zinc-400">No drafts yet.</div>
+        <% end %>
+
+        <% drafts.each do |draft| %>
+          <% selected = active_draft&.id == draft.id %>
+          <div class="px-2 py-1">
+            <div class="flex items-center gap-2 rounded-md px-2 py-1.5 <%= selected ? 'bg-zinc-800/70' : 'hover:bg-zinc-800/60' %>">
+              <div class="flex-1" data-draft-dropdown-target="renameDisplay" data-draft-id="<%= draft.id %>">
+                <%= button_to enter_draft_path(start_date: draft_start_date, draft_id: draft.id),
+                      method: :post,
+                      form: { data: { turbo_stream: true }, class: "text-left" },
+                      class: "w-full min-w-0 text-sm text-zinc-100" do %>
+                  <span title="<%= draft.name %>" class="inline-block max-w-[165px] truncate align-bottom <%= selected ? 'font-semibold text-amber-200' : '' %>"><%= draft.name %></span>
+                <% end %>
+              </div>
+
+              <%= form_with url: rename_draft_path(draft), method: :patch, class: "hidden flex-1", data: { turbo_stream: true, draft_dropdown_target: "renameForm", draft_id: draft.id } do |f| %>
+                <%= f.hidden_field :start_date, value: draft_start_date %>
+                <div class="flex items-center gap-2">
+                  <%= f.text_field :name,
+                        value: draft.name,
+                        class: "flex-1 rounded-md border border-zinc-700 bg-zinc-900/70 px-2 py-1.5 text-sm text-zinc-100 focus:outline-none focus:ring-2",
+                        style: "--tw-ring-color: var(--studs-accent);",
+                        data: { draft_dropdown_target: "renameInput", draft_id: draft.id } %>
+                  <button type="submit"
+                          class="inline-flex h-7 w-7 items-center justify-center rounded-md border border-zinc-700 text-emerald-300 transition-all duration-150 hover:-translate-y-px hover:bg-emerald-950/30 hover:shadow-[0_6px_14px_rgba(0,0,0,0.35),0_0_0_1px_rgba(52,211,153,0.28)]">✓</button>
+                  <button type="button"
+                          class="inline-flex h-7 w-7 items-center justify-center rounded-md border border-zinc-700 text-rose-300 transition-all duration-150 hover:-translate-y-px hover:bg-rose-950/30 hover:shadow-[0_6px_14px_rgba(0,0,0,0.35),0_0_0_1px_rgba(244,63,94,0.28)]"
+                          data-action="click->draft-dropdown#cancelRename"
+                          data-draft-dropdown-id-param="<%= draft.id %>">×</button>
+                </div>
+              <% end %>
+
+              <div class="flex items-center gap-2" data-draft-dropdown-target="renameActions" data-draft-id="<%= draft.id %>">
+                <button
+                  type="button"
+                  class="inline-flex h-7 w-7 items-center justify-center rounded-md border border-zinc-700 text-zinc-300 transition-all duration-150 hover:-translate-y-px hover:bg-zinc-800/70 hover:shadow-[0_6px_14px_rgba(0,0,0,0.35),0_0_0_1px_rgba(255,255,255,0.06)]"
+                  data-action="click->draft-dropdown#showRename"
+                  data-draft-dropdown-id-param="<%= draft.id %>">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                  </svg>
+                </button>
+
+                <%= button_to delete_draft_path(draft, start_date: draft_start_date),
+                      method: :delete,
+                      form: { data: { turbo_stream: true, turbo_confirm: "Delete draft '#{draft.name}'?" } },
+                      class: "inline-flex h-7 w-7 items-center justify-center rounded-md border border-zinc-700 text-rose-300 transition-all duration-150 hover:-translate-y-px hover:bg-rose-950/30 hover:shadow-[0_6px_14px_rgba(0,0,0,0.35),0_0_0_1px_rgba(244,63,94,0.28)]" do %>
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                  </svg>
+                <% end %>
+              </div>
+            </div>
+          </div>
+        <% end %>
+      </div>
+
+      <% if active_draft.present? %>
+        <div class="border-t border-zinc-700/60 p-2">
+          <%= button_to exit_draft_path(start_date: draft_start_date),
+                method: :patch,
+                form: { data: { turbo_stream: true, action: "click->draft-cache#clear" } },
+                class: "inline-flex w-full items-center justify-center rounded-md border border-amber-300/65 bg-amber-500/16 px-2 py-1.5 text-sm font-normal leading-5 text-amber-100 hover:bg-amber-500/20" do %>
+            Exit Draft Mode
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+<% end %>

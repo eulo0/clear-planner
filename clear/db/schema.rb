@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_04_15_133144) do
+ActiveRecord::Schema[8.1].define(version: 2026_04_24_173000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -44,11 +44,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_15_133144) do
 
   create_table "calendar_drafts", force: :cascade do |t|
     t.datetime "created_at", null: false
+    t.string "name", null: false
     t.jsonb "operations", default: [], null: false
     t.jsonb "previous_operations", default: [], null: false
     t.datetime "updated_at", null: false
     t.bigint "user_id", null: false
-    t.index ["user_id"], name: "index_calendar_drafts_on_user_id", unique: true
+    t.index ["user_id"], name: "index_calendar_drafts_on_user_id"
   end
 
   create_table "course_items", force: :cascade do |t|
