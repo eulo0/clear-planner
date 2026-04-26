@@ -300,18 +300,26 @@ class EventsController < ApplicationController
   end
 
   def apply_auto_schedule(event)
+    recurring = event.recurring?
+    weekdays = recurring ? Array(event.repeat_days).map(&:to_i) : []
+    repeat_until = recurring ? event.repeat_until : nil
+
     slot = Scheduling::AutoScheduler.new(
       user: current_user,
-      duration_minutes: event.duration_minutes
+      duration_minutes: event.duration_minutes,
+      weekdays: weekdays,
+      repeat_until: repeat_until
     ).find_slot
 
     if slot
       event.starts_at = slot.starts_at
       event.ends_at   = slot.ends_at
-      event.recurring = false
       true
     else
-      event.errors.add(:base, "No open slot found in the next 7 days for that duration. Try a shorter duration or pick a time manually.")
+      message = weekdays.any? ?
+        "No time-of-day works for every selected day before the end date. Try fewer days, a shorter duration, a later end date, or pick a time manually." :
+        "No open slot found in the next 7 days for that duration. Try a shorter duration or pick a time manually."
+      event.errors.add(:base, message)
       false
     end
   end

@@ -36,6 +36,8 @@ export default class extends Controller {
     }
 
     const duration = this.readDuration();
+    const weekdays = this.readWeekdays();
+    const repeatUntil = this.readRepeatUntil();
     this.previewTarget.classList.remove("hidden");
 
     if (!duration) {
@@ -45,8 +47,13 @@ export default class extends Controller {
 
     this.previewTarget.textContent = "Finding a slot…";
 
+    const params = new URLSearchParams();
+    params.set("duration_minutes", duration);
+    weekdays.forEach((w) => params.append("weekdays[]", w));
+    if (repeatUntil) params.set("repeat_until", repeatUntil);
+
     try {
-      const res = await fetch(`/auto_schedule/preview?duration_minutes=${duration}`, {
+      const res = await fetch(`/auto_schedule/preview?${params.toString()}`, {
         headers: { Accept: "application/json" },
         credentials: "same-origin",
       });
@@ -63,5 +70,23 @@ export default class extends Controller {
     const hidden = this.element.querySelector('input.dropdown-input[name$="[duration_minutes]"]');
     const value = hidden?.value ? parseInt(hidden.value, 10) : NaN;
     return Number.isFinite(value) && value > 0 ? value : null;
+  }
+
+  readWeekdays() {
+    const recurring = this.element.querySelector('input[type="checkbox"][name$="[recurring]"]');
+    if (!recurring?.checked) return [];
+
+    const days = this.element.querySelectorAll('input[type="checkbox"][name$="[repeat_days][]"]:checked');
+    return Array.from(days)
+      .map((d) => parseInt(d.value, 10))
+      .filter((n) => Number.isFinite(n));
+  }
+
+  readRepeatUntil() {
+    const recurring = this.element.querySelector('input[type="checkbox"][name$="[recurring]"]');
+    if (!recurring?.checked) return null;
+
+    const field = this.element.querySelector('input[type="date"][name$="[repeat_until]"]');
+    return field?.value || null;
   }
 }
