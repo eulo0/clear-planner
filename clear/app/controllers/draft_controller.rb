@@ -52,6 +52,23 @@ class DraftController < ApplicationController
     render_calendar_turbo_stream(draft: current_user_draft)
   end
 
+  def changes
+    start_date = parse_start_date(params[:start_date]).iso8601
+    draft = if params[:draft_id].present?
+      current_user.calendar_drafts.find_by(id: params[:draft_id])
+    else
+      current_user_draft
+    end
+    rows = draft.present? ? build_change_rows(draft.operations) : []
+
+    render partial: "draft/changes_modal",
+           locals: {
+             draft: draft,
+             rows: rows,
+             start_date: start_date
+           }
+  end
+
   def apply
     draft = current_user_draft
     if draft
@@ -139,6 +156,31 @@ class DraftController < ApplicationController
     session.delete(:active_calendar_draft_id)
     @current_user_draft = nil
     @current_user_drafts = nil
+  end
+
+  def build_change_rows(operations)
+    operations.each_with_index.map do |op, idx|
+      type   = op["type"].to_s
+      model  = op["model"].to_s
+      data   = op["data"] || {}
+      record = op["id"].present? ? draft_record_for(model, op["id"]) : nil
+
+      {
+        index: idx,
+        id: op["id"] || op["temp_id"] || "op_#{idx}",
+        action: type,
+        model: model,
+        color: data["color"].presence || record&.try(:color).presence,
+        title: data["title"].presence || record&.title
+      }
+    end
+  end
+
+  def draft_record_for(model, id)
+    case model
+    when "event" then current_user.events.find_by(id: id)
+    when "course" then current_user.courses.find_by(id: id)
+    end
   end
 
   def parse_start_date(raw)

@@ -219,6 +219,34 @@
         </div>
       </div>
     </div>
+    <!-- Draft Changes Modal -->
+    <div data-controller="modal">
+      <!-- Draft Changes Modal Overlay -->
+      <div
+        data-modal-target="overlay"
+        data-action="click->modal#close"
+        class="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300">
+      </div>
+      <!-- Draft Changes Modal Panel -->
+      <div
+        data-modal-target="panel"
+        role="dialog"
+        aria-modal="true"
+        class="fixed inset-0 z-50 flex items-center justify-center
+               opacity-0 scale-95 pointer-events-none
+               transition-all duration-300 ease-out">
+        <div class="w-full max-w-4xl max-h-[85vh] overflow-hidden rounded-2xl shadow-2xl"
+             style="border: 1px solid var(--studs-border); background-color: var(--studs-sidebar-bg);">
+          <%= turbo_frame_tag "draft_changes_modal",
+                class: "block h-full",
+                data: {
+                  modal_target: "frame",
+                  action: "turbo:frame-load->modal#frameLoaded turbo:submit-end->modal#submitEnded"
+                } do %>
+          <% end %>
+        </div>
+      </div>
+    </div>
     <!-- Toast notifications -->
     <%= render "shared/toasts" %>
     <script>

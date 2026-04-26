@@ -102,6 +102,7 @@ Rails.application.routes.draw do
 
   post   "dashboard/draft",         to: "draft#enter",   as: :enter_draft
   post   "dashboard/draft/create",  to: "draft#create",  as: :create_draft
+  get    "dashboard/draft/changes", to: "draft#changes", as: :draft_changes
   patch  "dashboard/draft/apply",   to: "draft#apply",   as: :apply_draft
   delete "dashboard/draft",         to: "draft#discard", as: :discard_draft
   patch  "dashboard/draft/exit",    to: "draft#exit",    as: :exit_draft
