@@ -66,10 +66,10 @@
                style="border-left: 4px solid <%= color %>;
                       <%= i > 0 ? "border-top: 1px solid var(--studs-divider);" : "" %>">
             <div class="min-w-0 flex-1">
-              <p class="font-medium text-zinc-100 flex items-center gap-2 flex-wrap">
+              <p class="font-medium text-zinc-100 truncate min-w-0">
                 <%= link_to course.title.presence || "(Untitled)", course_path(course),
-                      class: "hover:underline underline-offset-2",
-                      data: { turbo_frame: "_top" } %>
+                class: "hover:underline underline-offset-2",
+                data: { turbo_frame: "_top" } %>
               </p>
               <% details = [course.term.presence, course.professor.presence, course.location.presence].compact %>
               <% if details.any? %>

@@ -67,20 +67,24 @@
                style="border-left: 4px solid <%= color %>;
                       <%= i > 0 ? "border-top: 1px solid var(--studs-divider);" : "" %>">
             <div class="min-w-0 flex-1">
-              <p class="font-medium text-zinc-100 flex items-center gap-2 flex-wrap">
-                <%= link_to event.title.presence || "(Untitled)", event_path(event, start_date: starts_at&.to_date),
-                      class: "hover:underline underline-offset-2",
-                      data: {
-                        turbo_frame: "event_drawer",
-                        action: "click->drawer#start",
-                        turbo_prefetch: false
-                      } %>
+              <div class="flex items-center gap-2 flex-wrap">
+                <p class="font-medium text-zinc-100 min-w-0 truncate max-w-xs sm:max-w-sm md:max-w-md">
+                  <%= link_to event.title.presence || "(Untitled)", event_path(event, start_date: starts_at&.to_date),
+            class: "hover:underline underline-offset-2",
+            data: {
+              turbo_frame: "event_drawer",
+              action: "click->drawer#start",
+              turbo_prefetch: false
+            } %>
+                </p>
                 <% if event.project_id.present? %>
-                  <%= Project.find(event.project_id).title %>
+                  <span class="shrink-0 truncate max-w-[8rem] text-sm text-zinc-400">
+                    <%= Project.find(event.project_id).title %>
+                  </span>
                 <% end %>
                 <% if event.recurring? %>
                   <span class="rounded-full px-2 py-0.5 text-[10px] font-semibold"
-                        style="border: 1px solid var(--studs-border); background-color: var(--studs-panel-hover); color: var(--studs-accent);">
+            style="border: 1px solid var(--studs-border); background-color: var(--studs-panel-hover); color: var(--studs-accent);">
                     ↻ Repeats
                   </span>
                 <% end %>
@@ -89,7 +93,7 @@
                     P<%= event.priority %>
                   </span>
                 <% end %>
-              </p>
+              </div>
               <p class="mt-1 text-sm text-zinc-400">
                 <%= starts_at&.strftime("%b %d, %Y • %I:%M %p") %>
                 <% if ends_at.present? %>
