@@ -2,11 +2,6 @@ class AiChatController < ApplicationController
   layout "app_shell"
   before_action :authenticate_user!
 
-  def index
-    @messages = []
-    @rate = GeminiRateTracker.usage
-  end
-
   def panel
     @rate = GeminiRateTracker.usage
     render layout: false
@@ -28,7 +23,7 @@ class AiChatController < ApplicationController
           flash.now[:alert] = "Message can't be blank."
           render turbo_stream: turbo_stream.replace("toast-container", partial: "shared/toasts")
         end
-        format.html { redirect_to ai_chat_index_path, alert: "Message can't be blank." }
+        format.html { redirect_to authenticated_root_path, alert: "Message can't be blank." }
       end
       return
     end
@@ -40,7 +35,7 @@ class AiChatController < ApplicationController
           flash.now[:alert] = "Daily AI limit reached (#{rate[:rpd_limit]} requests). Resets at midnight."
           render turbo_stream: turbo_stream.replace("toast-container", partial: "shared/toasts")
         end
-        format.html { redirect_to ai_chat_index_path, alert: "Daily AI limit reached." }
+        format.html { redirect_to authenticated_root_path, alert: "Daily AI limit reached." }
       end
       return
     end
@@ -51,7 +46,7 @@ class AiChatController < ApplicationController
           flash.now[:alert] = "Slow down — rate limit is #{rate[:rpm_limit]} requests per minute. Wait a moment and try again."
           render turbo_stream: turbo_stream.replace("toast-container", partial: "shared/toasts")
         end
-        format.html { redirect_to ai_chat_index_path, alert: "Rate limit reached, try again shortly." }
+        format.html { redirect_to authenticated_root_path, alert: "Rate limit reached, try again shortly." }
       end
       return
     end
@@ -120,7 +115,7 @@ class AiChatController < ApplicationController
         flash.now[:alert] = e.message
         render turbo_stream: turbo_stream.replace("toast-container", partial: "shared/toasts")
       end
-      format.html { redirect_to ai_chat_index_path, alert: e.message }
+      format.html { redirect_to authenticated_root_path, alert: e.message }
     end
   rescue => e
     respond_to do |format|
@@ -128,7 +123,7 @@ class AiChatController < ApplicationController
         flash.now[:alert] = "AI error: #{e.message}"
         render turbo_stream: turbo_stream.replace("toast-container", partial: "shared/toasts")
       end
-      format.html { redirect_to ai_chat_index_path, alert: "AI error: #{e.message}" }
+      format.html { redirect_to authenticated_root_path, alert: "AI error: #{e.message}" }
     end
   end
 

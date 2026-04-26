@@ -43,8 +43,6 @@ Rails.application.routes.draw do
   end
   resources :agenda
 
-  resources :documents
-
   resources :syllabuses do
     member do
       post :create_course
@@ -57,7 +55,7 @@ Rails.application.routes.draw do
     end
   end
 
-  resources :ai_chat, only: [ :index, :create ] do
+  resources :ai_chat, only: [ :create ] do
     collection do
       get :usage
       get :panel
