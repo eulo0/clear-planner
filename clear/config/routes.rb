@@ -30,7 +30,11 @@ Rails.application.routes.draw do
     end
   end
 
-  resources :work_shifts
+  resources :work_shifts do
+    collection do
+      delete :destroy_all
+    end
+  end
 
   scope :university_calendar do
     get  "preview",     to: "university_calendar#preview",     as: :university_calendar_preview
@@ -39,6 +43,9 @@ Rails.application.routes.draw do
     post "import",      to: "university_calendar#import",      as: :university_calendar_import
   end
   resources :courses do
+    collection do
+      delete :destroy_all
+    end
     resources :course_items, only: %i[index create show edit update destroy]
   end
   resources :agenda

@@ -134,6 +134,11 @@ class CoursesController < ApplicationController
     end
   end
 
+  def destroy_all
+    current_user.courses.destroy_all
+    redirect_to courses_path, notice: "All courses deleted."
+  end
+
   def destroy
     if in_draft_mode?
       current_user_draft.add_delete("course", @course.id)
