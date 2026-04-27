@@ -4,7 +4,7 @@
 <%= form_with model: work_shift,
               url: form_url,
               class: "space-y-5",
-              data: { turbo: turbo_enabled, controller: "duration-fill auto-schedule-toggle" } do |f| %>
+              data: { turbo: turbo_enabled, controller: "duration-fill" } do |f| %>
   <% if work_shift.errors.any? %>
     <div class="rounded-2xl p-4 text-red-300"
          style="border: 1px solid rgba(239,68,68,0.3); background-color: rgba(127,29,29,0.2);">
@@ -29,23 +29,8 @@
           style: input_style,
           placeholder: "e.g. Starbucks Morning, Target Closing…" %>
   </div>
-  <!-- Auto Schedule -->
-  <div class="relative rounded-2xl p-4"
-       style="border: 1px solid var(--studs-border); background-color: var(--studs-panel-bg-2);">
-    <%= f.check_box :auto_schedule,
-          { class: "absolute top-4 right-4 h-5 w-5 rounded cursor-pointer",
-            style: "accent-color: var(--studs-accent);",
-            data: { auto_schedule_toggle_target: "toggle", action: "change->auto-schedule-toggle#toggle" } } %>
-    <div class="pr-10">
-      <div class="text-sm font-semibold text-zinc-200">Auto Schedule</div>
-      <div class="text-xs text-zinc-500 mt-0.5">Let CLEAR pick the next open slot in your week using the duration below</div>
-      <div data-auto-schedule-toggle-target="preview"
-           class="hidden mt-3 text-xs font-medium"
-           style="color: var(--studs-accent);"></div>
-    </div>
-  </div>
   <!-- Times -->
-  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2" data-auto-schedule-toggle-target="manual">
+  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
     <div>
       <%= f.label :start_time, class: label_classes, style: label_style do %>Start Time <span class="text-red-400">*</span><% end %>
       <%= f.time_field :start_time, class: input_classes, style: input_style,
@@ -60,7 +45,7 @@
   <!-- Duration -->
   <div>
     <%= f.label :duration_minutes, "Duration", class: label_classes, style: label_style %>
-    <div data-action="dropdown:select->duration-fill#fill dropdown:select->auto-schedule-toggle#previewIfReady">
+    <div data-action="dropdown:select->duration-fill#fill">
       <%= render Studs::DropdownComponent.new(
         label: "— select duration —",
         variant: :duration,
@@ -72,7 +57,7 @@
   </div>
   <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
     <!-- Starting Date -->
-    <div data-auto-schedule-toggle-target="manual">
+    <div>
       <%= f.label :start_date, class: label_classes, style: label_style do %>Start Date <span class="text-red-400">*</span><% end %>
       <%= f.date_field :start_date, class: input_classes, style: input_style %>
     </div>
@@ -101,8 +86,7 @@
          style="border: 1px solid var(--studs-border); background-color: var(--studs-panel-bg-2);">
       <%= f.check_box :recurring,
             class: "peer absolute top-4 right-4 h-5 w-5 rounded cursor-pointer",
-            style: "accent-color: var(--studs-accent);",
-            data: { action: "change->auto-schedule-toggle#previewIfReady" } %>
+            style: "accent-color: var(--studs-accent);" %>
       <div class="pr-10">
         <div class="text-sm font-semibold text-zinc-200">Repeat</div>
         <div class="text-xs text-zinc-500 mt-0.5">Repeat on selected weekdays</div>
@@ -113,7 +97,7 @@
         <div class="grid grid-cols-7 gap-1.5">
           <% [["Su", 0], ["Mo", 1], ["Tu", 2], ["We", 3], ["Th", 4], ["Fr", 5], ["Sa", 6]].each do |lbl, wday| %>
             <label class="relative cursor-pointer">
-              <%= f.check_box :repeat_days, { multiple: true, class: "peer sr-only", data: { action: "change->auto-schedule-toggle#previewIfReady" } }, wday, nil %>
+              <%= f.check_box :repeat_days, { multiple: true, class: "peer sr-only" }, wday, nil %>
               <div class="repeat-day-btn flex h-9 items-center justify-center rounded-xl border text-xs font-semibold transition-all
                           border-zinc-700 bg-zinc-900/40 text-zinc-400
                           hover:border-zinc-500 hover:text-zinc-200">
@@ -124,8 +108,7 @@
         </div>
         <div>
           <%= f.label :repeat_until, "Repeat until", class: label_classes, style: label_style %>
-          <%= f.date_field :repeat_until, class: input_classes, style: input_style,
-                data: { action: "change->auto-schedule-toggle#previewIfReady" } %>
+          <%= f.date_field :repeat_until, class: input_classes, style: input_style %>
         </div>
       </div>
     </div>

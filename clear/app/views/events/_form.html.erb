@@ -98,7 +98,8 @@
       <%= f.text_field :priority,
             class: input_classes,
             style: input_style,
-            placeholder: "1 = highest priority" %>
+            placeholder: "1 = highest priority",
+            data: { action: "change->auto-schedule-toggle#previewIfReady" } %>
     </div>
   </div>
   <!-- Description -->

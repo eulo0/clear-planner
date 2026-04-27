@@ -38,6 +38,7 @@ export default class extends Controller {
     const duration = this.readDuration();
     const weekdays = this.readWeekdays();
     const repeatUntil = this.readRepeatUntil();
+    const priority = this.readPriority();
     this.previewTarget.classList.remove("hidden");
 
     if (!duration) {
@@ -51,6 +52,7 @@ export default class extends Controller {
     params.set("duration_minutes", duration);
     weekdays.forEach((w) => params.append("weekdays[]", w));
     if (repeatUntil) params.set("repeat_until", repeatUntil);
+    if (priority) params.set("priority", priority);
 
     try {
       const res = await fetch(`/auto_schedule/preview?${params.toString()}`, {
@@ -88,5 +90,10 @@ export default class extends Controller {
 
     const field = this.element.querySelector('input[type="date"][name$="[repeat_until]"]');
     return field?.value || null;
+  }
+
+  readPriority() {
+    const field = this.element.querySelector('input[name$="[priority]"]');
+    return field?.value?.trim() || null;
   }
 }

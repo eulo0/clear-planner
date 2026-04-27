@@ -63,7 +63,7 @@ class EventsController < ApplicationController
       return
     end
 
-    if @event.save
+    if save_event_with_displacement(@event)
       respond_to do |format|
         format.html { redirect_to event_path(@event), notice: "Event created." }
 
@@ -304,16 +304,19 @@ class EventsController < ApplicationController
     weekdays = recurring ? Array(event.repeat_days).map(&:to_i) : []
     repeat_until = recurring ? event.repeat_until : nil
 
-    slot = Scheduling::AutoScheduler.new(
+    result = Scheduling::AutoScheduler.new(
       user: current_user,
       duration_minutes: event.duration_minutes,
+      priority: event.priority,
       weekdays: weekdays,
-      repeat_until: repeat_until
+      repeat_until: repeat_until,
+      buffer_minutes: Scheduling::AutoScheduler.buffer_for_priority(event.priority)
     ).find_slot
 
-    if slot
-      event.starts_at = slot.starts_at
-      event.ends_at   = slot.ends_at
+    if result
+      event.starts_at = result.starts_at
+      event.ends_at   = result.ends_at
+      @displaced_events = result.displaced
       true
     else
       message = weekdays.any? ?
@@ -322,5 +325,44 @@ class EventsController < ApplicationController
       event.errors.add(:base, message)
       false
     end
+  end
+
+  def save_event_with_displacement(event)
+    saved = false
+    ActiveRecord::Base.transaction do
+      if event.save
+        cascade_ok = true
+        Array(@displaced_events).each do |d|
+          new_slot = reschedule_displaced(d)
+          if new_slot.nil?
+            event.errors.add(:base, "Couldn't reschedule '#{d.title}' to make room — try a lower priority or different duration.")
+            cascade_ok = false
+            break
+          end
+          unless d.update(starts_at: new_slot.starts_at, ends_at: new_slot.ends_at)
+            event.errors.add(:base, "Couldn't reschedule '#{d.title}': #{d.errors.full_messages.join(', ')}")
+            cascade_ok = false
+            break
+          end
+        end
+        saved = cascade_ok
+        raise ActiveRecord::Rollback unless cascade_ok
+      end
+    end
+    saved
+  end
+
+  def reschedule_displaced(event)
+    duration = event.duration_minutes
+    duration ||= ((event.ends_at - event.starts_at) / 60).to_i if event.starts_at && event.ends_at
+
+    Scheduling::AutoScheduler.new(
+      user: current_user,
+      duration_minutes: duration,
+      priority: event.priority,
+      buffer_minutes: Scheduling::AutoScheduler.buffer_for_priority(event.priority),
+      exclude_event_id: event.id,
+      allow_displacement: false
+    ).find_slot
   end
 end

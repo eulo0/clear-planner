@@ -10,16 +10,29 @@ module Scheduling
     DEFAULT_BUFFER_MINUTES = 30
     GRANULARITY_MINUTES    = 15
 
-    Result = Struct.new(:starts_at, :ends_at, keyword_init: true)
+    Result = Struct.new(:starts_at, :ends_at, :displaced, keyword_init: true)
+    BusyInterval = Struct.new(:starts_at, :ends_at, :movable, :event, keyword_init: true)
 
     DEFAULT_RECURRING_HORIZON_DAYS = 56 # 8 weeks
 
-    def initialize(user:, duration_minutes:, weekdays: nil, repeat_until: nil,
+    # Higher priority (lower number) packs in tighter against fixed items.
+    def self.buffer_for_priority(priority)
+      case priority.to_i
+      when 1 then 0
+      when 2 then 15
+      else DEFAULT_BUFFER_MINUTES
+      end
+    end
+
+    def initialize(user:, duration_minutes:, priority: nil, weekdays: nil, repeat_until: nil,
                    search_starts_at: nil, search_ends_at: nil,
                    work_day_start: DEFAULT_WORK_DAY_START, work_day_end: DEFAULT_WORK_DAY_END,
-                   buffer_minutes: DEFAULT_BUFFER_MINUTES)
+                   buffer_minutes: DEFAULT_BUFFER_MINUTES,
+                   exclude_event_id: nil, allow_displacement: true,
+                   extra_busy: nil)
       @user = user
       @duration_minutes = duration_minutes.to_i
+      @priority = priority
       @weekdays = Array(weekdays).map(&:to_i).select { |w| w.between?(0, 6) }.uniq.sort
       @repeat_until = parse_date(repeat_until)
       @search_starts_at = search_starts_at || Time.current
@@ -28,6 +41,9 @@ module Scheduling
       @work_day_start   = work_day_start
       @work_day_end     = work_day_end
       @buffer_minutes   = buffer_minutes
+      @exclude_event_id = exclude_event_id
+      @allow_displacement = allow_displacement
+      @extra_busy = Array(extra_busy)
     end
 
     def find_slot
@@ -39,7 +55,7 @@ module Scheduling
 
     def find_single_slot
       candidate = round_up(@search_starts_at)
-      busy = busy_intervals
+      intervals = busy_intervals
 
       while candidate + @duration_minutes.minutes <= @search_ends_at
         candidate = snap_into_work_hours(candidate)
@@ -50,13 +66,17 @@ module Scheduling
           next
         end
 
-        conflict = busy.find { |b_start, b_end| b_start < slot_end && b_end > candidate }
-        if conflict
-          candidate = round_up(conflict.last)
+        immovable = intervals.find { |i| !i.movable && i.starts_at < slot_end && i.ends_at > candidate }
+        if immovable
+          candidate = round_up(immovable.ends_at)
           next
         end
 
-        return Result.new(starts_at: candidate, ends_at: slot_end)
+        displaced = intervals
+          .select { |i| i.movable && i.starts_at < slot_end && i.ends_at > candidate }
+          .map(&:event).compact.uniq
+
+        return Result.new(starts_at: candidate, ends_at: slot_end, displaced: displaced)
       end
 
       nil
@@ -69,7 +89,7 @@ module Scheduling
       latest_minute   = @work_day_end * 60 - @duration_minutes
       return nil if latest_minute < earliest_minute
 
-      busy = busy_intervals
+      intervals = busy_intervals
 
       max_weeks = compute_max_weeks
       week_offset = 0
@@ -78,14 +98,14 @@ module Scheduling
         week_offset += 1
         next if week_dates.empty?
 
-        slot = find_time_of_day(week_dates, busy, earliest_minute, latest_minute)
+        slot = find_time_of_day(week_dates, intervals, earliest_minute, latest_minute)
         return slot if slot
       end
 
       nil
     end
 
-    def find_time_of_day(dates, busy, earliest_minute, latest_minute)
+    def find_time_of_day(dates, intervals, earliest_minute, latest_minute)
       minute = earliest_minute
       while minute <= latest_minute
         hour = minute / 60
@@ -95,13 +115,24 @@ module Scheduling
           slot_start = Time.zone.local(date.year, date.month, date.day, hour, min)
           slot_end   = slot_start + @duration_minutes.minutes
           next false if slot_start < @search_starts_at
-          busy.none? { |b_start, b_end| b_start < slot_end && b_end > slot_start }
+          intervals.none? { |i| !i.movable && i.starts_at < slot_end && i.ends_at > slot_start }
         end
 
         if all_clear
           first = dates.first
           slot_start = Time.zone.local(first.year, first.month, first.day, hour, min)
-          return Result.new(starts_at: slot_start, ends_at: slot_start + @duration_minutes.minutes)
+          slot_end   = slot_start + @duration_minutes.minutes
+
+          displaced = []
+          dates.each do |date|
+            ds = Time.zone.local(date.year, date.month, date.day, hour, min)
+            de = ds + @duration_minutes.minutes
+            intervals.each do |i|
+              displaced << i.event if i.movable && i.starts_at < de && i.ends_at > ds
+            end
+          end
+
+          return Result.new(starts_at: slot_start, ends_at: slot_end, displaced: displaced.compact.uniq)
         end
 
         minute += GRANULARITY_MINUTES
@@ -159,8 +190,19 @@ module Scheduling
            .where("starts_at <= ?", @search_ends_at)
            .where("recurring = FALSE OR repeat_until >= ?", @search_starts_at.to_date)
            .each do |event|
+        next if event.id == @exclude_event_id
+
+        outranks = can_displace?(event.priority)
+        movable = outranks && @allow_displacement && !event.recurring?
+        event_buffer = outranks ? @buffer_minutes : DEFAULT_BUFFER_MINUTES
+
         event.occurrences_between(@search_starts_at, @search_ends_at).each do |occ|
-          intervals << buffered(occ.starts_at, occ.ends_at) if occ.ends_at
+          next unless occ.ends_at
+          buf_start, buf_end = buffered(occ.starts_at, occ.ends_at, event_buffer)
+          intervals << BusyInterval.new(
+            starts_at: buf_start, ends_at: buf_end,
+            movable: movable, event: movable ? event : nil
+          )
         end
       end
 
@@ -169,7 +211,9 @@ module Scheduling
            .where("end_date >= ?", @search_starts_at.to_date)
            .each do |course|
         course.occurrences_between(@search_starts_at, @search_ends_at).each do |occ|
-          intervals << buffered(occ.starts_at, occ.ends_at) if occ.ends_at
+          next unless occ.ends_at
+          buf_start, buf_end = buffered(occ.starts_at, occ.ends_at, DEFAULT_BUFFER_MINUTES)
+          intervals << BusyInterval.new(starts_at: buf_start, ends_at: buf_end, movable: false, event: nil)
         end
       end
 
@@ -178,15 +222,31 @@ module Scheduling
            .where("repeat_until IS NULL OR repeat_until >= ?", @search_starts_at.to_date)
            .each do |shift|
         shift.occurrences_between(@search_starts_at, @search_ends_at).each do |occ|
-          intervals << buffered(occ.starts_at, occ.ends_at) if occ.ends_at
+          next unless occ.ends_at
+          buf_start, buf_end = buffered(occ.starts_at, occ.ends_at, DEFAULT_BUFFER_MINUTES)
+          intervals << BusyInterval.new(starts_at: buf_start, ends_at: buf_end, movable: false, event: nil)
         end
       end
 
-      intervals.sort_by(&:first)
+      @extra_busy.each do |b_start, b_end|
+        intervals << BusyInterval.new(starts_at: b_start, ends_at: b_end, movable: false, event: nil)
+      end
+
+      intervals.sort_by(&:starts_at)
     end
 
-    def buffered(starts_at, ends_at)
-      [ starts_at - @buffer_minutes.minutes, ends_at + @buffer_minutes.minutes ]
+    def can_displace?(existing_priority)
+      new_p = @priority.to_i
+      return false if new_p <= 0
+
+      existing_p = existing_priority.to_i
+      return true if existing_p <= 0
+
+      new_p < existing_p
+    end
+
+    def buffered(starts_at, ends_at, minutes)
+      [ starts_at - minutes.minutes, ends_at + minutes.minutes ]
     end
 
     def round_up(time)
