@@ -25,7 +25,7 @@
           <div class="project-row flex items-start justify-between gap-4 p-4"
      style="<%= i > 0 ? "border-top: 1px solid var(--studs-divider);" : "" %>">
             <div class="min-w-0 flex-1">
-              <p class="font-medium text-zinc-100 flex items-center gap-2 flex-wrap">
+              <p class="font-medium text-zinc-100 truncate min-w-0">
                 <%= link_to project.title.presence || "(Untitled)", project_path(project),
             class: "hover:underline underline-offset-2",
             data: { turbo_frame: "_top" } %>

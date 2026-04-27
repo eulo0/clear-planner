@@ -41,7 +41,7 @@
               <% bg = item.try(:color).presence || "#3f3f46" %>
               <% text_color = item.try(:contrast_text_color) || "#F9FAFB" %>
               <div class="rounded-xl px-2 py-2 text-sm" style="background-color: <%= bg %>;">
-                <div class="font-medium" style="color: <%= text_color %>;">
+                <div class="font-medium truncate" style="color: <%= text_color %>;">
                   <%= item.title %>
                 </div>
                 <% if item.starts_at.present? %>

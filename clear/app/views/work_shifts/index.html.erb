@@ -54,7 +54,7 @@
                style="border-left: 4px solid <%= color %>;
                       <%= i > 0 ? "border-top: 1px solid var(--studs-divider);" : "" %>">
             <div class="min-w-0 flex-1">
-              <p class="font-medium text-zinc-100 flex items-center gap-2 flex-wrap">
+              <p class="font-medium text-zinc-100 min-w-0 truncate max-w-xs sm:max-w-sm md:max-w-md">
                 <%= link_to shift.title.presence || "(Untitled)", edit_work_shift_path(shift),
                       class: "hover:underline underline-offset-2" %>
                 <% if shift.recurring? %>
