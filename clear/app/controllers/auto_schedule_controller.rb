@@ -74,7 +74,7 @@ class AutoScheduleController < ApplicationController
     if displacements.any?
       parts = displacements.map do |d|
         if d[:slot]
-          "'#{d[:event].title}' to #{d[:slot].starts_at.strftime('%-l:%M %p').downcase}"
+          "'#{d[:event].title}' to #{d[:slot].starts_at.strftime('%a %b %-d')}, #{d[:slot].starts_at.strftime('%-l:%M %p').downcase}"
         else
           "'#{d[:event].title}' (no slot)"
         end
