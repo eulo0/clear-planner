@@ -18,8 +18,7 @@ class AutoScheduleController < ApplicationController
       duration_minutes: duration,
       priority: priority,
       weekdays: weekdays,
-      repeat_until: repeat_until,
-      buffer_minutes: Scheduling::AutoScheduler.buffer_for_priority(priority)
+      repeat_until: repeat_until
     ).find_slot
 
     if result
@@ -53,7 +52,6 @@ class AutoScheduleController < ApplicationController
         user: current_user,
         duration_minutes: duration,
         priority: d.priority,
-        buffer_minutes: Scheduling::AutoScheduler.buffer_for_priority(d.priority),
         exclude_event_id: d.id,
         allow_displacement: false,
         extra_busy: extra_busy.dup

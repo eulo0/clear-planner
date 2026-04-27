@@ -309,8 +309,7 @@ class EventsController < ApplicationController
       duration_minutes: event.duration_minutes,
       priority: event.priority,
       weekdays: weekdays,
-      repeat_until: repeat_until,
-      buffer_minutes: Scheduling::AutoScheduler.buffer_for_priority(event.priority)
+      repeat_until: repeat_until
     ).find_slot
 
     if result
@@ -360,7 +359,6 @@ class EventsController < ApplicationController
       user: current_user,
       duration_minutes: duration,
       priority: event.priority,
-      buffer_minutes: Scheduling::AutoScheduler.buffer_for_priority(event.priority),
       exclude_event_id: event.id,
       allow_displacement: false
     ).find_slot

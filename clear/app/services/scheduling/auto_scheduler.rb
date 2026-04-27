@@ -15,19 +15,9 @@ module Scheduling
 
     DEFAULT_RECURRING_HORIZON_DAYS = 56 # 8 weeks
 
-    # Higher priority (lower number) packs in tighter against fixed items.
-    def self.buffer_for_priority(priority)
-      case priority.to_i
-      when 1 then 0
-      when 2 then 15
-      else DEFAULT_BUFFER_MINUTES
-      end
-    end
-
     def initialize(user:, duration_minutes:, priority: nil, weekdays: nil, repeat_until: nil,
                    search_starts_at: nil, search_ends_at: nil,
                    work_day_start: DEFAULT_WORK_DAY_START, work_day_end: DEFAULT_WORK_DAY_END,
-                   buffer_minutes: DEFAULT_BUFFER_MINUTES,
                    exclude_event_id: nil, allow_displacement: true,
                    extra_busy: nil)
       @user = user
@@ -40,7 +30,6 @@ module Scheduling
       @search_ends_at = search_ends_at || default_search_ends_at
       @work_day_start   = work_day_start
       @work_day_end     = work_day_end
-      @buffer_minutes   = buffer_minutes
       @exclude_event_id = exclude_event_id
       @allow_displacement = allow_displacement
       @extra_busy = Array(extra_busy)
@@ -192,13 +181,11 @@ module Scheduling
            .each do |event|
         next if event.id == @exclude_event_id
 
-        outranks = can_displace?(event.priority)
-        movable = outranks && @allow_displacement && !event.recurring?
-        event_buffer = outranks ? @buffer_minutes : DEFAULT_BUFFER_MINUTES
+        movable = can_displace?(event.priority) && @allow_displacement && !event.recurring?
 
         event.occurrences_between(@search_starts_at, @search_ends_at).each do |occ|
           next unless occ.ends_at
-          buf_start, buf_end = buffered(occ.starts_at, occ.ends_at, event_buffer)
+          buf_start, buf_end = buffered(occ.starts_at, occ.ends_at, DEFAULT_BUFFER_MINUTES)
           intervals << BusyInterval.new(
             starts_at: buf_start, ends_at: buf_end,
             movable: movable, event: movable ? event : nil

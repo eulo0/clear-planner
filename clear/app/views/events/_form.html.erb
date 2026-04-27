@@ -95,11 +95,22 @@
     </div>
     <div>
       <%= f.label :priority, class: label_classes, style: label_style %>
-      <%= f.text_field :priority,
-            class: input_classes,
-            style: input_style,
-            placeholder: "1 = highest priority",
-            data: { action: "change->auto-schedule-toggle#previewIfReady" } %>
+      <div data-action="dropdown:select->auto-schedule-toggle#previewIfReady">
+        <%= render Studs::DropdownComponent.new(
+          label: "— no priority —",
+          variant: :duration,
+          name: "#{f.object_name}[priority]",
+          selected_value: event.priority,
+          items: [
+            { label: "None", value: "" },
+            { label: "1 — Highest", value: "1" },
+            { label: "2", value: "2" },
+            { label: "3", value: "3" },
+            { label: "4", value: "4" },
+            { label: "5 — Lowest", value: "5" }
+          ]
+        ) %>
+      </div>
     </div>
   </div>
   <!-- Description -->
