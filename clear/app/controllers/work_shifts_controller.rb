@@ -99,6 +99,11 @@ class WorkShiftsController < ApplicationController
     end
   end
 
+  def destroy_all
+    current_user.work_shifts.destroy_all
+    redirect_to work_shifts_path, notice: "All shifts deleted."
+  end
+
   def destroy
     if in_draft_mode?
       current_user_draft.add_delete("shift", @work_shift.id)
