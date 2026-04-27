@@ -13,6 +13,9 @@ application.register("agenda-highlight", AgendaHighlightController)
 import AgendaItemController from "./agenda_item_controller"
 application.register("agenda-item", AgendaItemController)
 
+import AgendaResetFiltersController from "./agenda_reset_filters_controller"
+application.register("agenda-reset-filters", AgendaResetFiltersController)
+
 import AiChatDrawerController from "./ai_chat_drawer_controller"
 application.register("ai-chat-drawer", AiChatDrawerController)
 

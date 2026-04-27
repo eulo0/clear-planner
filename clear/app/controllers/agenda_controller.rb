@@ -25,6 +25,10 @@ class AgendaController < ApplicationController
     if end_date < start_date
       flash.now[:alert] = "End date must be on or after the start date"
       end_date = start_date
+      if turbo_frame_request?
+        render turbo_stream: turbo_stream.replace("toast-container", partial: "shared/toasts", locals: { notice: nil, alert: flash.now[:alert] })
+        return
+      end
     end
 
     @date_range = start_date..end_date
