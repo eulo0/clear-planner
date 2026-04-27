@@ -1,0 +1,94 @@
+<%= turbo_frame_tag "draft_changes_modal", data: { modal_target: "frame", action: "turbo:frame-load->modal#frameLoaded turbo:submit-end->modal#submitEnded" } do %>
+  <style>
+    [data-draft-change-card] {
+      background-color: var(--bg-normal);
+      transition:
+        background-color 0.15s ease,
+        box-shadow 0.15s ease,
+        transform 0.15s ease;
+    }
+
+    [data-draft-change-card]:hover {
+      background-color: var(--bg-hover);
+    }
+  </style>
+  <div class="h-[85vh] w-full flex flex-col">
+    <div class="px-4 py-3 studs-topbar" style="background-color: var(--studs-panel-bg-2); border-bottom: 1px solid var(--studs-border);">
+      <div class="flex items-center justify-between">
+        <div class="min-w-0">
+          <div class="text-sm font-semibold text-zinc-100">Draft Changes</div>
+          <div class="mt-0.5 text-xs text-zinc-400">
+            <% total_rows = draft&.operation_count.to_i %>
+            <%= draft.present? ? "#{draft.name}: #{total_rows} #{'change'.pluralize(total_rows)}" : "Draft mode is not active" %>
+          </div>
+        </div>
+        <button type="button" class="studs-nav-btn" data-action="modal#close">x</button>
+      </div>
+    </div>
+
+    <div class="flex-1 min-h-0 bg-zinc-950/95">
+      <div class="scrollbars h-full min-h-0 overflow-y-auto px-3 py-3">
+        <% if rows.any? %>
+          <div class="space-y-2">
+            <% hex_to_rgba = ->(hex, alpha) {
+              h = hex.to_s.delete("#")[0, 6]
+              r = h[0..1].to_i(16)
+              g = h[2..3].to_i(16)
+              b = h[4..5].to_i(16)
+              "rgba(#{r},#{g},#{b},#{alpha})"
+            } %>
+
+            <% rows.each do |row| %>
+              <% base = row[:color].presence || "#34D399" %>
+              <% tint_bg = hex_to_rgba.call(base, 0.14) %>
+              <% tint_hover = hex_to_rgba.call(base, 0.20) %>
+              <% tint_border = hex_to_rgba.call(base, 0.35) %>
+              <% tint_bar = hex_to_rgba.call(base, 0.90) %>
+              <% operation_label = case row[:action]
+                  when "create" then "NEW"
+                  when "update" then "EDITED"
+                  when "delete" then "REMOVED"
+                  else row[:action].to_s.upcase
+                  end %>
+              <% operation_label_class = case row[:action]
+                  when "create" then "bg-amber-400/90 text-black/90"
+                  when "update" then "bg-sky-400/90 text-black/90"
+                  when "delete" then "bg-red-400/90 text-white"
+                  else ""
+                  end %>
+
+              <div data-draft-change-card class="rounded-2xl border p-3" style="--bg-normal: <%= tint_bg %>; --bg-hover: <%= tint_hover %>; border-color: <%= tint_border %>; border-left: 6px solid <%= tint_bar %>;">
+                <div class="flex items-center gap-2 min-w-0">
+                  <span class="shrink-0 inline-flex h-2.5 w-2.5 rounded-full" style="background-color: <%= tint_bar %>"></span>
+                  <div class="truncate text-sm font-semibold text-zinc-50"><%= row[:title] %></div>
+                  <span class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide <%= operation_label_class %>"><%= operation_label %></span>
+                  <span class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide" style="border: 1px solid <%= tint_border %>; background-color: <%= tint_hover %>; color: #f8fafc;"><%= row[:model].to_s.titleize %></span>
+                  <div class="ml-auto pl-3 shrink-0">
+                  <%= button_to "Restore",
+                        draft_restore_path(index: row[:index], start_date: start_date),
+                        method: :patch,
+                        class: "shrink-0 rounded-xl border border-red-500/40 bg-red-500/15 px-3 py-1.5 text-xs font-semibold text-red-200 transition hover:bg-red-500/25 cursor-pointer",
+                        form: {
+                          class: "shrink-0",
+                          data: {
+                            turbo_frame: "draft_changes_modal",
+                            turbo_stream: true,
+                            turbo_confirm: "Restore this draft change?"
+                          }
+                        }
+                  %>
+                  </div>
+                </div>
+              </div>
+            <% end %>
+          </div>
+
+        <% else %>
+          <div class="rounded-2xl border bg-zinc-900/40 px-4 py-4 text-sm text-zinc-200" style="border-color: var(--studs-border);">
+            No queued draft changes.
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+<% end %>

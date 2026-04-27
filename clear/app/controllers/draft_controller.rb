@@ -52,6 +52,23 @@ class DraftController < ApplicationController
     render_calendar_turbo_stream(draft: current_user_draft)
   end
 
+  def changes
+    start_date = parse_start_date(params[:start_date]).iso8601
+    draft = if params[:draft_id].present?
+      current_user.calendar_drafts.find_by(id: params[:draft_id])
+    else
+      current_user_draft
+    end
+    rows = draft.present? ? build_change_rows(draft.operations) : []
+
+    render partial: "draft/changes_modal",
+           locals: {
+             draft: draft,
+             rows: rows,
+             start_date: start_date
+           }
+  end
+
   def apply
     draft = current_user_draft
     if draft
@@ -76,6 +93,24 @@ class DraftController < ApplicationController
     render_calendar_turbo_stream(draft: nil)
   end
 
+  def restore
+    start_date = parse_start_date(params[:start_date])
+    draft = current_user_draft
+
+    if draft.present?
+      idx = params[:index].to_i
+      ops = draft.operations.dup
+      ops.delete_at(idx) if idx >= 0 && idx < ops.length
+      draft.update!(operations: ops)
+    end
+
+    render_calendar_turbo_stream(
+      draft: current_user_draft,
+      start_date: start_date,
+      include_changes_modal: true
+    )
+  end
+
   def exit
     clear_active_draft!
     render_calendar_turbo_stream(draft: nil)
@@ -87,8 +122,8 @@ class DraftController < ApplicationController
     @draft = current_user.calendar_drafts.find(params[:id])
   end
 
-  def render_calendar_turbo_stream(draft:)
-    start_date  = parse_start_date(params[:start_date])
+  def render_calendar_turbo_stream(draft:, start_date: nil, include_changes_modal: false)
+    start_date  = start_date || parse_start_date(params[:start_date])
     week_start  = start_date.beginning_of_week
     range_start = week_start.beginning_of_day
     range_end   = (week_start + 6.days).end_of_day
@@ -121,6 +156,14 @@ class DraftController < ApplicationController
         locals: { start_date: start_date.iso8601, active_draft: draft }
       )
     ]
+    if include_changes_modal
+      rows = draft.present? ? build_change_rows(draft.operations) : []
+      streams << turbo_stream.replace(
+        "draft_changes_modal",
+        partial: "draft/changes_modal",
+        locals: { draft: draft, rows: rows, start_date: start_date.iso8601 }
+      )
+    end
 
     respond_to do |format|
       format.turbo_stream { render turbo_stream: streams }
@@ -139,6 +182,32 @@ class DraftController < ApplicationController
     session.delete(:active_calendar_draft_id)
     @current_user_draft = nil
     @current_user_drafts = nil
+  end
+
+  def build_change_rows(operations)
+    operations.each_with_index.map do |op, idx|
+      type   = op["type"].to_s
+      model  = op["model"].to_s
+      data   = op["data"] || {}
+      record = op["id"].present? ? draft_record_for(model, op["id"]) : nil
+
+      {
+        index: idx,
+        id: op["id"] || op["temp_id"] || "op_#{idx}",
+        action: type,
+        model: model,
+        color: data["color"].presence || record&.try(:color).presence,
+        title: data["title"].presence || record&.title
+      }
+    end
+  end
+
+  def draft_record_for(model, id)
+    case model
+    when "event" then current_user.events.find_by(id: id)
+    when "course" then current_user.courses.find_by(id: id)
+    when "shift" then current_user.work_shifts.find_by(id: id)
+    end
   end
 
   def parse_start_date(raw)

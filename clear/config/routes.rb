@@ -102,11 +102,14 @@ Rails.application.routes.draw do
 
   post   "dashboard/draft",         to: "draft#enter",   as: :enter_draft
   post   "dashboard/draft/create",  to: "draft#create",  as: :create_draft
+  get    "dashboard/draft/changes", to: "draft#changes", as: :draft_changes
+  patch  "dashboard/draft/restore", to: "draft#restore", as: :draft_restore
   patch  "dashboard/draft/apply",   to: "draft#apply",   as: :apply_draft
   delete "dashboard/draft",         to: "draft#discard", as: :discard_draft
   patch  "dashboard/draft/exit",    to: "draft#exit",    as: :exit_draft
   patch  "dashboard/draft/:id/name", to: "draft#rename",  as: :rename_draft
   delete "dashboard/draft/:id",     to: "draft#destroy", as: :delete_draft
+
 
   get "projects/join", to: "projects#join", as: :join_project
   get "/ui",             to: "ui#show"

@@ -42,6 +42,21 @@ class CalendarDraft < ApplicationRecord
     end
   end
 
+  # Lightweight struct used to represent draft-created shifts in the calendar preview.
+  DraftShiftProxy = Struct.new(
+    :temp_id, :title, :start_date, :start_time, :end_time, :color, :location, :description,
+    :recurring, :repeat_until,
+    keyword_init: true
+  ) do
+    def id = temp_id
+    def model_name = WorkShift.model_name
+    def recurring = false
+
+    def contrast_text_color
+      WorkShift.new(color: color.presence || "#34D399").contrast_text_color
+    end
+  end
+
   # --------------------------------------------------------------------------
   # Mutation helpers
   # --------------------------------------------------------------------------
@@ -90,6 +105,12 @@ class CalendarDraft < ApplicationRecord
           when "update" then user.courses.find(op["id"]).update!(op["data"].symbolize_keys)
           when "delete" then user.courses.find(op["id"]).destroy!
           end
+        when "shift"
+          case op["type"]
+          when "create" then user.work_shifts.create!(op["data"].symbolize_keys)
+          when "update" then user.work_shifts.find(op["id"]).update!(op["data"].symbolize_keys)
+          when "delete" then user.work_shifts.find(op["id"]).destroy!
+          end
         end
       end
     end
@@ -131,9 +152,21 @@ class CalendarDraft < ApplicationRecord
 
     course_create_ops = operations.select { |op| op["type"] == "create" && op["model"] == "course" }
 
+    # ── Workshifts draft ops ──
+    shift_deleted_ids = operations
+      .select { |op| op["type"] == "delete" && op["model"] == "shift" }
+      .map { |op| op["id"] }
+
+    shift_update_ops = operations
+      .select { |op| op["type"] == "update" && op["model"] == "shift" }
+      .index_by { |op| op["id"] }
+
+    shift_create_ops = operations.select { |op| op["type"] == "create" && op["model"] == "shift" }
+
     # Build updated objects once per record id, not once per occurrence
     updated_event_cache  = {}
     updated_course_cache = {}
+    updated_shift_cache = {}
 
     result = occurrences.map do |occ|
       record = occ.respond_to?(:event) ? occ.event : occ
@@ -203,8 +236,31 @@ class CalendarDraft < ApplicationRecord
 
           next Course::Occurrence.new(event: updated, starts_at: new_start, ends_at: new_end, draft_status: "updated")
         end
-      end
+      elsif model == "work_shift"
+        if shift_deleted_ids.include?(record.id)
+          next WorkShift::Occurrence.new(
+            event: record, starts_at: occ.starts_at, ends_at: occ.ends_at,
+            draft_status: "deleted"
+          )
+        end
 
+        if (update_op = shift_update_ops[record.id])
+          updated = updated_shift_cache[record.id] ||= begin
+            ws = WorkShift.new(record.attributes.except("id", "created_at", "updated_at").merge(update_op["data"]))
+            ws.id = record.id
+            ws.instance_variable_set(:@new_record, false)
+            ws
+          end
+
+          occ_date  = occ.starts_at.to_date
+          new_start = Time.zone.local(occ_date.year, occ_date.month, occ_date.day,
+                                      updated.start_time.hour, updated.start_time.min, updated.start_time.sec)
+          new_end   = Time.zone.local(occ_date.year, occ_date.month, occ_date.day,
+                                      updated.end_time.hour, updated.end_time.min, updated.end_time.sec)
+
+          next WorkShift::Occurrence.new(event: updated, starts_at: new_start, ends_at: new_end, draft_status: "updated")
+        end
+      end
       occ
     end.compact
 
@@ -276,6 +332,37 @@ class CalendarDraft < ApplicationRecord
         end
         d += 1.day
       end
+    end
+
+    # ── Draft-created shifts ──
+    shift_create_ops.each do |op|
+      data = op["data"].symbolize_keys
+      start_date = data[:start_date].present? ? (Date.parse(data[:start_date].to_s) rescue nil) : nil
+      start_time = Time.zone.parse(data[:start_time].to_s) rescue nil
+      end_time   = Time.zone.parse(data[:end_time].to_s) rescue nil
+      next unless start_date && start_time && end_time
+      next if start_date < range_start.to_date || start_date > range_end.to_date
+
+      proxy = DraftShiftProxy.new(
+        temp_id: op["temp_id"],
+        title: data[:title].presence || "(Draft Shift)",
+        start_date: start_date,
+        start_time: start_time,
+        end_time: end_time,
+        color: data[:color].presence || "#34D399",
+        location: data[:location],
+        description: data[:description]
+      )
+
+      occ_start = Time.zone.local(start_date.year, start_date.month, start_date.day,
+                                  start_time.hour, start_time.min, start_time.sec)
+      occ_end   = Time.zone.local(start_date.year, start_date.month, start_date.day,
+                                  end_time.hour, end_time.min, end_time.sec)
+
+      result << WorkShift::Occurrence.new(
+        event: proxy, starts_at: occ_start, ends_at: occ_end,
+        draft_status: "created"
+      )
     end
 
     result.sort_by(&:starts_at)
