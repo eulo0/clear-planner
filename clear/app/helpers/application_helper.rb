@@ -16,7 +16,7 @@ module ApplicationHelper
   end.freeze
 
   def compare_options_for_select(drafts)
-    [["Current Calendar", "current"]] + drafts.map { |d| [d.name, d.id.to_s] }
+    [ [ "Current Calendar", "current" ] ] + drafts.map { |d| [ d.name, d.id.to_s ] }
   end
 
   def rgba(hex, alpha)

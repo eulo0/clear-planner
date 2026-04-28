@@ -84,14 +84,14 @@ class AnalyticsController < ApplicationController
 
     daily_stats = @days.map do |day|
       timed_occs    = occurrences.select { |o| !o.is_a?(CourseItem) && o.starts_at.to_date == day }
-      timed_minutes = timed_occs.sum { |o| o.ends_at && o.starts_at ? [(o.ends_at - o.starts_at) / 60.0, 0].max.to_i : 0 }
+      timed_minutes = timed_occs.sum { |o| o.ends_at && o.starts_at ? [ (o.ends_at - o.starts_at) / 60.0, 0 ].max.to_i : 0 }
       day_deadlines = occurrences.count { |o| o.is_a?(CourseItem) && o.starts_at.to_date == day }
       {
         date:       day,
         minutes:    timed_minutes,
         item_count: timed_occs.count,
         deadlines:  day_deadlines,
-        pct:        [(timed_minutes.to_f / MAX_DAILY_MINUTES * 100), 100].min.round(1)
+        pct:        [ (timed_minutes.to_f / MAX_DAILY_MINUTES * 100), 100 ].min.round(1)
       }
     end
 
