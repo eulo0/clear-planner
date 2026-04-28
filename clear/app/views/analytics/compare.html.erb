@@ -1,0 +1,292 @@
+<% content_for :page_title, "Analytics" %>
+<% content_for :page_subtitle, "Week of #{@week_start.strftime("%b %-d")} – #{@week_end.strftime("%b %-d, %Y")}" %>
+
+<style>
+  @keyframes bar-grow { from { width: 0%; } }
+  .analytics-bar {
+    animation: bar-grow 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+</style>
+
+<!-- Tabs -->
+<div class="flex gap-1 mb-5 rounded-xl p-1 w-fit" style="background-color: var(--studs-panel-bg); border: 1px solid var(--studs-border);">
+  <%= link_to "This Week", analytics_path,
+        class: "rounded-lg px-4 py-1.5 text-sm font-medium text-zinc-400 hover:text-zinc-200 transition-colors" %>
+  <span class="rounded-lg px-4 py-1.5 text-sm font-semibold text-zinc-100"
+        style="background-color: var(--studs-panel-bg-2); box-shadow: 0 1px 3px rgba(0,0,0,0.3);">
+    Compare
+  </span>
+</div>
+
+<div data-controller="analytics-draft"
+     data-analytics-draft-url-value="<%= analytics_compare_path(left: @left_id, right: @right_id) %>">
+<%= turbo_frame_tag "analytics_content" do %>
+
+<% if @all_drafts.empty? %>
+  <!-- Empty state -->
+  <div class="rounded-2xl p-12 flex flex-col items-center justify-center text-center"
+       style="border: 1px solid var(--studs-border); background-color: var(--studs-panel-bg);">
+    <p class="text-4xl opacity-20 mb-4">⚖️</p>
+    <p class="text-sm font-semibold text-zinc-300 mb-1">No drafts to compare</p>
+    <p class="text-xs text-zinc-500">Create a draft on the calendar to compare schedules here.</p>
+  </div>
+<% else %>
+
+<!-- Selector form -->
+<% compare_dropdown_items = compare_options_for_select(@all_drafts).map { |label, value| { label: label, value: value } } %>
+<%= form_with url: analytics_compare_path, method: :get, class: "mb-5", data: { controller: "analytics-compare", action: "dropdown:select->analytics-compare#submit" } do |f| %>
+  <div class="flex items-center gap-3 flex-wrap">
+    <div class="flex-1 min-w-0">
+      <%= render Studs::DropdownComponent.new(
+        label: "Current Calendar",
+        items: compare_dropdown_items,
+        name: "left",
+        selected_value: @left_id,
+        variant: :analytics_compare
+      ) %>
+    </div>
+
+    <span class="text-xs font-bold text-zinc-500 shrink-0">vs</span>
+
+    <div class="flex-1 min-w-0">
+      <%= render Studs::DropdownComponent.new(
+        label: "Current Calendar",
+        items: compare_dropdown_items,
+        name: "right",
+        selected_value: @right_id,
+        variant: :analytics_compare
+      ) %>
+    </div>
+  </div>
+<% end %>
+
+<!-- Stat comparison cards -->
+<%
+  stat_rows = [
+    { label: "Events",          color: "#60a5fa", left: @left_stats[:event_count],    right: @right_stats[:event_count] },
+    { label: "Course Sessions", color: "#34d399", left: @left_stats[:course_count],   right: @right_stats[:course_count] },
+    { label: "Work Shifts",     color: "#a78bfa", left: @left_stats[:shift_count],    right: @right_stats[:shift_count] },
+    { label: "Deadlines",       color: "#fbbf24", left: @left_stats[:deadline_count], right: @right_stats[:deadline_count] },
+  ]
+%>
+<div class="grid grid-cols-2 gap-4 mb-4 lg:grid-cols-4">
+  <% stat_rows.each do |row| %>
+    <% delta = row[:right] - row[:left] %>
+    <div class="rounded-2xl p-4" style="border: 1px solid var(--studs-border); background-color: var(--studs-panel-bg);">
+      <div class="flex items-center gap-2 mb-3">
+        <span class="h-2 w-2 rounded-full shrink-0" style="background-color: <%= row[:color] %>;"></span>
+        <p class="text-xs font-semibold text-zinc-400 truncate"><%= row[:label] %></p>
+      </div>
+      <!-- Left value -->
+      <div class="flex items-baseline gap-1 mb-1">
+        <span class="text-[10px] font-semibold text-zinc-500 w-12 shrink-0 truncate"><%= @left_label.truncate(10) %></span>
+        <span class="text-lg font-bold text-zinc-300"><%= row[:left] %></span>
+      </div>
+      <!-- Right value + delta -->
+      <div class="flex items-baseline gap-1.5 pt-2" style="border-top: 1px solid var(--studs-divider);">
+        <span class="text-[10px] font-semibold text-zinc-500 w-12 shrink-0 truncate"><%= @right_label.truncate(10) %></span>
+        <span class="text-xl font-bold text-zinc-100"><%= row[:right] %></span>
+        <% if delta > 0 %>
+          <span class="text-xs font-bold text-emerald-300 bg-emerald-500/15 rounded px-1.5 py-px ml-auto">+<%= delta %></span>
+        <% elsif delta < 0 %>
+          <span class="text-xs font-bold text-red-300 bg-red-500/15 rounded px-1.5 py-px ml-auto"><%= delta %></span>
+        <% else %>
+          <span class="text-xs font-medium text-zinc-600 ml-auto">&mdash;</span>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+</div>
+
+<!-- Time + busiest day + week load -->
+<div class="grid grid-cols-1 gap-4 mb-4 lg:grid-cols-2">
+
+  <!-- Scheduled time + week load -->
+  <div class="rounded-2xl p-5" style="border: 1px solid var(--studs-border); background-color: var(--studs-panel-bg);">
+    <p class="text-xs font-semibold text-zinc-400 mb-3">Scheduled Time</p>
+    <%
+      lh = @left_stats[:total_minutes] / 60;  lm = @left_stats[:total_minutes] % 60
+      rh = @right_stats[:total_minutes] / 60; rm = @right_stats[:total_minutes] % 60
+      td = @right_stats[:total_minutes] - @left_stats[:total_minutes]
+      ah = td.abs / 60; am = td.abs % 60
+      l_str  = lh > 0 ? "#{lh}h#{lm > 0 ? " #{lm}m" : ""}" : "#{lm}m"
+      r_str  = rh > 0 ? "#{rh}h#{rm > 0 ? " #{rm}m" : ""}" : "#{rm}m"
+      td_str = (td > 0 ? "+" : "-") + (ah > 0 ? "#{ah}h#{am > 0 ? " #{am}m" : ""}" : "#{am}m")
+    %>
+    <div class="flex items-center gap-2 mb-3 flex-wrap">
+      <span class="text-base font-bold text-zinc-400"><%= l_str %></span>
+      <span class="text-zinc-600 text-sm">&rarr;</span>
+      <span class="text-xl font-bold text-zinc-100"><%= r_str %></span>
+      <% if td != 0 %>
+        <span class="text-xs font-bold rounded-md px-1.5 py-0.5 <%= td > 0 ? 'text-emerald-300 bg-emerald-500/15' : 'text-red-300 bg-red-500/15' %>"><%= td_str %></span>
+      <% end %>
+    </div>
+
+    <!-- Week load bars -->
+    <% l_week_pct = [(@left_stats[:total_minutes].to_f  / (AnalyticsController::MAX_DAILY_MINUTES * 5) * 100), 100].min.round(1) %>
+    <% r_week_pct = [(@right_stats[:total_minutes].to_f / (AnalyticsController::MAX_DAILY_MINUTES * 5) * 100), 100].min.round(1) %>
+    <div class="space-y-1.5">
+      <div class="flex items-center gap-1.5">
+        <span class="text-[9px] font-semibold text-zinc-500 w-16 shrink-0 truncate text-right"><%= @left_label.truncate(10) %></span>
+        <div class="flex-1 h-2 rounded-full overflow-hidden" style="background-color: var(--studs-border);">
+          <div class="analytics-bar h-full rounded-full"
+               style="width: <%= l_week_pct %>%;
+                      background-color: <%= l_week_pct >= 80 ? '#ef4444' : l_week_pct >= 50 ? '#f59e0b' : 'var(--studs-accent)' %>;
+                      opacity: 0.5;"></div>
+        </div>
+        <span class="text-[10px] font-medium text-zinc-500 w-8 shrink-0 text-right"><%= l_week_pct.round %>%</span>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <span class="text-[9px] font-semibold text-zinc-400 w-16 shrink-0 truncate text-right"><%= @right_label.truncate(10) %></span>
+        <div class="flex-1 h-2 rounded-full overflow-hidden" style="background-color: var(--studs-border);">
+          <div class="analytics-bar h-full rounded-full"
+               style="width: <%= r_week_pct %>%;
+                      background-color: <%= r_week_pct >= 80 ? '#ef4444' : r_week_pct >= 50 ? '#f59e0b' : 'var(--studs-accent)' %>;"></div>
+        </div>
+        <span class="text-[10px] font-medium text-zinc-400 w-8 shrink-0 text-right"><%= r_week_pct.round %>%</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Busiest day + total items -->
+  <div class="rounded-2xl p-5" style="border: 1px solid var(--studs-border); background-color: var(--studs-panel-bg);">
+    <p class="text-xs font-semibold text-zinc-400 mb-3">Busiest Day</p>
+    <% l_busy = @left_stats[:busiest_day];  r_busy = @right_stats[:busiest_day] %>
+    <% l_busy_name = l_busy&.dig(:minutes).to_i > 0 ? l_busy[:date].strftime("%A") : "None" %>
+    <% r_busy_name = r_busy&.dig(:minutes).to_i > 0 ? r_busy[:date].strftime("%A") : "None" %>
+    <div class="flex items-center gap-2 flex-wrap mb-4">
+      <span class="text-base font-bold text-zinc-400"><%= l_busy_name %></span>
+      <span class="text-zinc-600 text-sm">&rarr;</span>
+      <span class="text-xl font-bold text-zinc-100"><%= r_busy_name %></span>
+      <% if l_busy_name != r_busy_name %>
+        <span class="text-xs font-bold rounded-md px-1.5 py-0.5 text-amber-300 bg-amber-500/15">changed</span>
+      <% end %>
+    </div>
+
+    <p class="text-xs font-semibold text-zinc-400 mb-2">Total Items</p>
+    <% total_delta = @right_stats[:total_count] - @left_stats[:total_count] %>
+    <div class="flex items-center gap-2 flex-wrap">
+      <span class="text-base font-bold text-zinc-400"><%= @left_stats[:total_count] %></span>
+      <span class="text-zinc-600 text-sm">&rarr;</span>
+      <span class="text-xl font-bold text-zinc-100"><%= @right_stats[:total_count] %></span>
+      <% if total_delta > 0 %>
+        <span class="text-xs font-bold text-emerald-300 bg-emerald-500/15 rounded px-1.5 py-0.5">+<%= total_delta %></span>
+      <% elsif total_delta < 0 %>
+        <span class="text-xs font-bold text-red-300 bg-red-500/15 rounded px-1.5 py-0.5"><%= total_delta %></span>
+      <% end %>
+    </div>
+  </div>
+</div>
+
+<!-- Daily load comparison -->
+<div class="rounded-2xl p-6" style="border: 1px solid var(--studs-border); background-color: var(--studs-panel-bg);">
+  <div class="flex items-center justify-between mb-5">
+    <h2 class="text-sm font-semibold text-zinc-100">Daily Load Comparison</h2>
+    <div class="flex items-center gap-3 text-[10px] font-medium">
+      <span class="flex items-center gap-1.5 text-zinc-500">
+        <span class="inline-block h-2 w-3 rounded-sm opacity-45" style="background: var(--studs-accent);"></span>
+        <%= @left_label.truncate(14) %>
+      </span>
+      <span class="flex items-center gap-1.5 text-zinc-300">
+        <span class="inline-block h-2 w-3 rounded-sm" style="background: var(--studs-accent);"></span>
+        <%= @right_label.truncate(14) %>
+      </span>
+    </div>
+  </div>
+
+  <div class="space-y-4">
+    <% @days.each_with_index do |day, i| %>
+      <% l_stat = @left_stats[:daily_stats][i] %>
+      <% r_stat = @right_stats[:daily_stats][i] %>
+      <% is_today = day == Date.current %>
+      <%
+        item_delta = r_stat[:item_count] - l_stat[:item_count]
+        dl_delta   = r_stat[:deadlines]  - l_stat[:deadlines]
+        l_bar_css  = l_stat[:pct] >= 75 ? "background:#ef4444;" : l_stat[:pct] >= 50 ? "background:#f59e0b;" : "background:var(--studs-accent);"
+        r_bar_css  = r_stat[:pct] >= 75 ? "background:#ef4444;" : r_stat[:pct] >= 50 ? "background:#f59e0b;" : "background:var(--studs-accent);"
+        pct_delta  = (r_stat[:pct] - l_stat[:pct]).round
+      %>
+
+      <div class="flex items-start gap-3">
+        <!-- Day label -->
+        <div class="w-12 shrink-0 text-right leading-tight pt-1">
+          <span class="text-xs font-bold <%= is_today ? 'text-zinc-100' : 'text-zinc-300' %>"><%= day.strftime("%a") %></span>
+          <% if is_today %>
+            <span class="block text-[9px] font-bold" style="color: var(--studs-accent);">TODAY</span>
+          <% else %>
+            <span class="block text-[9px] text-zinc-500"><%= day.strftime("%-d") %></span>
+          <% end %>
+        </div>
+
+        <!-- Stacked bars -->
+        <div class="flex-1 min-w-0 space-y-1.5">
+          <!-- Left bar -->
+          <div class="flex items-center gap-2">
+            <span class="text-[9px] font-semibold text-zinc-500 w-16 shrink-0 text-right truncate"><%= @left_label.truncate(10) %></span>
+            <div class="relative flex-1 h-4 rounded-full overflow-hidden" style="background-color: var(--studs-panel-bg-2);">
+              <% if l_stat[:pct] > 0 %>
+                <div class="analytics-bar absolute inset-y-0 left-0 rounded-full"
+                     style="width: <%= [l_stat[:pct], 100].min %>%; <%= l_bar_css %> opacity: 0.45;"></div>
+              <% end %>
+            </div>
+            <span class="text-[10px] font-medium text-zinc-600 w-8 shrink-0 text-right">
+              <%= l_stat[:pct] > 0 ? "#{l_stat[:pct].round}%" : "" %>
+            </span>
+          </div>
+
+          <!-- Right bar -->
+          <div class="flex items-center gap-2">
+            <span class="text-[9px] font-semibold text-zinc-400 w-16 shrink-0 text-right truncate"><%= @right_label.truncate(10) %></span>
+            <div class="relative flex-1 h-4 rounded-full overflow-hidden" style="background-color: var(--studs-panel-bg-2);">
+              <% if r_stat[:pct] > 0 %>
+                <div class="analytics-bar absolute inset-y-0 left-0 rounded-full"
+                     style="width: <%= [r_stat[:pct], 100].min %>%; <%= r_bar_css %>"></div>
+              <% end %>
+            </div>
+            <span class="text-[10px] font-medium w-8 shrink-0 text-right
+                         <%= pct_delta > 0 ? 'text-emerald-400' : pct_delta < 0 ? 'text-red-400' : 'text-zinc-500' %>">
+              <%= r_stat[:pct] > 0 ? "#{r_stat[:pct].round}%" : "" %>
+            </span>
+          </div>
+
+          <!-- Change pills -->
+          <% if item_delta != 0 || dl_delta != 0 %>
+            <div class="flex items-center gap-2 pl-18">
+              <% if item_delta != 0 %>
+                <span class="text-[10px] font-medium rounded px-1.5 py-px
+                             <%= item_delta > 0 ? 'text-emerald-300 bg-emerald-500/12' : 'text-red-300 bg-red-500/12' %>">
+                  <%= item_delta > 0 ? "+#{item_delta}" : item_delta %> item<%= item_delta.abs == 1 ? "" : "s" %>
+                </span>
+              <% end %>
+              <% if dl_delta != 0 %>
+                <span class="text-[10px] font-medium rounded px-1.5 py-px text-amber-300 bg-amber-500/12">
+                  <%= dl_delta > 0 ? "+#{dl_delta}" : dl_delta %> deadline<%= dl_delta.abs == 1 ? "" : "s" %>
+                </span>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+
+  <!-- Legend -->
+  <div class="mt-5 flex flex-wrap items-center gap-x-4 gap-y-1 pt-4" style="border-top: 1px solid var(--studs-divider);">
+    <div class="flex items-center gap-1.5">
+      <span class="inline-block h-2 w-4 rounded-full" style="background: var(--studs-accent);"></span>
+      <span class="text-xs font-medium text-zinc-400">&lt; 50% — light</span>
+    </div>
+    <div class="flex items-center gap-1.5">
+      <span class="inline-block h-2 w-4 rounded-full bg-amber-400"></span>
+      <span class="text-xs font-medium text-zinc-400">50–75% — moderate</span>
+    </div>
+    <div class="flex items-center gap-1.5">
+      <span class="inline-block h-2 w-4 rounded-full bg-red-400"></span>
+      <span class="text-xs font-medium text-zinc-400">&gt; 75% — heavy</span>
+    </div>
+  </div>
+</div>
+
+<% end %>
+<% end %>
+</div>

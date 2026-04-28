@@ -19,6 +19,12 @@ application.register("ai-chat-drawer", AiChatDrawerController)
 import AiUsageController from "./ai_usage_controller"
 application.register("ai-usage", AiUsageController)
 
+import AnalyticsCompareController from "./analytics_compare_controller"
+application.register("analytics-compare", AnalyticsCompareController)
+
+import AnalyticsDraftController from "./analytics_draft_controller"
+application.register("analytics-draft", AnalyticsDraftController)
+
 import AutoScheduleToggleController from "./auto_schedule_toggle_controller"
 application.register("auto-schedule-toggle", AutoScheduleToggleController)
 

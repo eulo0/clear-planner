@@ -15,6 +15,10 @@ module ApplicationHelper
     [ label, minutes ]
   end.freeze
 
+  def compare_options_for_select(drafts)
+    [ [ "Current Calendar", "current" ] ] + drafts.map { |d| [ d.name, d.id.to_s ] }
+  end
+
   def rgba(hex, alpha)
     h = hex.to_s.delete("#")
     return "rgba(52,211,153,#{alpha})" unless h.match?(/\A\h{6}\z/)
