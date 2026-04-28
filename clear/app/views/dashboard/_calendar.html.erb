@@ -591,8 +591,10 @@
                 "#{draft_style_extra}"
               %>
               <% highlight_id = "#{model}-#{record.id}-#{seg[:seg_start].to_date.iso8601}" %>
+              <% draft_created_editable = is_draft_created && (model == "event" || model == "course" || model == "work_shift") %>
+              <% popover_enabled = !is_draft_deleted && (!is_draft_created || draft_created_editable) %>
               <% href =
-                if is_draft_created || is_draft_deleted
+                if is_draft_deleted
                   "#"
                 elsif is_due
                   course_course_item_path(record.course, record, start_date: seg[:seg_start].to_date)
@@ -608,8 +610,8 @@
                 data: {
                   calendar_event: true,
                   event_starts_at: event_starts_epoch,
-                  turbo_frame: (is_draft_created || is_draft_deleted) ? nil : "event_popover",
-                  action: (is_draft_created || is_draft_deleted) ? nil : "click->agenda-highlight#selectFromCalendar click->event-popover#show",
+                  turbo_frame: popover_enabled ? "event_popover" : nil,
+                  action: popover_enabled ? "click->agenda-highlight#selectFromCalendar click->event-popover#show" : nil,
                   turbo_prefetch: false
                 } do %>
                 <% badge_inline_style =

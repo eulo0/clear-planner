@@ -1,4 +1,5 @@
 <%= turbo_frame_tag "event_popover" do %>
+  <% event_identifier = local_assigns[:event_identifier] || event %>
   <% start_at = event.starts_at&.in_time_zone %>
   <% end_at   = event.ends_at&.in_time_zone %>
 
@@ -70,7 +71,7 @@
 
   <!-- Actions -->
   <div class="flex items-center gap-2 px-4 pb-3 pt-1 border-t border-zinc-800">
-    <%= link_to edit_event_path(event, start_date: start_date),
+    <%= link_to edit_event_path(event_identifier, start_date: start_date),
           data: { turbo: false },
           class: "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-zinc-200 hover:bg-zinc-800 transition" do %>
       <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -100,13 +101,13 @@
           class="hidden absolute bottom-full left-0 mb-1 w-52 rounded-lg border border-zinc-700 py-1 z-50"
           style="background-color: #18181b; box-shadow: 0 8px 30px rgba(0,0,0,0.7);">
 
-          <%= button_to event_path(event, start_date: start_date, scope: "single"),
+          <%= button_to event_path(event_identifier, start_date: start_date, scope: "single"),
                 method: :delete,
                 class: "w-full text-left px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-800 transition" do %>
             This event only
           <% end %>
 
-          <%= button_to event_path(event, start_date: start_date, scope: "all"),
+          <%= button_to event_path(event_identifier, start_date: start_date, scope: "all"),
                 method: :delete,
                 class: "w-full text-left px-3 py-2 text-sm text-rose-300 hover:bg-rose-950/40 transition",
                 form: { data: { turbo_confirm: "Delete all occurrences of this event?" } } do %>
@@ -115,7 +116,7 @@
         </div>
       </div>
     <% else %>
-      <%= button_to event_path(event, start_date: start_date),
+      <%= button_to event_path(event_identifier, start_date: start_date),
             method: :delete,
             class: "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-rose-300 hover:bg-rose-950/40 transition",
             form: { data: { turbo_confirm: "Delete this event?" } } do %>

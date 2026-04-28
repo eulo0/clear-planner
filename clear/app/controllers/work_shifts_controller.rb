@@ -23,7 +23,7 @@ class WorkShiftsController < ApplicationController
     end
 
     render partial: partial,
-           locals: { work_shift: @work_shift, start_date: params[:start_date] }
+           locals: { work_shift: @work_shift, start_date: params[:start_date], work_shift_identifier: (@draft_temp_id || @work_shift) }
   end
 
   def new
@@ -49,10 +49,19 @@ class WorkShiftsController < ApplicationController
     return unless turbo_frame_request?
 
     render partial: "work_shifts/drawer_edit",
-           locals: { work_shift: @work_shift, start_date: params[:start_date] }
+           locals: { work_shift: @work_shift, start_date: params[:start_date], work_shift_identifier: (@draft_temp_id || @work_shift) }
   end
 
   def update
+    if @draft_temp_id.present?
+      unless current_user_draft&.update_create("shift", @draft_temp_id, work_shift_params.to_h)
+        redirect_to dashboard_path, alert: "Draft shift was not found."
+        return
+      end
+
+      return render_draft_calendar_update
+    end
+
     if in_draft_mode?
       current_user_draft.add_update("shift", @work_shift.id, work_shift_params.to_h)
       return render_draft_calendar_update
@@ -105,6 +114,15 @@ class WorkShiftsController < ApplicationController
   end
 
   def destroy
+    if @draft_temp_id.present?
+      unless current_user_draft&.delete_create("shift", @draft_temp_id)
+        redirect_to dashboard_path, alert: "Draft shift was not found."
+        return
+      end
+
+      return render_draft_calendar_update
+    end
+
     if in_draft_mode?
       current_user_draft.add_delete("shift", @work_shift.id)
       return render_draft_calendar_update
@@ -179,7 +197,27 @@ class WorkShiftsController < ApplicationController
   end
 
   def set_work_shift
+    if in_draft_mode? && params[:id].to_s.start_with?("d_")
+      op = current_user_draft&.find_create_op("shift", params[:id])
+      unless op
+        redirect_to dashboard_path, alert: "Draft shift was not found."
+        return
+      end
+
+      @draft_temp_id = params[:id]
+      @work_shift = WorkShift.new(op.fetch("data", {}))
+      return
+    end
+
     @work_shift = current_user.work_shifts.find(params[:id])
+    apply_draft_work_shift_update! if in_draft_mode?
+  end
+
+  def apply_draft_work_shift_update!
+    op = current_user_draft&.find_update_op("shift", @work_shift.id)
+    return unless op
+
+    @work_shift.assign_attributes(op.fetch("data", {}))
   end
 
   def work_shift_params

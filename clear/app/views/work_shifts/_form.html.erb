@@ -1,10 +1,23 @@
+<% start_date_param = local_assigns[:start_date].presence || params[:start_date].presence %>
 <% turbo_enabled = local_assigns.key?(:turbo) ? local_assigns[:turbo] : true %>
 <% cancel_drawer = local_assigns[:cancel_drawer] %>
-<% form_url = work_shift.persisted? ? work_shift_path(work_shift) : work_shifts_path %>
+<% work_shift_identifier = local_assigns[:work_shift_identifier] %>
+<% draft_temp_shift = work_shift_identifier.to_s.start_with?("d_") %>
+<% form_url =
+    if draft_temp_shift
+      start_date_param ? work_shift_path(work_shift_identifier, start_date: start_date_param) : work_shift_path(work_shift_identifier)
+    elsif work_shift.persisted?
+      start_date_param ? work_shift_path(work_shift, start_date: start_date_param) : work_shift_path(work_shift)
+    else
+      start_date_param ? work_shifts_path(start_date: start_date_param) : work_shifts_path
+    end
+%>
 <%= form_with model: work_shift,
               url: form_url,
+              method: (draft_temp_shift ? :patch : nil),
               class: "space-y-5",
               data: { turbo: turbo_enabled, controller: "duration-fill" } do |f| %>
+  <%= hidden_field_tag :start_date, start_date_param if start_date_param.present? %>
   <% if work_shift.errors.any? %>
     <div class="rounded-2xl p-4 text-red-300"
          style="border: 1px solid rgba(239,68,68,0.3); background-color: rgba(127,29,29,0.2);">
@@ -131,7 +144,7 @@
       <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
         <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
       </svg>
-      <%= work_shift.persisted? ? "Update shift" : "Create shift" %>
+      <%= (work_shift.persisted? || draft_temp_shift) ? "Update shift" : "Create shift" %>
     </button>
     <% if cancel_drawer %>
       <button type="button" class="studs-nav-btn" data-action="drawer#close">Cancel</button>

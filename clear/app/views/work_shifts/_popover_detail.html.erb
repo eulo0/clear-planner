@@ -1,4 +1,5 @@
 <%= turbo_frame_tag "event_popover" do %>
+  <% work_shift_identifier = local_assigns[:work_shift_identifier] || work_shift %>
   <!-- Header -->
   <div class="flex items-center justify-between gap-3 px-4 pt-3 pb-2">
     <div class="flex items-center gap-2 min-w-0">
@@ -65,7 +66,7 @@
 
   <!-- Actions -->
   <div class="flex items-center gap-2 px-4 pb-3 pt-1 border-t border-zinc-800">
-    <%= link_to edit_work_shift_path(work_shift),
+    <%= link_to edit_work_shift_path(work_shift_identifier),
           data: { turbo: false },
           class: "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-zinc-200 hover:bg-zinc-800 transition" do %>
       <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -74,7 +75,7 @@
       Edit
     <% end %>
 
-    <%= button_to work_shift_path(work_shift),
+    <%= button_to work_shift_path(work_shift_identifier),
           method: :delete,
           class: "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-rose-300 hover:bg-rose-950/40 transition",
           form: { data: { turbo_confirm: "Delete this shift?" } } do %>

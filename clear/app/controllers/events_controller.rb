@@ -25,7 +25,7 @@ class EventsController < ApplicationController
     end
 
     render partial: partial,
-           locals: { event: @event, start_date: params[:start_date] }
+           locals: { event: @event, start_date: params[:start_date], event_identifier: (@draft_temp_id || @event) }
   end
 
   def new
@@ -109,10 +109,19 @@ class EventsController < ApplicationController
     return unless turbo_frame_request?
 
     render partial: "events/drawer_edit",
-           locals: { event: @event, start_date: params[:start_date] }
+           locals: { event: @event, start_date: params[:start_date], event_identifier: (@draft_temp_id || @event) }
   end
 
   def update
+    if @draft_temp_id.present?
+      unless current_user_draft&.update_create("event", @draft_temp_id, event_params.to_h)
+        redirect_to dashboard_path, alert: "Draft event was not found."
+        return
+      end
+
+      return render_draft_calendar_update
+    end
+
     project = @event.project
     if in_draft_mode?
       current_user_draft.add_update("event", @event.id, event_params.to_h)
@@ -186,6 +195,15 @@ class EventsController < ApplicationController
   end
 
   def destroy
+    if @draft_temp_id.present?
+      unless current_user_draft&.delete_create("event", @draft_temp_id)
+        redirect_to dashboard_path, alert: "Draft event was not found."
+        return
+      end
+
+      return render_draft_calendar_update
+    end
+
     project =  @event.project
     if in_draft_mode?
       current_user_draft.add_delete("event", @event.id)
@@ -246,7 +264,27 @@ class EventsController < ApplicationController
   private
 
   def set_event
+    if in_draft_mode? && params[:id].to_s.start_with?("d_")
+      op = current_user_draft&.find_create_op("event", params[:id])
+      unless op
+        redirect_to dashboard_path, alert: "Draft event was not found."
+        return
+      end
+
+      @draft_temp_id = params[:id]
+      @event = Event.new(op.fetch("data", {}))
+      return
+    end
+
     @event = current_user.events.find(params[:id])
+    apply_draft_event_update! if in_draft_mode?
+  end
+
+  def apply_draft_event_update!
+    op = current_user_draft&.find_update_op("event", @event.id)
+    return unless op
+
+    @event.assign_attributes(op.fetch("data", {}))
   end
 
   def in_draft_mode?

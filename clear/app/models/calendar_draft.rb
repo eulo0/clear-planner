@@ -20,6 +20,9 @@ class CalendarDraft < ApplicationRecord
     keyword_init: true
   ) do
     def id = temp_id
+    def to_param = temp_id
+    def persisted? = true
+    def to_model = self
     def model_name = Event.model_name
     def recurring = false
 
@@ -35,6 +38,9 @@ class CalendarDraft < ApplicationRecord
     keyword_init: true
   ) do
     def id = temp_id
+    def to_param = temp_id
+    def persisted? = true
+    def to_model = self
     def model_name = Course.model_name
 
     def contrast_text_color
@@ -49,6 +55,9 @@ class CalendarDraft < ApplicationRecord
     keyword_init: true
   ) do
     def id = temp_id
+    def to_param = temp_id
+    def persisted? = true
+    def to_model = self
     def model_name = WorkShift.model_name
     def recurring = false
 
@@ -82,6 +91,49 @@ class CalendarDraft < ApplicationRecord
     # Drop any pending update for this record, then queue the delete
     filtered = operations.reject { |op| op["model"] == model && op["id"] == id }
     update!(operations: filtered + [ { "type" => "delete", "model" => model, "id" => id } ])
+  end
+
+  # For the edit route to work on newly drafted occurrences. Makes d_<id> records.
+  def find_create_op(model, temp_id)
+    operations.find do |op|
+      op["type"] == "create" && op["model"] == model && op["temp_id"].to_s == temp_id.to_s
+    end
+  end
+
+  # Used so the popover doesn't show old values when updated while in Draft Mode
+  def find_update_op(model, id)
+    operations.reverse_each.find do |op|
+      op["type"] == "update" && op["model"] == model && op["id"].to_i == id.to_i
+    end
+  end
+
+  # For being able to edit newly created drafted occurrences
+  def update_create(model, temp_id, data)
+    updated = false
+    next_ops = operations.map do |op|
+      if op["type"] == "create" && op["model"] == model && op["temp_id"].to_s == temp_id.to_s
+        updated = true
+        op.merge("data" => data.stringify_keys)
+      else
+        op
+      end
+    end
+
+    update!(operations: next_ops) if updated
+    updated
+  end
+
+  # For being able to delete created drafted occurrences
+  def delete_create(model, temp_id)
+    removed = false
+    next_ops = operations.reject do |op|
+      match = op["type"] == "create" && op["model"] == model && op["temp_id"].to_s == temp_id.to_s
+      removed ||= match
+      match
+    end
+
+    update!(operations: next_ops) if removed
+    removed
   end
 
   # --------------------------------------------------------------------------

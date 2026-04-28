@@ -21,7 +21,7 @@ class CoursesController < ApplicationController
     end
 
     render partial: partial,
-           locals: { course: @course, start_date: params[:start_date] }
+           locals: { course: @course, start_date: params[:start_date], course_identifier: (@draft_temp_id || @course) }
   end
 
   def new
@@ -82,10 +82,19 @@ class CoursesController < ApplicationController
   def edit
     return unless turbo_frame_request?
 
-    render partial: "courses/drawer_edit", locals: { course: @course, start_date: params[:start_date] }
+    render partial: "courses/drawer_edit", locals: { course: @course, start_date: params[:start_date], course_identifier: (@draft_temp_id || @course) }
   end
 
   def update
+    if @draft_temp_id.present?
+      unless current_user_draft&.update_create("course", @draft_temp_id, course_params.to_h)
+        redirect_to dashboard_path, alert: "Draft course was not found."
+        return
+      end
+
+      return render_draft_calendar_update
+    end
+
     if in_draft_mode?
       current_user_draft.add_update("course", @course.id, course_params.to_h)
       return render_draft_calendar_update
@@ -140,6 +149,15 @@ class CoursesController < ApplicationController
   end
 
   def destroy
+    if @draft_temp_id.present?
+      unless current_user_draft&.delete_create("course", @draft_temp_id)
+        redirect_to dashboard_path, alert: "Draft course was not found."
+        return
+      end
+
+      return render_draft_calendar_update
+    end
+
     if in_draft_mode?
       current_user_draft.add_delete("course", @course.id)
       return render_draft_calendar_update
@@ -180,7 +198,27 @@ class CoursesController < ApplicationController
   private
 
   def set_course
+    if in_draft_mode? && params[:id].to_s.start_with?("d_")
+      op = current_user_draft&.find_create_op("course", params[:id])
+      unless op
+        redirect_to dashboard_path, alert: "Draft course was not found."
+        return
+      end
+
+      @draft_temp_id = params[:id]
+      @course = Course.new(op.fetch("data", {}))
+      return
+    end
+
     @course = current_user.courses.find(params[:id])
+    apply_draft_course_update! if in_draft_mode?
+  end
+
+  def apply_draft_course_update!
+    op = current_user_draft&.find_update_op("course", @course.id)
+    return unless op
+
+    @course.assign_attributes(op.fetch("data", {}))
   end
 
   def in_draft_mode?

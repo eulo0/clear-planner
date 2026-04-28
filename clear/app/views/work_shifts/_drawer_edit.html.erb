@@ -19,7 +19,7 @@
       </div>
     </div>
     <div class="scrollbars min-h-0 flex-1 overflow-y-auto px-6 py-6">
-      <%= render "work_shifts/form", work_shift: work_shift, start_date: start_date, cancel_drawer: true %>
+      <%= render "work_shifts/form", work_shift: work_shift, start_date: start_date, cancel_drawer: true, work_shift_identifier: local_assigns[:work_shift_identifier] %>
     </div>
   </div>
 <% end %>

@@ -1,8 +1,12 @@
 <% start_date_param = local_assigns[:start_date].presence || params[:start_date].presence %>
 <% turbo_enabled = local_assigns.key?(:turbo) ? local_assigns[:turbo] : true %>
 <% cancel_drawer = local_assigns[:cancel_drawer] %>
+<% course_identifier = local_assigns[:course_identifier] %>
+<% draft_temp_course = course_identifier.to_s.start_with?("d_") %>
 <% form_url =
-    if course.persisted?
+    if draft_temp_course
+      start_date_param ? course_path(course_identifier, start_date: start_date_param) : course_path(course_identifier)
+    elsif course.persisted?
       start_date_param ? course_path(course, start_date: start_date_param) : course_path(course)
     else
       start_date_param ? courses_path(start_date: start_date_param) : courses_path
@@ -10,6 +14,7 @@
 %>
 <%= form_with model: course,
               url: form_url,
+              method: (draft_temp_course ? :patch : nil),
               class: "space-y-5",
               data: { turbo: turbo_enabled, controller: "duration-fill" } do |f| %>
   <%= hidden_field_tag :start_date, start_date_param if start_date_param.present? %>
@@ -164,7 +169,7 @@
       <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
         <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
       </svg>
-      <%= course.persisted? ? "Update course" : "Create course" %>
+      <%= (course.persisted? || draft_temp_course) ? "Update course" : "Create course" %>
     </button>
     <% if cancel_drawer %>
       <button type="button" class="studs-nav-btn" data-action="drawer#close">Cancel</button>
