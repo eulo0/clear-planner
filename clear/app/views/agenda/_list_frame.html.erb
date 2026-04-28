@@ -3,7 +3,7 @@
        style="border: 1px solid var(--studs-border); background-color: var(--studs-panel-bg-2);">
     <div class="flex flex-col items-center justify-center py-16 text-center">
       <div class="mb-3 flex items-center justify-center">
-        <span class="text-4xl opacity-30" aria-hidden="true">🗓️</span>
+        <%= icon "calendar-02-stroke-rounded", class: "h-10 w-10 opacity-30 text-zinc-300" %>
       </div>
       <% if params.dig(:q, :term).present? || active_filters.positive? %>
         <p class="text-sm font-medium text-zinc-300">
