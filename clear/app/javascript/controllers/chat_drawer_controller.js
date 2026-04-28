@@ -26,7 +26,7 @@ export default class extends Controller {
 
     this.panelTarget.classList.remove("translate-x-[120%]");
     this.panelTarget.classList.add("translate-x-0");
-    this.panelTarget.style.width = "360px";
+    this.panelTarget.style.width = "600px";
 
     if (!this.frameTarget.src) {
       this.frameTarget.src = this.urlValue;
@@ -62,5 +62,12 @@ export default class extends Controller {
   scrollToBottom() {
     const messages = document.getElementById("project_messages");
     if (messages) messages.scrollTop = messages.scrollHeight;
+  }
+
+  sendOnEnter(event) {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      event.target.closest("form")?.requestSubmit();
+    }
   }
 }

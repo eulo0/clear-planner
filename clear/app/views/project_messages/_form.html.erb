@@ -1,12 +1,20 @@
-<div id="project_message_form" class="px-3 py-3" style="border-top: 1px solid var(--studs-border);">
+<div id="project_message_form" class="shrink-0 px-4 py-3 backdrop-blur"
+     style="border-top: 1px solid var(--studs-border); background-color: var(--studs-panel-header);">
   <%= form_with model: [@project, ProjectMessage.new], data: { turbo_stream: true } do |f| %>
-    <div class="flex gap-2">
+    <div class="flex items-center gap-2">
       <%= f.text_area :body,
-            placeholder: "Send a message...",
+            placeholder: "Send a message… (Shift+Enter for new line)",
             rows: 2,
-            class: "flex-1 rounded-xl px-3 py-2 text-sm text-zinc-100 resize-none",
-            style: "border: 1px solid var(--studs-border); background-color: var(--studs-panel-bg-2);" %>
-      <%= f.submit "Send", class: "studs-nav-btn" %>
+            class: "flex-1 w-full resize-none rounded-2xl px-4 py-3 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none transition",
+            style: "background-color: color-mix(in srgb, var(--studs-panel-bg) 60%, #09090b); border: 1px solid var(--studs-border);",
+            data: { action: "keydown->chat-drawer#sendOnEnter" } %>
+      <button type="submit"
+              class="shrink-0 inline-flex items-center justify-center rounded-xl w-9 h-9 transition hover:brightness-110 focus:outline-none"
+              style="background-color: var(--studs-accent); box-shadow: 0 0 12px color-mix(in srgb, var(--studs-accent) 40%, transparent);">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 19V5m0 0l-7 7m7-7l7 7"/>
+        </svg>
+      </button>
     </div>
   <% end %>
 </div>
