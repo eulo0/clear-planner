@@ -33,24 +33,29 @@
 <% else %>
 
 <!-- Selector form -->
-<%= form_with url: analytics_compare_path, method: :get, class: "mb-5" do |f| %>
+<% compare_dropdown_items = compare_options_for_select(@all_drafts).map { |label, value| { label: label, value: value } } %>
+<%= form_with url: analytics_compare_path, method: :get, class: "mb-5", data: { controller: "analytics-compare", action: "dropdown:select->analytics-compare#submit" } do |f| %>
   <div class="flex items-center gap-3 flex-wrap">
     <div class="flex-1 min-w-0">
-      <%= f.select :left, compare_options_for_select(@all_drafts),
-            { selected: @left_id },
-            class: "w-full rounded-xl px-3 py-2.5 text-sm font-medium text-zinc-100 cursor-pointer focus:outline-none",
-            style: "background-color: var(--studs-panel-bg); border: 1px solid var(--studs-border);",
-            onchange: "this.closest('form').requestSubmit()" %>
+      <%= render Studs::DropdownComponent.new(
+        label: "Current Calendar",
+        items: compare_dropdown_items,
+        name: "left",
+        selected_value: @left_id,
+        variant: :analytics_compare
+      ) %>
     </div>
 
     <span class="text-xs font-bold text-zinc-500 shrink-0">vs</span>
 
     <div class="flex-1 min-w-0">
-      <%= f.select :right, compare_options_for_select(@all_drafts),
-            { selected: @right_id },
-            class: "w-full rounded-xl px-3 py-2.5 text-sm font-medium text-zinc-100 cursor-pointer focus:outline-none",
-            style: "background-color: var(--studs-panel-bg); border: 1px solid var(--studs-border);",
-            onchange: "this.closest('form').requestSubmit()" %>
+      <%= render Studs::DropdownComponent.new(
+        label: "Current Calendar",
+        items: compare_dropdown_items,
+        name: "right",
+        selected_value: @right_id,
+        variant: :analytics_compare
+      ) %>
     </div>
   </div>
 <% end %>

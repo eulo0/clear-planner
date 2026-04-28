@@ -34,6 +34,14 @@ module Studs
           "bg-zinc-950/60 focus:outline-none focus:ring-2 transition-all duration-150 border"
         ].join(" "),
         button_style: "border-color: var(--studs-border); --tw-ring-color: var(--studs-accent);"
+      },
+      analytics_compare: {
+        width: "w-full",
+        wrapper: "relative block w-full dropdown-wrapper",
+        button: [
+          "w-full rounded-xl px-3 py-2.5 text-sm font-medium text-zinc-100 cursor-pointer focus:outline-none"
+        ].join(" "),
+        button_style: "background-color: var(--studs-panel-bg); border: 1px solid var(--studs-border);"
       }
     }.freeze
 
