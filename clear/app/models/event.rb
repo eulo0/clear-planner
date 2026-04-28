@@ -6,6 +6,12 @@ class Event < ApplicationRecord
   has_many :event_exceptions, dependent: :destroy
   has_many :notifications, as: :notifiable, dependent: :destroy
 
+  attr_accessor :auto_schedule
+
+  def auto_schedule?
+    ActiveModel::Type::Boolean.new.cast(auto_schedule)
+  end
+
   validates :title, presence: true
   validates :starts_at, presence: true
   validate :ends_at_after_starts_at, if: -> { starts_at.present? && ends_at.present? }

@@ -19,6 +19,9 @@ application.register("ai-chat-drawer", AiChatDrawerController)
 import AiUsageController from "./ai_usage_controller"
 application.register("ai-usage", AiUsageController)
 
+import AutoScheduleToggleController from "./auto_schedule_toggle_controller"
+application.register("auto-schedule-toggle", AutoScheduleToggleController)
+
 import AvatarCropController from "./avatar_crop_controller"
 application.register("avatar-crop", AvatarCropController)
 

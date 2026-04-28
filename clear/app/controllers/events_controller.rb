@@ -49,7 +49,21 @@ class EventsController < ApplicationController
       @event.project = current_user.projects.find(params[:event][:project_id])
     end
 
-    if @event.save
+    if @event.auto_schedule? && !apply_auto_schedule(@event)
+      respond_to do |format|
+        format.html { render :new, status: :unprocessable_entity }
+        format.turbo_stream do
+          render turbo_stream: turbo_stream.replace(
+            "event_drawer",
+            partial: "events/drawer_edit",
+            locals: { event: @event, start_date: params[:start_date] }
+          ), status: :unprocessable_entity
+        end
+      end
+      return
+    end
+
+    if save_event_with_displacement(@event)
       respond_to do |format|
         format.html { redirect_to event_path(@event), notice: "Event created." }
 
@@ -280,8 +294,73 @@ class EventsController < ApplicationController
   def event_params
     params.require(:event).permit(
       :title, :starts_at, :ends_at, :duration_minutes, :location, :priority,
-      :description, :color, :recurring, :repeat_until, :project_id,
+      :description, :color, :recurring, :repeat_until, :project_id, :auto_schedule,
       repeat_days: []
     )
+  end
+
+  def apply_auto_schedule(event)
+    recurring = event.recurring?
+    weekdays = recurring ? Array(event.repeat_days).map(&:to_i) : []
+    repeat_until = recurring ? event.repeat_until : nil
+
+    result = Scheduling::AutoScheduler.new(
+      user: current_user,
+      duration_minutes: event.duration_minutes,
+      priority: event.priority,
+      weekdays: weekdays,
+      repeat_until: repeat_until
+    ).find_slot
+
+    if result
+      event.starts_at = result.starts_at
+      event.ends_at   = result.ends_at
+      @displaced_events = result.displaced
+      true
+    else
+      message = weekdays.any? ?
+        "No time-of-day works for every selected day before the end date. Try fewer days, a shorter duration, a later end date, or pick a time manually." :
+        "No open slot found in the next 7 days for that duration. Try a shorter duration or pick a time manually."
+      event.errors.add(:base, message)
+      false
+    end
+  end
+
+  def save_event_with_displacement(event)
+    saved = false
+    ActiveRecord::Base.transaction do
+      if event.save
+        cascade_ok = true
+        Array(@displaced_events).each do |d|
+          new_slot = reschedule_displaced(d)
+          if new_slot.nil?
+            event.errors.add(:base, "Couldn't reschedule '#{d.title}' to make room — try a lower priority or different duration.")
+            cascade_ok = false
+            break
+          end
+          unless d.update(starts_at: new_slot.starts_at, ends_at: new_slot.ends_at)
+            event.errors.add(:base, "Couldn't reschedule '#{d.title}': #{d.errors.full_messages.join(', ')}")
+            cascade_ok = false
+            break
+          end
+        end
+        saved = cascade_ok
+        raise ActiveRecord::Rollback unless cascade_ok
+      end
+    end
+    saved
+  end
+
+  def reschedule_displaced(event)
+    duration = event.duration_minutes
+    duration ||= ((event.ends_at - event.starts_at) / 60).to_i if event.starts_at && event.ends_at
+
+    Scheduling::AutoScheduler.new(
+      user: current_user,
+      duration_minutes: duration,
+      priority: event.priority,
+      exclude_event_id: event.id,
+      allow_displacement: false
+    ).find_slot
   end
 end

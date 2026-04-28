@@ -36,6 +36,8 @@ Rails.application.routes.draw do
     end
   end
 
+  get "auto_schedule/preview", to: "auto_schedule#preview", as: :auto_schedule_preview
+
   scope :university_calendar do
     get  "preview",     to: "university_calendar#preview",     as: :university_calendar_preview
     get  "pdf_preview", to: "university_calendar#pdf_preview_page", as: :university_calendar_pdf_preview_page
