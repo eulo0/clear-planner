@@ -279,7 +279,13 @@ class EventsController < ApplicationController
   private
 
   def set_event
-    if in_draft_mode? && params[:id].to_s.start_with?("d_")
+    if params[:id].to_s.start_with?("d_")
+      unless in_draft_mode?
+        redirect_to dashboard_path, alert: "Can't modify a created draft event outside of draft mode."
+        return
+      end
+
+
       op = current_user_draft&.find_create_op("event", params[:id])
       unless op
         redirect_to dashboard_path, alert: "Draft event was not found."
@@ -287,7 +293,7 @@ class EventsController < ApplicationController
       end
 
       @draft_temp_id = params[:id]
-      @event = Event.new(op.fetch("data", {}))
+      @event = current_user.events.new(op.fetch("data", {}))
       return
     end
 

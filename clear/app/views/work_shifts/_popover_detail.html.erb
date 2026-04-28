@@ -66,7 +66,7 @@
 
   <!-- Actions -->
   <div class="flex items-center gap-2 px-4 pb-3 pt-1 border-t border-zinc-800">
-    <%= link_to edit_work_shift_path(work_shift_identifier),
+    <%= link_to edit_work_shift_path(work_shift_identifier, start_date: start_date),
           data: { turbo: false },
           class: "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-zinc-200 hover:bg-zinc-800 transition" do %>
       <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -75,7 +75,7 @@
       Edit
     <% end %>
 
-    <%= button_to work_shift_path(work_shift_identifier),
+    <%= button_to work_shift_path(work_shift_identifier, start_date: start_date),
           method: :delete,
           class: "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-rose-300 hover:bg-rose-950/40 transition",
           form: { data: { turbo_confirm: "Delete this shift?" } } do %>

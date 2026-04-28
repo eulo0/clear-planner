@@ -226,7 +226,13 @@ class WorkShiftsController < ApplicationController
   end
 
   def set_work_shift
-    if in_draft_mode? && params[:id].to_s.start_with?("d_")
+    if params[:id].to_s.start_with?("d_")
+      unless in_draft_mode?
+        redirect_to dashboard_path, alert: "Can't modify a created draft workshift outside of draft mode."
+        return
+      end
+
+
       op = current_user_draft&.find_create_op("shift", params[:id])
       unless op
         redirect_to dashboard_path, alert: "Draft shift was not found."
@@ -234,7 +240,7 @@ class WorkShiftsController < ApplicationController
       end
 
       @draft_temp_id = params[:id]
-      @work_shift = WorkShift.new(op.fetch("data", {}))
+      @work_shift = current_user.work_shifts.new(op.fetch("data", {}))
       return
     end
 

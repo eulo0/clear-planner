@@ -213,7 +213,12 @@ class CoursesController < ApplicationController
   private
 
   def set_course
-    if in_draft_mode? && params[:id].to_s.start_with?("d_")
+    if params[:id].to_s.start_with?("d_")
+      unless in_draft_mode?
+        redirect_to dashboard_path, alert: "Can't modify a created draft course outside of draft mode."
+        return
+      end
+
       op = current_user_draft&.find_create_op("course", params[:id])
       unless op
         redirect_to dashboard_path, alert: "Draft course was not found."
@@ -221,7 +226,7 @@ class CoursesController < ApplicationController
       end
 
       @draft_temp_id = params[:id]
-      @course = Course.new(op.fetch("data", {}))
+      @course = current_user.courses.new(op.fetch("data", {}))
       return
     end
 

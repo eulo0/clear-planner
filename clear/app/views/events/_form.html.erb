@@ -143,6 +143,7 @@
       <div class="mt-4 space-y-3 hidden peer-checked:block">
         <div class="text-[10px] font-bold uppercase tracking-widest"
              style="color: var(--studs-accent); opacity: 0.8;">Days</div>
+        <%= hidden_field_tag "#{f.object_name}[repeat_days][]", "" %>
         <div class="grid grid-cols-7 gap-1.5">
           <% [["Su", 0], ["Mo", 1], ["Tu", 2], ["We", 3], ["Th", 4], ["Fr", 5], ["Sa", 6]].each do |lbl, wday| %>
             <label class="relative cursor-pointer">
