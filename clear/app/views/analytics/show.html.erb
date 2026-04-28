@@ -15,6 +15,16 @@
   }
 </style>
 
+<!-- Tabs -->
+<div class="flex gap-1 mb-5 rounded-xl p-1 w-fit" style="background-color: var(--studs-panel-bg); border: 1px solid var(--studs-border);">
+  <span class="rounded-lg px-4 py-1.5 text-sm font-semibold text-zinc-100"
+        style="background-color: var(--studs-panel-bg-2); box-shadow: 0 1px 3px rgba(0,0,0,0.3);">
+    This Week
+  </span>
+  <%= link_to "Compare", analytics_compare_path,
+        class: "rounded-lg px-4 py-1.5 text-sm font-medium text-zinc-400 hover:text-zinc-200 transition-colors" %>
+</div>
+
 <div data-controller="analytics-draft" data-analytics-draft-url-value="<%= analytics_path %>">
 <%= turbo_frame_tag "analytics_content" do %>
 
