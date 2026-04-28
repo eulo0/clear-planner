@@ -32,6 +32,11 @@ class WorkShiftsController < ApplicationController
 
   def create
     if in_draft_mode?
+      @work_shift = current_user.work_shifts.new(work_shift_params)
+      unless @work_shift.valid?
+        return render_draft_work_shift_form_error(:new)
+      end
+
       current_user_draft.add_create("shift", work_shift_params.to_h)
       return render_draft_calendar_update
     end
@@ -54,6 +59,11 @@ class WorkShiftsController < ApplicationController
 
   def update
     if @draft_temp_id.present?
+      @work_shift.assign_attributes(work_shift_params)
+      unless @work_shift.valid?
+        return render_draft_work_shift_form_error(:edit)
+      end
+
       unless current_user_draft&.update_create("shift", @draft_temp_id, work_shift_params.to_h)
         redirect_to dashboard_path, alert: "Draft shift was not found."
         return
@@ -63,6 +73,11 @@ class WorkShiftsController < ApplicationController
     end
 
     if in_draft_mode?
+      @work_shift.assign_attributes(work_shift_params)
+      unless @work_shift.valid?
+        return render_draft_work_shift_form_error(:edit)
+      end
+
       current_user_draft.add_update("shift", @work_shift.id, work_shift_params.to_h)
       return render_draft_calendar_update
     end
@@ -192,6 +207,20 @@ class WorkShiftsController < ApplicationController
           turbo_stream.update("event_drawer", ""),
           turbo_stream.update("event_popover", "")
         ]
+      end
+    end
+  end
+
+  def render_draft_work_shift_form_error(template)
+    respond_to do |format|
+      format.html { render template, status: :unprocessable_entity }
+
+      format.turbo_stream do
+        render turbo_stream: turbo_stream.replace(
+          "event_drawer",
+          partial: "work_shifts/drawer_edit",
+          locals: { work_shift: @work_shift, start_date: params[:start_date], work_shift_identifier: (@draft_temp_id || @work_shift) }
+        ), status: :unprocessable_entity
       end
     end
   end

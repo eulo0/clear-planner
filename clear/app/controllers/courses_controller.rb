@@ -30,6 +30,11 @@ class CoursesController < ApplicationController
 
   def create
     if in_draft_mode?
+      @course = current_user.courses.new(course_params)
+      unless @course.valid?
+        return render_draft_course_form_error(:new)
+      end
+
       current_user_draft.add_create("course", course_params.to_h)
       return render_draft_calendar_update
     end
@@ -87,6 +92,11 @@ class CoursesController < ApplicationController
 
   def update
     if @draft_temp_id.present?
+      @course.assign_attributes(course_params)
+      unless @course.valid?
+        return render_draft_course_form_error(:edit)
+      end
+
       unless current_user_draft&.update_create("course", @draft_temp_id, course_params.to_h)
         redirect_to dashboard_path, alert: "Draft course was not found."
         return
@@ -96,6 +106,11 @@ class CoursesController < ApplicationController
     end
 
     if in_draft_mode?
+      @course.assign_attributes(course_params)
+      unless @course.valid?
+        return render_draft_course_form_error(:edit)
+      end
+
       current_user_draft.add_update("course", @course.id, course_params.to_h)
       return render_draft_calendar_update
     end
@@ -253,6 +268,20 @@ class CoursesController < ApplicationController
           turbo_stream.update("event_drawer", ""),
           turbo_stream.update("event_popover", "")
         ]
+      end
+    end
+  end
+
+  def render_draft_course_form_error(template)
+    respond_to do |format|
+      format.html { render template, status: :unprocessable_entity }
+
+      format.turbo_stream do
+        render turbo_stream: turbo_stream.replace(
+          "event_drawer",
+          partial: "courses/drawer_edit",
+          locals: { course: @course, start_date: params[:start_date], course_identifier: (@draft_temp_id || @course) }
+        ), status: :unprocessable_entity
       end
     end
   end

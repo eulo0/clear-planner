@@ -40,6 +40,11 @@ class EventsController < ApplicationController
 
   def create
     if in_draft_mode?
+      @event = current_user.events.new(event_params)
+      unless @event.valid?
+        return render_draft_event_form_error(:new)
+      end
+
       current_user_draft.add_create("event", event_params.to_h)
       return render_draft_calendar_update
     end
@@ -114,6 +119,11 @@ class EventsController < ApplicationController
 
   def update
     if @draft_temp_id.present?
+      @event.assign_attributes(event_params)
+      unless @event.valid?
+        return render_draft_event_form_error(:edit)
+      end
+
       unless current_user_draft&.update_create("event", @draft_temp_id, event_params.to_h)
         redirect_to dashboard_path, alert: "Draft event was not found."
         return
@@ -124,6 +134,11 @@ class EventsController < ApplicationController
 
     project = @event.project
     if in_draft_mode?
+      @event.assign_attributes(event_params)
+      unless @event.valid?
+        return render_draft_event_form_error(:edit)
+      end
+
       current_user_draft.add_update("event", @event.id, event_params.to_h)
       return render_draft_calendar_update
     end
@@ -319,6 +334,20 @@ class EventsController < ApplicationController
           turbo_stream.update("event_drawer", ""),
           turbo_stream.update("event_popover", "")
         ]
+      end
+    end
+  end
+
+  def render_draft_event_form_error(template)
+    respond_to do |format|
+      format.html { render template, status: :unprocessable_entity }
+
+      format.turbo_stream do
+        render turbo_stream: turbo_stream.replace(
+          "event_drawer",
+          partial: "events/drawer_edit",
+          locals: { event: @event, start_date: params[:start_date], event_identifier: (@draft_temp_id || @event) }
+        ), status: :unprocessable_entity
       end
     end
   end
