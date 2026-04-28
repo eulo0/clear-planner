@@ -7,6 +7,9 @@ import { application } from "./application"
 import AgendaDrawerController from "./agenda_drawer_controller"
 application.register("agenda-drawer", AgendaDrawerController)
 
+import AnalyticsDraftController from "./analytics_draft_controller"
+application.register("analytics-draft", AnalyticsDraftController)
+
 import AgendaHighlightController from "./agenda_highlight_controller"
 application.register("agenda-highlight", AgendaHighlightController)
 
