@@ -408,7 +408,7 @@
               <%= link_to new_event_path(params_hash),
                 class: "timeslot absolute left-0 w-full transition-colors cursor-pointer hover:bg-white/5",
                 style: "top: #{i * (hour_height_px / 2.0)}px; height: #{hour_height_px / 2.0}px;",
-                data: { turbo: false } do %>
+                data: { turbo_frame: "_top" } do %>
               <% end %>
             <% end %>
           </div>
