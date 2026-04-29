@@ -4,7 +4,8 @@
                    "bg-zinc-950/60 focus:outline-none focus:ring-2 transition-all duration-150 border" %>
 <% input_style   = "border-color: var(--studs-border); --tw-ring-color: var(--studs-accent);" %>
 <% cancel_drawer = local_assigns[:cancel_drawer] %>
-<%= form_with model: [course, course_item] do |f| %>
+<% draft_course_item_confirm = current_user_draft.present? ? "This action will affect your main calendar. Will you like to continue?" : nil %>
+<%= form_with model: [course, course_item], data: (draft_course_item_confirm ? { turbo_confirm: draft_course_item_confirm } : {}) do |f| %>
   <% if course_item.errors.any? %>
     <div class="rounded-2xl p-4 text-red-300 mb-4"
          style="border: 1px solid rgba(239,68,68,0.3); background-color: rgba(127,29,29,0.2);">
