@@ -1,20 +1,34 @@
 <% draft_rows = [["Main Calendar", "current"]] + current_user_drafts.map { |d| [d.name, d.id.to_s] } %>
 <% selected_draft = current_user_draft&.id&.to_s || "current" %>
 
-<p class="prose prose-invert prose-sm max-w-none whitespace-pre-wrap mb-1">Pick a draft to use for this chat.</p>
-<p class="text-xs text-zinc-400 mb-3">This sets the calendar context for your conversation.</p>
-<div class="space-y-1.5">
-  <% draft_rows.each do |label, value| %>
-    <% selected = selected_draft == value %>
-      <button
-        type="button"
-      class="w-full inline-flex items-center justify-between rounded-2xl px-3 py-1.5 text-left border transition duration-150 hover:brightness-110"
-      style="<%= selected ? 'border-color: color-mix(in srgb, var(--studs-accent) 65%, var(--studs-border)); background-color: color-mix(in srgb, var(--studs-accent) 16%, var(--studs-panel-bg-2)); color: #ecfeff; box-shadow: 0 0 0 1px color-mix(in srgb, var(--studs-accent) 22%, transparent) inset; font-size: 0.875rem; font-family: inherit;' : 'border-color: var(--studs-border); background-color: color-mix(in srgb, var(--studs-panel-bg) 55%, #09090b); color: #f4f4f5; font-size: 0.875rem; font-family: inherit;' %>"
-      data-draft-value="<%= value %>">
-      <span class="truncate"><%= label %></span>
-    </button>
-  <% end %>
-</div>
-<div class="flex items-center gap-2 pt-3 mt-3" style="border-top: 1px solid var(--studs-divider);">
-  <button type="button" class="studs-nav-btn">Cancel</button>
+<div class="flex items-start justify-start ai-chat-pop mt-4">
+  <div
+    class="self-start inline-flex flex-col w-full max-w-[62%] rounded-2xl px-4 py-3 text-sm leading-relaxed"
+    style="background-color: var(--studs-panel-bg-2); border: 1px solid var(--studs-border); color: #f4f4f5;"
+  >
+    <div class="mb-1.5">
+      <span class="text-[10px] font-bold uppercase tracking-widest"
+            style="color: color-mix(in srgb, var(--studs-accent) 60%, #a1a1aa);">
+        Assistant
+      </span>
+    </div>
+
+    <p class="prose prose-invert prose-sm max-w-none whitespace-pre-wrap mb-1">Pick a draft to use for this chat.</p>
+    <p class="text-xs text-zinc-400 mb-3">This sets the calendar context for your conversation.</p>
+    <div class="space-y-1.5">
+      <% draft_rows.each do |label, value| %>
+        <% selected = selected_draft == value %>
+          <button
+            type="button"
+          class="w-full inline-flex items-center justify-between rounded-2xl px-3 py-1.5 text-left border transition duration-150 hover:brightness-110"
+          style="<%= selected ? 'border-color: color-mix(in srgb, var(--studs-accent) 65%, var(--studs-border)); background-color: color-mix(in srgb, var(--studs-accent) 16%, var(--studs-panel-bg-2)); color: #ecfeff; box-shadow: 0 0 0 1px color-mix(in srgb, var(--studs-accent) 22%, transparent) inset; font-size: 0.875rem; font-family: inherit;' : 'border-color: var(--studs-border); background-color: color-mix(in srgb, var(--studs-panel-bg) 55%, #09090b); color: #f4f4f5; font-size: 0.875rem; font-family: inherit;' %>"
+          data-draft-value="<%= value %>">
+          <span class="truncate"><%= label %></span>
+        </button>
+      <% end %>
+    </div>
+    <div class="flex items-center gap-2 pt-3 mt-3" style="border-top: 1px solid var(--studs-divider);">
+      <button type="button" class="studs-nav-btn">Cancel</button>
+    </div>
+  </div>
 </div>
