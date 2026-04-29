@@ -71,7 +71,7 @@
 
     <div class="shrink-0 border-t border-zinc-800 bg-zinc-950/60 px-6 py-4">
       <div class="flex items-center gap-2">
-        <%= link_to edit_work_shift_path(work_shift),
+        <%= link_to edit_work_shift_path(work_shift, start_date: start_date_value),
                     data: { turbo_frame: "event_drawer", turbo_prefetch: false },
                     class: "studs-nav-btn" do %>
           <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
@@ -80,7 +80,7 @@
           Edit
         <% end %>
 
-        <%= button_to work_shift_path(work_shift),
+        <%= button_to work_shift_path(work_shift, start_date: start_date_value),
               method: :delete,
               class: "studs-nav-btn",
               style: "border-color: rgba(239,68,68,0.4); color: #fca5a5;",

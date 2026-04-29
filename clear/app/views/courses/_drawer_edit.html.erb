@@ -19,7 +19,7 @@
       </div>
     </div>
     <div class="scrollbars min-h-0 flex-1 overflow-y-auto px-6 py-6">
-      <%= render "courses/form", course: course, start_date: start_date, cancel_drawer: true %>
+      <%= render "courses/form", course: course, start_date: start_date, cancel_drawer: true, course_identifier: local_assigns[:course_identifier] %>
     </div>
   </div>
 <% end %>

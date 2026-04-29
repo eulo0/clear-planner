@@ -40,7 +40,7 @@ class WorkShift < ApplicationRecord
       window_end_date   = [ window_end_date, repeat_until ].min if repeat_until.present?
       return [] if window_end_date < window_start_date
 
-      days_set = Array(repeat_days).map(&:to_i)
+      days_set = Array(repeat_days).reject(&:blank?).map(&:to_i)
       out = []
       d = window_start_date
       while d <= window_end_date
@@ -67,7 +67,7 @@ class WorkShift < ApplicationRecord
   end
 
   def repeat_days_labels
-    Array(repeat_days).sort.filter_map { |d| DAY_NAMES[d.to_i] }.join(" | ")
+    Array(repeat_days).reject(&:blank?).map(&:to_i).sort.filter_map { |d| DAY_NAMES[d] }.join(" | ")
   end
 
   def formatted_time_range
@@ -94,7 +94,7 @@ class WorkShift < ApplicationRecord
   end
 
   def normalize_recurrence_fields
-    self.repeat_days = Array(repeat_days).reject(&:blank?).map(&:to_i).uniq.sort
+    self.repeat_days = Array(repeat_days).reject(&:blank?).map(&:to_s).uniq.sort_by(&:to_i)
 
     unless recurring?
       self.repeat_days = []

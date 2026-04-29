@@ -1,4 +1,5 @@
 <%= turbo_frame_tag "event_popover" do %>
+  <% course_identifier = local_assigns[:course_identifier] || course %>
   <!-- Header -->
   <div class="flex items-center justify-between gap-3 px-4 pt-3 pb-2">
     <div class="flex items-center gap-2 min-w-0">
@@ -77,7 +78,7 @@
 
   <!-- Actions -->
   <div class="flex items-center gap-2 px-4 pb-3 pt-1 border-t border-zinc-800">
-    <%= link_to edit_course_path(course, start_date: start_date),
+    <%= link_to edit_course_path(course_identifier, start_date: start_date),
           data: { turbo: false },
           class: "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-zinc-200 hover:bg-zinc-800 transition" do %>
       <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -86,16 +87,18 @@
       Edit
     <% end %>
 
-    <%= link_to course_course_items_path(course),
-          data: { turbo: false },
-          class: "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-zinc-200 hover:bg-zinc-800 transition" do %>
-      <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-      </svg>
-      Items
+    <% if course.persisted? %>
+      <%= link_to course_course_items_path(course),
+            data: { turbo: false },
+            class: "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-zinc-200 hover:bg-zinc-800 transition" do %>
+        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+        </svg>
+        Items
+      <% end %>
     <% end %>
 
-    <%= button_to course_path(course, start_date: start_date),
+    <%= button_to course_path(course_identifier, start_date: start_date),
           method: :delete,
           class: "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-rose-300 hover:bg-rose-950/40 transition",
           form: { data: { turbo_confirm: "Delete this course and all its data?" } } do %>

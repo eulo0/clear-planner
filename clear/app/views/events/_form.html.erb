@@ -1,8 +1,12 @@
 <% start_date_param = local_assigns[:start_date].presence || params[:start_date].presence %>
 <% turbo_enabled = local_assigns.key?(:turbo) ? local_assigns[:turbo] : true %>
 <% cancel_drawer = local_assigns[:cancel_drawer] %>
+<% event_identifier = local_assigns[:event_identifier] %>
+<% draft_temp_event = event_identifier.to_s.start_with?("d_") %>
 <% form_url =
-    if event.persisted?
+    if draft_temp_event
+      start_date_param ? event_path(event_identifier, start_date: start_date_param) : event_path(event_identifier)
+    elsif event.persisted?
       start_date_param ? event_path(event, start_date: start_date_param) : event_path(event)
     else
       start_date_param ? events_path(start_date: start_date_param) : events_path
@@ -10,6 +14,7 @@
 %>
 <%= form_with model: event,
               url: form_url,
+              method: (draft_temp_event ? :patch : nil),
               class: "space-y-5",
               data: { drawer_close_on_success: "false", turbo: turbo_enabled, controller: "duration-fill auto-schedule-toggle" } do |f| %>
   <%= hidden_field_tag :start_date, start_date_param if start_date_param.present? %>
@@ -138,6 +143,7 @@
       <div class="mt-4 space-y-3 hidden peer-checked:block">
         <div class="text-[10px] font-bold uppercase tracking-widest"
              style="color: var(--studs-accent); opacity: 0.8;">Days</div>
+        <%= hidden_field_tag "#{f.object_name}[repeat_days][]", "" %>
         <div class="grid grid-cols-7 gap-1.5">
           <% [["Su", 0], ["Mo", 1], ["Tu", 2], ["We", 3], ["Th", 4], ["Fr", 5], ["Sa", 6]].each do |lbl, wday| %>
             <label class="relative cursor-pointer">
@@ -180,7 +186,7 @@
       <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
         <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
       </svg>
-      <%= event.persisted? ? "Update event" : "Create event" %>
+      <%= (event.persisted? || draft_temp_event) ? "Update event" : "Create event" %>
     </button>
     <% if cancel_drawer %>
       <button type="button" class="studs-nav-btn" data-action="drawer#close">Cancel</button>

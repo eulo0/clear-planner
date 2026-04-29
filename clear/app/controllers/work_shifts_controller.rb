@@ -23,7 +23,7 @@ class WorkShiftsController < ApplicationController
     end
 
     render partial: partial,
-           locals: { work_shift: @work_shift, start_date: params[:start_date] }
+           locals: { work_shift: @work_shift, start_date: params[:start_date], work_shift_identifier: (@draft_temp_id || @work_shift) }
   end
 
   def new
@@ -32,6 +32,11 @@ class WorkShiftsController < ApplicationController
 
   def create
     if in_draft_mode?
+      @work_shift = current_user.work_shifts.new(work_shift_params)
+      unless @work_shift.valid?
+        return render_draft_work_shift_form_error(:new)
+      end
+
       current_user_draft.add_create("shift", work_shift_params.to_h)
       return render_draft_calendar_update
     end
@@ -49,11 +54,30 @@ class WorkShiftsController < ApplicationController
     return unless turbo_frame_request?
 
     render partial: "work_shifts/drawer_edit",
-           locals: { work_shift: @work_shift, start_date: params[:start_date] }
+           locals: { work_shift: @work_shift, start_date: params[:start_date], work_shift_identifier: (@draft_temp_id || @work_shift) }
   end
 
   def update
+    if @draft_temp_id.present?
+      @work_shift.assign_attributes(work_shift_params)
+      unless @work_shift.valid?
+        return render_draft_work_shift_form_error(:edit)
+      end
+
+      unless current_user_draft&.update_create("shift", @draft_temp_id, work_shift_params.to_h)
+        redirect_to dashboard_path, alert: "Draft shift was not found."
+        return
+      end
+
+      return render_draft_calendar_update
+    end
+
     if in_draft_mode?
+      @work_shift.assign_attributes(work_shift_params)
+      unless @work_shift.valid?
+        return render_draft_work_shift_form_error(:edit)
+      end
+
       current_user_draft.add_update("shift", @work_shift.id, work_shift_params.to_h)
       return render_draft_calendar_update
     end
@@ -105,6 +129,15 @@ class WorkShiftsController < ApplicationController
   end
 
   def destroy
+    if @draft_temp_id.present?
+      unless current_user_draft&.delete_create("shift", @draft_temp_id)
+        redirect_to dashboard_path, alert: "Draft shift was not found."
+        return
+      end
+
+      return render_draft_calendar_update
+    end
+
     if in_draft_mode?
       current_user_draft.add_delete("shift", @work_shift.id)
       return render_draft_calendar_update
@@ -178,8 +211,48 @@ class WorkShiftsController < ApplicationController
     end
   end
 
+  def render_draft_work_shift_form_error(template)
+    respond_to do |format|
+      format.html { render template, status: :unprocessable_entity }
+
+      format.turbo_stream do
+        render turbo_stream: turbo_stream.replace(
+          "event_drawer",
+          partial: "work_shifts/drawer_edit",
+          locals: { work_shift: @work_shift, start_date: params[:start_date], work_shift_identifier: (@draft_temp_id || @work_shift) }
+        ), status: :unprocessable_entity
+      end
+    end
+  end
+
   def set_work_shift
+    if params[:id].to_s.start_with?("d_")
+      unless in_draft_mode?
+        redirect_to dashboard_path, alert: "Can't modify a created draft workshift outside of draft mode."
+        return
+      end
+
+
+      op = current_user_draft&.find_create_op("shift", params[:id])
+      unless op
+        redirect_to dashboard_path, alert: "Draft shift was not found."
+        return
+      end
+
+      @draft_temp_id = params[:id]
+      @work_shift = current_user.work_shifts.new(op.fetch("data", {}))
+      return
+    end
+
     @work_shift = current_user.work_shifts.find(params[:id])
+    apply_draft_work_shift_update! if in_draft_mode?
+  end
+
+  def apply_draft_work_shift_update!
+    op = current_user_draft&.find_update_op("shift", @work_shift.id)
+    return unless op
+
+    @work_shift.assign_attributes(op.fetch("data", {}))
   end
 
   def work_shift_params
