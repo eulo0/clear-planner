@@ -108,10 +108,11 @@
         <div class="text-[10px] font-bold uppercase tracking-widest"
              style="color: var(--studs-accent); opacity: 0.8;">Days</div>
         <%= hidden_field_tag "#{f.object_name}[repeat_days][]", "" %>
+        <% selected_days = Array(work_shift.repeat_days).map(&:to_s) %>
         <div class="grid grid-cols-7 gap-1.5">
           <% [["Su", 0], ["Mo", 1], ["Tu", 2], ["We", 3], ["Th", 4], ["Fr", 5], ["Sa", 6]].each do |lbl, wday| %>
             <label class="relative cursor-pointer">
-              <%= f.check_box :repeat_days, { multiple: true, class: "peer sr-only" }, wday, nil %>
+              <%= f.check_box :repeat_days, { multiple: true, class: "peer sr-only", checked: selected_days.include?(wday.to_s) }, wday.to_s, nil %>
               <div class="repeat-day-btn flex h-9 items-center justify-center rounded-xl border text-xs font-semibold transition-all
                           border-zinc-700 bg-zinc-900/40 text-zinc-400
                           hover:border-zinc-500 hover:text-zinc-200">
