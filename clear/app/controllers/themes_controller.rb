@@ -20,7 +20,7 @@ class ThemesController < ApplicationController
       redirect_to profile_path, notice: "Theme updated!"
     else
       if current_user.update_theme(theme_params)
-        redirect_back fallback_location: authenticated_root_path, notice: "Theme saved!"
+        redirect_back fallback_location: authenticated_root_path, notice: "Theme switched!"
       else
         redirect_back fallback_location: authenticated_root_path, alert: "Couldn't save theme."
       end

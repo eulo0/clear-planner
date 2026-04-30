@@ -3,9 +3,9 @@
   <% edit_variables = local_assigns[:edit_variables] || {} %>
   <% editing = edit_name.present? %>
   <%= form_with url: theme_path, method: editing ? :patch : :post,
-        data: { controller: "custom-theme",
-                custom_theme_profile_path_value: profile_path,
-                action: "submit->custom-theme#validate" } do |f| %>
+      data: { controller: "custom-theme",
+              custom_theme_profile_path_value: profile_path,
+              action: "submit->custom-theme#validate turbo:submit-end->custom-theme#reset" } do |f| %>
     <% if editing %>
       <input type="hidden" name="custom_theme[original_name]" value="<%= edit_name %>" />
     <% end %>
@@ -44,11 +44,11 @@
           { key: "--studs-accent",           label: "Accent"           },
           { key: "--studs-accent-secondary", label: "Accent Secondary" },
           { key: "--studs-sidebar-bg",       label: "Sidebar BG"       },
-          { key: "--studs-body-bg",          label: "Background"       },
           { key: "--studs-panel-bg",         label: "Panel BG"         },
           { key: "--studs-panel-bg-2",       label: "Panel BG 2"       },
           { key: "--studs-panel-hover",      label: "Panel Hover"      },
           { key: "--studs-panel-header",     label: "Panel Header"     },
+          { key: "--studs-body-bg",          label: "Background"       },
           { key: "--studs-border",           label: "Border"           },
           { key: "--studs-border-subtle",    label: "Border Subtle"    },
           { key: "--studs-divider",          label: "Divider"          },
