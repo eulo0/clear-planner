@@ -27,7 +27,7 @@ module UniversityCalendar
     SEMESTER_HEADER = /\A\s*(?:FALL|SPRING|WINTER|SUMMER\s*(?:I{1,2})?)\s+(?:SEMESTER\s+)?(\d{4})\b/i
     WINTERSESSION_HEADER = /\A\s*WINTERSESSION\b.*?(\d{4})\s*-\s*\w+\s+(\d{4})/i
 
-    SKIP_LINE = /\A\s*(?:20\d{2}\s*-\s*20\d{2}\s+ACADEMIC|Last updated|Approved:|Please note:|page\s+\d+|table\s+of\s+contents|participate in the)\b/i
+    SKIP_LINE = /\A\s*(?:20\d{2}\s*-\s*20\d{2}\s+ACADEMIC|Last updated|Approved:|Please note:|page\s+\d+|table\s+of\s+contents)\b/i
 
     def self.call(pdf_data)
       reader = PDF::Reader.new(StringIO.new(pdf_data))
@@ -68,14 +68,19 @@ module UniversityCalendar
         items << result if result
       end
 
+      # Only keep events from today onward
+      today = Date.today
+      items.reject! { |item| item[:starts_at].to_date < today }
+
       deduplicate(items)
     end
 
     private
 
+    # Joins wrapped description lines back onto their date rows
     def merge_continuation_lines(lines)
       merged = []
-      pending_continuation = nil
+      pending = []
 
       lines.each do |line|
         stripped = line.strip
@@ -85,30 +90,59 @@ module UniversityCalendar
         is_header = stripped.match?(SEMESTER_HEADER) || stripped.match?(WINTERSESSION_HEADER)
         is_skip = stripped.match?(SKIP_LINE)
 
-        if is_row || is_header
-          if pending_continuation && merged.any? && !is_header
-            row_match = stripped.match(TABLE_ROW)
-            desc = row_match ? row_match[:description].strip : nil
-
-            if desc && fragment?(desc)
-              # The continuation belongs with this row — prepend it to the description
-              new_desc = "#{pending_continuation} #{desc}"
-              stripped = stripped.sub(desc, new_desc)
-              pending_continuation = nil
-            else
-              # Continuation didn't match the next row — attach to previous row
-              merged[-1] = "#{merged[-1]} #{pending_continuation}"
-              pending_continuation = nil
-            end
-          end
+        if is_header
+          flush_pending_to_previous(merged, pending)
+          pending = []
+          merged << stripped
+        elsif is_row
+          stripped = apply_pending(merged, pending, stripped)
+          pending = []
           merged << stripped
         elsif !is_skip
-          # Continuation line — save it for the next row
-          pending_continuation = [ pending_continuation, stripped ].compact.join(" ")
+          # Non-row, non-skip line — hold it until we know which row it belongs to
+          pending << stripped
         end
       end
 
+      flush_pending_to_previous(merged, pending)
+
       merged
+    end
+
+    # Fragment continuations go to the previous row; phrase continuations go to this row
+    def apply_pending(merged, pending, stripped)
+      return stripped if pending.empty?
+
+      # Split pending at the first non-fragment line
+      frag_end = 0
+      frag_end += 1 while frag_end < pending.size && fragment?(pending[frag_end])
+      fragment_part = pending[0...frag_end]
+      phrase_part = pending[frag_end..] || []
+
+      # Fragments are wraps of the previous row
+      if fragment_part.any? && merged.any?
+        merged[-1] = [ merged[-1], *fragment_part ].join(" ")
+      end
+
+      # Phrase lines are the start of this row's description
+      if phrase_part.any?
+        row_match = stripped.match(TABLE_ROW)
+        if row_match
+          existing = row_match[:description].strip
+          new_desc = [ *phrase_part, existing ].join(" ")
+          stripped = stripped.sub(existing, new_desc)
+        else
+          # Row had no inline description
+          stripped = "#{stripped} #{phrase_part.join(' ')}"
+        end
+      end
+
+      stripped
+    end
+
+    def flush_pending_to_previous(merged, pending)
+      return if pending.empty? || merged.empty?
+      merged[-1] = [ merged[-1], *pending ].join(" ")
     end
 
     def fragment?(desc)
@@ -118,13 +152,10 @@ module UniversityCalendar
     end
 
     def clean_description(desc)
-      # Strip trailing footer/junk text
       desc = desc.sub(/\s*Approved:.*\z/i, "")
       desc = desc.sub(/\s*Please note:.*\z/i, "")
-      desc = desc.sub(/\s*participate in the following.*\z/i, "")
       desc = desc.strip
 
-      # Reject orphan fragments that aren't real event titles
       return nil if fragment?(desc)
 
       desc.presence

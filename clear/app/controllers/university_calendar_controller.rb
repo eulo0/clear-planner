@@ -28,14 +28,21 @@ class UniversityCalendarController < ApplicationController
   def pdf_preview
     @mode = :pdf
 
+    @pdf_errors = []
+
     unless params[:pdf_file].present?
-      flash.now[:alert] = "Please select a PDF file."
+      @pdf_errors << "Please select a PDF file."
       render :preview and return
     end
 
     file = params[:pdf_file]
     unless file.content_type == "application/pdf"
-      flash.now[:alert] = "Only PDF files are supported."
+      @pdf_errors << "Only PDF files are supported."
+      render :preview and return
+    end
+
+    if file.size > 800.kilobytes
+      @pdf_errors << "File size is over 800 KB."
       render :preview and return
     end
 
@@ -44,7 +51,7 @@ class UniversityCalendarController < ApplicationController
     @existing_keys = existing_event_keys
     render :preview
   rescue => e
-    flash.now[:alert] = "Could not parse PDF: #{e.message}"
+    @pdf_errors = [ "Could not parse PDF: #{e.message}" ]
     @items = []
     @existing_keys = Set.new
     render :preview
