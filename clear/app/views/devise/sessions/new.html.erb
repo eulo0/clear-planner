@@ -20,14 +20,14 @@
       <div class="space-y-5">
         <div>
           <%= f.label :email, class: label_classes, style: label_style %>
-	          <%= f.email_field :email,
-	                id: "email_field",
-	                autofocus: true,
-	                autocomplete: "email",
-	                value: params.dig(resource_name, :email).presence || params[:email].presence || session.delete(:prefill_sign_in_email).presence || resource.try(:email),
-	                class: "#{input_classes} mt-2",
-	                style: input_style,
-	                placeholder: "your email" %>
+	        <%= f.email_field :email,
+	              id: "email_field",
+	              autofocus: true,
+	              autocomplete: "email",
+	              value: params.dig(resource_name, :email).presence || params[:email].presence || session.delete(:prefill_sign_in_email).presence || resource.try(:email),
+	              class: "#{input_classes} mt-2",
+	              style: input_style,
+	              placeholder: "your email" %>
 	        </div>
         <div class="relative">
           <%= f.label :password, class: label_classes, style: label_style %>
