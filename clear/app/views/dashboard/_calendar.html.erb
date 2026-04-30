@@ -122,7 +122,10 @@
       </div>
     </div>
     <nav class="flex items-center gap-1.5">
-      <div data-action="dropdown:select->calendar-view#toggle">
+      <div
+  data-action="dropdown:select->calendar-view#toggle"
+        data-calendar-view-base-url-value="<%= @project ? project_path(@project) : dashboard_path %>"
+        >
         <%= render Studs::DropdownComponent.new(
           label: "Weekly",
           variant: :dashboard_view,
@@ -135,12 +138,13 @@
         ) %>
       </div>
       <div class="mx-1 h-5 w-px rounded-full" style="background-color: var(--studs-border);"></div>
-      <div
+      <% if !@project %>
+        <div
         data-controller="course-filter"
         data-course-filter-base-url-value="<%= dashboard_path %>"
         data-course-filter-start-date-value="<%= start_date.to_date.iso8601 %>"
         data-action="dropdown:select->course-filter#navigate">
-        <%= render Studs::DropdownComponent.new(
+          <%= render Studs::DropdownComponent.new(
           label: "All",
           variant: :dashboard_view,
           name: "course_filter",
@@ -153,8 +157,9 @@
             { label: "All Work Shifts", value: "work_shifts" },
           ]
         ) %>
-      </div>
-      <div class="mx-1 h-5 w-px rounded-full" style="background-color: var(--studs-border);"></div>
+        </div>
+        <div class="mx-1 h-5 w-px rounded-full" style="background-color: var(--studs-border);"></div>
+      <% end %>
       <% if @project %>
         <% if @project.membership_for(current_user)&.can_manage_members? %>
           <%= link_to new_project_project_invitation_path(@project),
