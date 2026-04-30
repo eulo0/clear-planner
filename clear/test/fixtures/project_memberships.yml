@@ -3,9 +3,9 @@
 one:
   user: one
   project: one
-  role: 2
+  role: 3
 
 two:
   user: two
   project: two
-  role: 2
+  role: 3
