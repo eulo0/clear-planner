@@ -1,17 +1,21 @@
 Rails.application.routes.draw do
   resources :projects do
-  get :agenda, on: :member
-  get :chat, on: :member
-  get :join, on: :collection
-  resources :project_invitations, only: %i[new create] do
-    get :members, on: :collection
+    get :agenda, on: :member
+    get :chat, on: :member
+    get :join, on: :collection
+    resources :project_invitations, only: %i[new create] do
+      get :members, on: :collection
+    end
+    resources :project_messages, only: [ :create ]
+    resources :project_memberships, only: %i[update destroy]
   end
-  resources :project_messages, only: [ :create ]
-  resources :project_memberships, only: %i[update destroy]
-end
   get "project_invitations/accept", to: "project_invitations#accept", as: :accept_project_invitation
-
-  devise_for :users
+  devise_for :users, controllers: {
+    registrations: "users/registrations",
+    confirmations: "users/confirmations",
+    sessions: "users/auth",
+    omniauth_callbacks: "users/omniauth_callbacks"
+  }
 
   resource :profile, only: [ :show, :edit, :update ] do
     patch :update_username

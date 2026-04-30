@@ -1,0 +1,44 @@
+<%# locals: resend_email: %>
+<div class="mt-2 whitespace-nowrap text-sm text-zinc-300">
+  <span class="inline-flex items-center gap-1">
+    <span>Didn’t get the email?</span>
+    <%= form_with url: user_confirmation_path,
+          method: :post,
+          data: { turbo: false },
+          html: { id: "resend_confirmation_form", class: "inline" } do %>
+      <%= hidden_field_tag "user[email]", resend_email, id: "resend_confirmation_email" %>
+      <%= hidden_field_tag "email", resend_email, id: "resend_confirmation_email_fallback" %>
+      <%= button_tag "Click to resend the email.",
+            type: "submit",
+            class: "inline-flex items-center bg-transparent p-0 text-sm leading-normal text-emerald-400 underline underline-offset-2 hover:text-emerald-300 transition-colors duration-200 cursor-pointer" %>
+    <% end %>
+  </span>
+
+  <% if flash[:confirmation_sent].present? %>
+    <p class="mt-2 text-xs text-zinc-400"><%= flash[:confirmation_sent] %></p>
+  <% end %>
+</div>
+
+<script>
+  (() => {
+    const sync = () => {
+      const emailField = document.getElementById("email_field");
+      const hiddenEmail = document.getElementById("resend_confirmation_email");
+      const hiddenEmailFallback = document.getElementById("resend_confirmation_email_fallback");
+      if (!emailField || !hiddenEmail || !hiddenEmailFallback) return;
+      if (!emailField.value) return;
+      hiddenEmail.value = emailField.value;
+      hiddenEmailFallback.value = emailField.value;
+    };
+
+    const bind = () => {
+      const emailField = document.getElementById("email_field");
+      if (!emailField) return;
+      emailField.addEventListener("input", sync);
+      sync();
+    };
+
+    document.addEventListener("DOMContentLoaded", bind);
+    document.addEventListener("turbo:load", bind);
+  })();
+</script>

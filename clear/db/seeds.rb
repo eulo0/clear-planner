@@ -20,6 +20,7 @@ admin = User.find_or_initialize_by(email: ADMIN_EMAIL)
 admin.password = admin_password
 admin.password_confirmation = admin_password
 admin.username = "admin"
+admin.confirmed_at = Time.current
 
 # Works if you added enum role: { user: 0, admin: 1 }
 # If you haven't migrated role yet, this will raise (which is good — forces consistency).
@@ -66,6 +67,7 @@ users_data = [
     password: demo_password,
     username: "chase",
     role: :user,
+    confirmed_at: Time.current,
     events: [
       {
         color: "#F97316",
@@ -134,6 +136,7 @@ users_data = [
     password: demo_password,
     username: "landon",
     role: :user,
+    confirmed_at: Time.current,
     events: [
       {
         color: "#FFFFFF",
