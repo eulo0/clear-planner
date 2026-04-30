@@ -7,8 +7,18 @@ class Project < ApplicationRecord
   has_many :project_messages, dependent: :destroy
   has_many :users, through: :project_memberships, source: :user
   has_many :project_invitations, dependent: :destroy
+  belongs_to :owner, class_name: "User", foreign_key: :user_id, optional: true
 
   validates :title, presence: true
+
+
+  def membership_for(user)
+    project_memberships.find_by(user: user)
+  end
+
+  def role_for(user)
+    membership_for(user)&.role
+  end
 
   def generate_invite_token
     self.invite_token = SecureRandom.hex(10)

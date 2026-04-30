@@ -1,6 +1,5 @@
 <% content_for :page_title, "Invite to #{@project.title}" %>
 <% content_for :page_subtitle, "Send an email invitation to collaborate" %>
-
 <div class="mx-auto max-w-lg">
   <div class="rounded-2xl p-6" style="border: 1px solid var(--studs-border); background-color: var(--studs-panel-bg);">
     <%= form_with model: [@project, @invitation],
@@ -16,13 +15,11 @@
           </ul>
         </div>
       <% end %>
-
       <% label_classes = "block text-[10px] font-bold uppercase tracking-widest mb-1.5" %>
       <% label_style   = "color: var(--studs-accent); opacity: 0.8;" %>
       <% input_classes = "w-full rounded-2xl px-4 py-2.5 text-sm text-zinc-100 placeholder:text-zinc-600 " \
                          "bg-zinc-950/60 focus:outline-none focus:ring-2 transition-all duration-150 border" %>
       <% input_style   = "border-color: var(--studs-border); --tw-ring-color: var(--studs-accent);" %>
-
       <div>
         <%= f.label :email, class: label_classes, style: label_style do %>Email address <span class="text-red-400">*</span><% end %>
         <%= f.email_field :email,
@@ -31,7 +28,6 @@
               placeholder: "colleague@example.com",
               autofocus: true %>
       </div>
-
       <div class="flex items-center gap-3 pt-4"
            style="border-top: 1px solid var(--studs-divider);">
         <button type="submit" class="studs-btn-accent">
@@ -40,42 +36,17 @@
           </svg>
           Send Invitation
         </button>
-        <%= link_to "Cancel", project_path(@project), class: "studs-nav-btn" %>
-      </div>
-    <% end %>
-
-    <% pending = @project.project_invitations.pending %>
-    <% if pending.any? %>
-      <div class="mt-6 pt-5" style="border-top: 1px solid var(--studs-divider);">
-        <h3 class="text-[10px] font-bold uppercase tracking-widest mb-3" style="color: var(--studs-accent); opacity: 0.8;">
-          Pending Invitations
-        </h3>
-        <div class="space-y-2">
-          <% pending.each do |inv| %>
-            <div class="flex items-center justify-between rounded-xl px-3 py-2 text-sm"
-                 style="background-color: var(--studs-panel-bg-2); border: 1px solid var(--studs-border);">
-              <span class="text-zinc-300"><%= inv.email %></span>
-              <span class="text-[10px] text-zinc-500">Sent <%= time_ago_in_words(inv.created_at) %> ago</span>
-            </div>
-          <% end %>
-        </div>
-      </div>
-    <% end %>
-
-    <% members = @project.users %>
-    <% if members.any? %>
-      <div class="mt-6 pt-5" style="border-top: 1px solid var(--studs-divider);">
-        <h3 class="text-[10px] font-bold uppercase tracking-widest mb-3" style="color: var(--studs-accent); opacity: 0.8;">
-          Current Members
-        </h3>
-        <div class="space-y-2">
-          <% members.each do |member| %>
-            <div class="flex items-center justify-between rounded-xl px-3 py-2 text-sm"
-                 style="background-color: var(--studs-panel-bg-2); border: 1px solid var(--studs-border);">
-              <span class="text-zinc-300"><%= member.email %></span>
-            </div>
-          <% end %>
-        </div>
+        <% invite_url = join_projects_url(token: @project.invite_token) %>
+        <button
+          type="button"
+          data-controller="clipboard"
+          data-clipboard-text-value="<%= invite_url %>"
+          data-action="click->clipboard#copy"
+          class="studs-nav-btn"
+          >
+          Copy Link
+        </button>
+        <%= link_to "Back", project_path(@project), class: "studs-nav-btn" %>
       </div>
     <% end %>
   </div>

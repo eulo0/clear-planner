@@ -1,7 +1,8 @@
 class ProjectInvitationsController < ApplicationController
   layout "app_shell"
   before_action :authenticate_user!
-  before_action :set_project, only: %i[new create]
+  before_action :set_project, only: %i[new create members]
+  before_action :require_owner!, only: %i[new create]
 
   def new
     @invitation = @project.project_invitations.new
@@ -36,12 +37,23 @@ class ProjectInvitationsController < ApplicationController
     redirect_to project_path(invitation.project), notice: "You joined \"#{invitation.project.title}\"!"
   end
 
+  def members
+    @members = @project.users
+  end
+
   private
 
   def set_project
     @project = current_user.projects.find_by(id: params[:project_id])
     unless @project
       redirect_to projects_path, alert: "Project not found or you are not a member."
+    end
+  end
+
+
+  def require_owner!
+    unless @project.membership_for(current_user)&.owner?
+      redirect_to project_path(@project), alert: "You don't have permission to do that."
     end
   end
 

@@ -156,23 +156,24 @@
       </div>
       <div class="mx-1 h-5 w-px rounded-full" style="background-color: var(--studs-border);"></div>
       <% if @project %>
-        <%= link_to new_project_project_invitation_path(@project),
-              class: "studs-nav-btn",
-              data: { turbo_frame: "_top" } do %>
+        <% if @project.membership_for(current_user)&.can_manage_members? %>
+          <%= link_to new_project_project_invitation_path(@project),
+                class: "studs-nav-btn",
+                data: { turbo_frame: "_top" } do %>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+            </svg>
+            Invite
+          <% end %>
+        <% end %>
+        <%= link_to members_project_project_invitations_path(@project),
+                class: "studs-nav-btn",
+                data: { turbo_frame: "_top" } do %>
           <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
             <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
           </svg>
-          Invite
+          Members
         <% end %>
-        <% invite_url = join_projects_url(token: @project.invite_token) %>
-        <button
-          data-controller="clipboard"
-          data-clipboard-text-value="<%= invite_url %>"
-          data-action="click->clipboard#copy"
-          class="studs-nav-btn"
-          >
-          Copy Link
-        </button>
         <%= link_to project_path(@project, start_date: prev_start), class: nav_btn, data: { turbo_frame: "dashboard_calendar" } do %>
           <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
             <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
@@ -400,15 +401,18 @@
              data-action="click->agenda-highlight#clearFromDay"
           style="border-right: 1px solid var(--studs-divider);">
           <!-- Clickable time slots -->
+          <% can_create_event = @project ? @project.membership_for(current_user)&.can_edit_content? : true %>
           <div class="absolute inset-0 z-[1]">
             <% 48.times do |i| %>
               <% slot_time = day_start + (i * 30).minutes %>
               <% params_hash = { start_time: slot_time.iso8601 } %>
               <% params_hash[:project_id] = @project.id if @project %>
-              <%= link_to new_event_path(params_hash),
-                class: "timeslot absolute left-0 w-full transition-colors cursor-pointer hover:bg-white/5",
-                style: "top: #{i * (hour_height_px / 2.0)}px; height: #{hour_height_px / 2.0}px;",
-                data: { turbo_frame: "_top" } do %>
+              <% if can_create_event %>
+                <%= link_to new_event_path(params_hash),
+                  class: "timeslot absolute left-0 w-full transition-colors cursor-pointer hover:bg-white/5",
+                  style: "top: #{i * (hour_height_px / 2.0)}px; height: #{hour_height_px / 2.0}px;",
+                  data: { turbo_frame: "_top" } do %>
+                <% end %>
               <% end %>
             <% end %>
           </div>
