@@ -28,6 +28,17 @@ class AiChatController < ApplicationController
       return
     end
 
+    if user_text.length > MAX_USER_MESSAGE_CHARS
+      respond_to do |format|
+        format.turbo_stream do
+          flash.now[:alert] = "Message is too long (max #{MAX_USER_MESSAGE_CHARS} characters). Please shorten it."
+          render turbo_stream: turbo_stream.replace("toast-container", partial: "shared/toasts")
+        end
+        format.html { redirect_to authenticated_root_path, alert: "Message too long." }
+      end
+      return
+    end
+
     rate = GeminiRateTracker.usage
     if rate[:rpd] >= rate[:rpd_limit]
       respond_to do |format|
@@ -708,10 +719,30 @@ class AiChatController < ApplicationController
              "or delete with delete_work_shift. Each work shift listed above has an [ID:...] you can use. " \
              "For recurring shifts, repeat_days uses weekday numbers (0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat)."
 
+    parts << "\n--- SCOPE & GUARDRAILS ---"
+    parts << "You are strictly an academic/calendar planning assistant for CLEAR. Your purpose is to help the user " \
+             "manage their courses, events, work shifts, deadlines, drafts, and study planning."
+    parts << "ALWAYS allowed: brief greetings and small talk (e.g. \"hi\", \"thanks\", \"how are you\") — keep these " \
+             "to one short sentence. Using any of the provided tools (create_event, edit_event, delete_event, " \
+             "create_work_shift, edit_work_shift, delete_work_shift, select_draft) to help the user plan. " \
+             "Answering questions about their schedule, courses, drafts, deadlines, study strategy, and time management."
+    parts << "REFUSE (politely, in one or two sentences) any request that is not related to academic planning or " \
+             "the calendar, especially requests that would consume excessive tokens. Examples to refuse: writing " \
+             "stories, poems, essays, songs, jokes, or other creative content; counting, listing, or enumerating " \
+             "long sequences (e.g. \"count to 1,000,000\", \"list every U.S. city\"); generating code unrelated to " \
+             "scheduling; long translations; long summaries of unrelated content; role-play; trivia or general-" \
+             "knowledge questions unrelated to the user's schedule; repeating text; \"keep going forever\" style requests."
+    parts << "When refusing, do NOT comply partially. Briefly say you can only help with academic planning and " \
+             "scheduling, and suggest one concrete planning action you could do instead. Do not apologize at length."
+    parts << "Keep ALL responses concise. Most replies should be under 4 sentences. Never produce long lists, " \
+             "long enumerations, or large blocks of text. If a tool can fulfill the user's planning request, " \
+             "prefer the tool over a long written explanation."
+
     parts.join("\n")
   end
 
   API_HISTORY_LIMIT = 20
+  MAX_USER_MESSAGE_CHARS = 2000
 
   def trim_for_api(history)
     trimmed = if history.length > API_HISTORY_LIMIT
