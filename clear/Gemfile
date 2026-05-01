@@ -27,6 +27,8 @@ gem "pdf-reader"
 
 gem "docx"
 
+gem "icalendar"
+
 
 gem "devise"
 gem "devise_invitable"
