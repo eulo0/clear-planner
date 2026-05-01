@@ -42,6 +42,13 @@ class CourseItem < ApplicationRecord
 
   public
 
+  def graded? = points_possible.present? && points_possible > 0 && points_earned.present?
+
+  def grade_percentage
+    return nil unless graded?
+    (points_earned / points_possible * 100).round(1)
+  end
+
   def starts_at = due_at
   def ends_at = due_at ? due_at + 30.minutes : nil
   def color = course.color

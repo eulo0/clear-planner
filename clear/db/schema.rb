@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_01_003734) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_01_021949) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -67,6 +67,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_01_003734) do
     t.text "details"
     t.datetime "due_at"
     t.integer "kind", default: 0, null: false
+    t.decimal "points_earned"
+    t.decimal "points_possible"
     t.string "title", null: false
     t.datetime "updated_at", null: false
     t.index ["course_id", "due_at"], name: "index_course_items_on_course_id_and_due_at"
@@ -82,6 +84,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_01_003734) do
     t.date "end_date"
     t.time "end_time"
     t.time "ends_at"
+    t.jsonb "grade_weights", default: {}, null: false
     t.string "instructor"
     t.string "location"
     t.string "meeting_days"

@@ -86,6 +86,40 @@ class Course < ApplicationRecord
     out
   end
 
+  def overall_grade
+    kinds_with_weight = grade_weights.select { |_, w| w.to_f > 0 }
+    return nil if kinds_with_weight.empty?
+
+    graded_items = course_items.select(&:graded?)
+    return nil if graded_items.empty?
+
+    weighted_sum = 0.0
+    total_weight = 0.0
+
+    kinds_with_weight.each do |kind, weight|
+      items = graded_items.select { |i| i.kind == kind }
+      next if items.empty?
+
+      avg = items.sum { |i| i.points_earned.to_f / i.points_possible.to_f } / items.size
+      weighted_sum += weight.to_f * avg
+      total_weight += weight.to_f
+    end
+
+    return nil if total_weight.zero?
+
+    (weighted_sum / total_weight * 100).round(1)
+  end
+
+  def letter_grade(percentage)
+    case percentage
+    when 90..Float::INFINITY then "A"
+    when 80...90 then "B"
+    when 70...80 then "C"
+    when 60...70 then "D"
+    else "F"
+    end
+  end
+
   # Text color for calendar readability
   def contrast_text_color
     hex = color.to_s.delete("#")

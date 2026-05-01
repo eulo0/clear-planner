@@ -2,11 +2,11 @@ class CoursesController < ApplicationController
   layout "app_shell"
 
   before_action :authenticate_user!
-  before_action :set_course, only: %i[show edit update destroy]
+  before_action :set_course, only: %i[show edit update destroy update_grade_weights grades]
 
   def index
     @q = params[:q].to_s.strip
-    @courses = current_user.courses.includes(:syllabuses).order(:title)
+    @courses = current_user.courses.includes(:syllabuses, :course_items).order(:title)
     @courses = @courses.where("title ILIKE ? OR professor ILIKE ? OR term ILIKE ? OR location ILIKE ?",
                               "%#{@q}%", "%#{@q}%", "%#{@q}%", "%#{@q}%") if @q.present?
   end
@@ -158,6 +158,18 @@ class CoursesController < ApplicationController
     end
   end
 
+  def grades
+    @items_by_kind = @course.course_items.order(:due_at).group_by(&:kind)
+  end
+
+  def update_grade_weights
+    if @course.update(grade_weights: grade_weights_params)
+      redirect_to grades_course_path(@course), notice: "Grade weights updated."
+    else
+      redirect_to grades_course_path(@course), alert: "Failed to update grade weights."
+    end
+  end
+
   def destroy_all
     current_user.courses.destroy_all
     redirect_to courses_path, notice: "All courses deleted."
@@ -300,6 +312,12 @@ class CoursesController < ApplicationController
     raw.present? ? Date.parse(raw) : Date.current
   rescue ArgumentError
     Date.current
+  end
+
+  def grade_weights_params
+    allowed_kinds = CourseItem.kinds.keys
+    raw = params.require(:grade_weights).permit(*allowed_kinds).to_h
+    raw.transform_values { |v| v.to_s.strip.empty? ? nil : v.to_f.clamp(0, 100) }.compact
   end
 
   def course_params
