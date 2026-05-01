@@ -80,10 +80,7 @@
                 { label: "Users", path: "/admin/users", icon_name: "user-02-stroke-rounded" }
               ] : [])
             ),
-            settings_items: [
-              { label: "Profile", path: profile_path, icon_name: "user-02-stroke-rounded",
-                data: { turbo_frame: "profile_modal", turbo_prefetch: false, action: "click->modal#start" } }
-            ] +
+            settings_items: 
             (current_user&.admin? ? [
               { label: "UI Kit", path: "/ui", icon_name: "search-01-stroke-rounded" }
             ] : []),
