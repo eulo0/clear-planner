@@ -2,6 +2,12 @@ import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
   submit() {
+    const startDateInput = this.element.querySelector('input[name="start_date"]')
+    if (startDateInput) {
+      const url = new URL(window.location.href)
+      startDateInput.value = url.searchParams.get("start_date") || ""
+    }
+
     const input = this.element.querySelector("#ai_chat_input")
     if (!input || !input.value.trim()) return
 

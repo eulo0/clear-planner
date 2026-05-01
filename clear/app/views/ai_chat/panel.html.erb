@@ -49,6 +49,7 @@
         <div id="ai_chat_history_wrapper">
           <%= hidden_field_tag :history, "[]" %>
         </div>
+        <%= hidden_field_tag :start_date, "" %>
         <%= text_area_tag :content, "",
           id: "ai_chat_input",
           rows: 3,
