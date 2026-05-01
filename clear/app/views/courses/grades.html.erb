@@ -10,7 +10,7 @@
   <div class="flex items-center justify-between gap-4">
     <div class="min-w-0 flex-1">
       <div class="text-base font-semibold text-zinc-100 truncate"><%= @course.title.presence || "Course" %></div>
-      <div class="text-sm text-zinc-500">Grade breakdown by assignment type.</div>
+      <div class="text-sm text-zinc-400">Grade breakdown by assignment type.</div>
     </div>
     <%= link_to course_course_items_path(@course), class: "studs-nav-btn shrink-0" do %>
       <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
@@ -27,7 +27,7 @@
       <% if overall %>
         <div class="flex items-center gap-1">
           <span class="text-xl font-bold" style="color: var(--studs-accent);"><%= @course.letter_grade(overall) %></span>
-          <span class="text-sm text-zinc-400"><%= overall %>%</span>
+          <span class="text-sm text-zinc-300"><%= overall %>%</span>
         </div>
       <% else %>
         <span class="text-sm text-zinc-500">—</span>
@@ -39,8 +39,8 @@
           <% items = graded_by_kind[kind] || [] %>
           <% avg = items.any? ? (items.sum { |i| i.grade_percentage } / items.size).round(1) : nil %>
           <div class="rounded-xl px-3 py-2 text-center" style="border: 1px solid var(--studs-border); background-color: var(--studs-panel-hover);">
-            <div class="text-[10px] font-semibold uppercase tracking-wide text-zinc-400"><%= kind.humanize %></div>
-            <div class="text-xs text-zinc-500 mt-0.5"><%= weight.to_i %>% weight</div>
+            <div class="text-[10px] font-semibold uppercase tracking-wide text-zinc-300"><%= kind.humanize %></div>
+            <div class="text-xs text-zinc-400 mt-0.5"><%= weight.to_i %>% weight</div>
             <div class="text-sm font-semibold mt-1" style="color: var(--studs-accent);">
               <%= avg ? "#{avg}%" : "—" %>
             </div>
@@ -103,22 +103,22 @@
             <div class="col-span-6">
               <p class="text-sm font-medium text-zinc-100"><%= item.title.presence || "(Untitled)" %></p>
               <% if item.due_at.present? %>
-                <p class="text-xs text-zinc-500 mt-0.5"><%= item.due_at.strftime("%b %-d at %-I:%M%P") %></p>
+                <p class="text-xs text-zinc-400 mt-0.5"><%= item.due_at.strftime("%b %-d at %-I:%M%P") %></p>
               <% end %>
             </div>
             <div class="col-span-4 text-sm text-zinc-300">
               <% if item.graded? %>
                 <span class="font-semibold text-zinc-100"><%= item.points_earned %></span>
-                <span class="text-zinc-500"> / <%= item.points_possible %></span>
+                <span class="text-zinc-400"> / <%= item.points_possible %></span>
               <% else %>
-                <span class="text-zinc-600">—</span>
+                <span class="text-zinc-400">—</span>
               <% end %>
             </div>
             <div class="col-span-2 text-right">
               <% if item.graded? %>
                 <span class="text-sm font-semibold" style="color: var(--studs-accent);"><%= item.grade_percentage %>%</span>
               <% else %>
-                <span class="text-xs text-zinc-600">Not graded</span>
+                <span class="text-xs text-zinc-400">Not graded</span>
               <% end %>
             </div>
           </div>
@@ -140,13 +140,13 @@
                style="border-bottom: 1px solid var(--studs-divider);">
             <div class="col-span-6 text-sm font-medium text-zinc-300">
               <%= kind.humanize %>
-              <span class="ml-2 text-xs text-zinc-600"><%= weight.to_i %>% weight</span>
+              <span class="ml-2 text-xs text-zinc-400"><%= weight.to_i %>% weight</span>
             </div>
-            <div class="col-span-4 text-sm text-zinc-400">
+            <div class="col-span-4 text-sm text-zinc-300">
               <% if possible > 0 %>
                 <%= earned.to_s.sub(/\.0$/, '') %> / <%= possible.to_s.sub(/\.0$/, '') %>
               <% else %>
-                <span class="text-zinc-600">0.00 / 0.00</span>
+                <span class="text-zinc-400">0.00 / 0.00</span>
               <% end %>
             </div>
             <div class="col-span-2 text-right text-sm font-semibold" style="color: var(--studs-accent);">
@@ -164,7 +164,7 @@
           <% if overall %>
             <%= @course.letter_grade(overall) %> &nbsp; <%= overall %>%
           <% else %>
-            <span class="text-zinc-500 text-sm font-normal">No grades yet</span>
+            <span class="text-zinc-400 text-sm font-normal">No grades yet</span>
           <% end %>
         </div>
       </div>
@@ -172,7 +172,7 @@
     <% else %>
       <div class="flex flex-col items-center justify-center py-16 text-center">
         <p class="text-sm font-medium text-zinc-300">No items yet</p>
-        <p class="mt-1 text-xs text-zinc-500">Add course items to start tracking grades</p>
+        <p class="mt-1 text-xs text-zinc-400">Add course items to start tracking grades</p>
       </div>
     <% end %>
   </div>
