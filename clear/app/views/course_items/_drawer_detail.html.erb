@@ -50,6 +50,19 @@
         <div class="mt-1 text-sm text-zinc-100 whitespace-pre-wrap"><%= course_item.details.presence || "—" %></div>
       </div>
 
+      <% if course_item.graded? %>
+        <div class="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4">
+          <div class="text-xs text-zinc-400">Grade</div>
+          <div class="mt-1 flex items-center gap-2">
+            <span class="text-sm font-semibold text-zinc-100"><%= course_item.points_earned %> / <%= course_item.points_possible %></span>
+            <span class="text-xs px-2 py-0.5 rounded-full font-semibold"
+                  style="background-color: rgba(52,211,153,0.15); color: var(--studs-accent); border: 1px solid rgba(52,211,153,0.3);">
+              <%= course_item.grade_percentage %>%
+            </span>
+          </div>
+        </div>
+      <% end %>
+
       <% if course.location.present? %>
         <div class="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4">
           <div class="text-xs text-zinc-400">Course location</div>

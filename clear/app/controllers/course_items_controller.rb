@@ -151,7 +151,7 @@ class CourseItemsController < ApplicationController
   end
 
   def course_item_params
-    params.require(:course_item).permit(:title, :kind, :due_at, :details)
+    params.require(:course_item).permit(:title, :kind, :due_at, :details, :points_possible, :points_earned)
   end
 
   def parse_start_date(raw)

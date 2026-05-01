@@ -9,18 +9,28 @@
       <div class="text-base font-semibold text-zinc-100 truncate"><%= @course.title.presence || "Course" %></div>
       <div class="text-sm text-zinc-500">Add and manage assignments, exams, presentations, and more.</div>
     </div>
-    <%= link_to courses_path, class: "studs-nav-btn shrink-0" do %>
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
-      </svg>
-      Back to courses
-    <% end %>
+    <div class="flex items-center gap-2 shrink-0">
+      <%= link_to grades_course_path(@course), class: "studs-nav-btn" do %>
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+        </svg>
+        Grades
+      <% end %>
+      <%= link_to courses_path, class: "studs-nav-btn" do %>
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+        </svg>
+        Back to courses
+      <% end %>
+    </div>
   </div>
+
   <!-- Add item form -->
   <div class="rounded-2xl p-4" style="border: 1px solid var(--studs-border); background-color: var(--studs-panel-bg-2);">
     <div class="text-[10px] font-bold uppercase tracking-widest mb-3" style="color: var(--studs-accent); opacity: 0.8;">New item</div>
     <%= render "form", course: @course, course_item: @course_item %>
   </div>
+
   <!-- Items list -->
   <div class="overflow-hidden rounded-2xl" style="border: 1px solid var(--studs-border); background-color: var(--studs-panel-bg-2);">
     <% if @course_items.any? %>
