@@ -178,7 +178,12 @@ class CoursesController < ApplicationController
       return render_draft_calendar_update
     end
 
-    @course.destroy!
+    if params[:scope] == "single"
+      excluded_date = parse_start_date(params[:start_date])
+      @course.course_exceptions.find_or_create_by!(excluded_date: excluded_date)
+    else
+      @course.destroy!
+    end
 
     respond_to do |format|
       format.html { redirect_to courses_path, notice: "Course deleted." }

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_04_29_223515) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_01_003734) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -50,6 +50,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_29_223515) do
     t.datetime "updated_at", null: false
     t.bigint "user_id", null: false
     t.index ["user_id"], name: "index_calendar_drafts_on_user_id"
+  end
+
+  create_table "course_exceptions", force: :cascade do |t|
+    t.bigint "course_id", null: false
+    t.datetime "created_at", null: false
+    t.date "excluded_date", null: false
+    t.datetime "updated_at", null: false
+    t.index ["course_id", "excluded_date"], name: "index_course_exceptions_on_course_id_and_excluded_date", unique: true
+    t.index ["course_id"], name: "index_course_exceptions_on_course_id"
   end
 
   create_table "course_items", force: :cascade do |t|
@@ -257,6 +266,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_29_223515) do
     t.index ["username"], name: "index_users_on_username"
   end
 
+  create_table "work_shift_exceptions", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.date "excluded_date", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "work_shift_id", null: false
+    t.index ["work_shift_id", "excluded_date"], name: "index_work_shift_exceptions_on_work_shift_id_and_excluded_date", unique: true
+    t.index ["work_shift_id"], name: "index_work_shift_exceptions_on_work_shift_id"
+  end
+
   create_table "work_shifts", force: :cascade do |t|
     t.string "color", default: "#34D399", null: false
     t.datetime "created_at", null: false
@@ -278,6 +296,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_29_223515) do
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "calendar_drafts", "users"
+  add_foreign_key "course_exceptions", "courses"
   add_foreign_key "course_items", "courses"
   add_foreign_key "courses", "projects"
   add_foreign_key "courses", "users"
@@ -295,5 +314,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_29_223515) do
   add_foreign_key "schedules", "users"
   add_foreign_key "syllabuses", "courses", on_delete: :nullify
   add_foreign_key "syllabuses", "users"
+  add_foreign_key "work_shift_exceptions", "work_shifts"
   add_foreign_key "work_shifts", "users"
 end

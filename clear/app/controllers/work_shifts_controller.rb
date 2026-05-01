@@ -143,7 +143,12 @@ class WorkShiftsController < ApplicationController
       return render_draft_calendar_update
     end
 
-    @work_shift.destroy!
+    if params[:scope] == "single"
+      excluded_date = parse_start_date(params[:start_date])
+      @work_shift.work_shift_exceptions.find_or_create_by!(excluded_date: excluded_date)
+    else
+      @work_shift.destroy!
+    end
 
     respond_to do |format|
       format.html { redirect_to work_shifts_path, notice: "Shift deleted." }

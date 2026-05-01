@@ -18,7 +18,6 @@
       ✕
     </button>
   </div>
-
   <!-- Details -->
   <div class="px-4 pb-3 space-y-2 text-sm">
     <% if course.start_time.present? && course.end_time.present? %>
@@ -29,7 +28,6 @@
         <span><%= course.start_time.strftime("%-I:%M %p") %> – <%= course.end_time.strftime("%-I:%M %p") %></span>
       </div>
     <% end %>
-
     <% if course.professor.present? %>
       <div class="flex items-center gap-2 text-zinc-300">
         <svg class="h-4 w-4 shrink-0 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -38,7 +36,6 @@
         <span><%= course.professor %></span>
       </div>
     <% end %>
-
     <% if course.location.present? %>
       <div class="flex items-center gap-2 text-zinc-300">
         <svg class="h-4 w-4 shrink-0 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -48,7 +45,6 @@
         <span><%= course.location %></span>
       </div>
     <% end %>
-
     <% if course.repeat_days.present? %>
       <div class="flex items-center gap-2 text-zinc-300">
         <svg class="h-4 w-4 shrink-0 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -65,7 +61,6 @@
         </span>
       </div>
     <% end %>
-
     <% if course.term.present? %>
       <div class="flex items-center gap-2 text-zinc-300">
         <svg class="h-4 w-4 shrink-0 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -75,7 +70,6 @@
       </div>
     <% end %>
   </div>
-
   <!-- Actions -->
   <div class="flex items-center gap-2 px-4 pb-3 pt-1 border-t border-zinc-800">
     <%= link_to edit_course_path(course_identifier, start_date: start_date),
@@ -86,7 +80,6 @@
       </svg>
       Edit
     <% end %>
-
     <% if course.persisted? %>
       <%= link_to course_course_items_path(course),
             data: { turbo: false },
@@ -97,15 +90,35 @@
         Items
       <% end %>
     <% end %>
-
-    <%= button_to course_path(course_identifier, start_date: start_date),
-          method: :delete,
-          class: "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-rose-300 hover:bg-rose-950/40 transition",
-          form: { data: { turbo_confirm: "Delete this course and all its data?" } } do %>
-      <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-      </svg>
-      Delete
-    <% end %>
+    <div data-controller="delete-options" class="relative">
+      <button
+          type="button"
+          data-action="delete-options#toggle"
+          class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-rose-300 hover:bg-rose-950/40 transition">
+        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+        </svg>
+        Delete
+        <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+        </svg>
+      </button>
+      <div
+          data-delete-options-target="menu"
+          class="hidden absolute bottom-full left-0 mb-1 w-52 rounded-lg border border-zinc-700 py-1 z-50"
+          style="background-color: #18181b; box-shadow: 0 8px 30px rgba(0,0,0,0.7);">
+        <%= button_to course_path(course_identifier, start_date: start_date, scope: "single"),
+                method: :delete,
+                class: "w-full text-left px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-800 transition" do %>
+          This course event only
+        <% end %>
+        <%= button_to course_path(course_identifier, start_date: start_date, scope: "all"),
+                method: :delete,
+                class: "w-full text-left px-3 py-2 text-sm text-rose-300 hover:bg-rose-950/40 transition",
+                form: { data: { turbo_confirm: "Delete all occurrences of this course?" } } do %>
+          All course events in series
+        <% end %>
+      </div>
+    </div>
   </div>
 <% end %>

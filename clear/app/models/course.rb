@@ -6,6 +6,7 @@ class Course < ApplicationRecord
   has_many :course_items, dependent: :destroy
   has_many :syllabuses, dependent: :nullify
   has_many :notifications, as: :notifiable, dependent: :destroy
+  has_many :course_exceptions, dependent: :destroy
 
   validates :title, presence: true
   validates :start_time, presence: true
@@ -65,10 +66,12 @@ class Course < ApplicationRecord
     window_end   = [ range_end.to_date, end_date ].min
     return [] if window_end < window_start
 
+    excluded_dates = course_exceptions.map(&:excluded_date).to_set
+
     out = []
     d = window_start
     while d <= window_end
-      if repeat_days.include?(d.wday)
+      if repeat_days.include?(d.wday) && !excluded_dates.include?(d)
         occ_start = Time.zone.local(d.year, d.month, d.day, start_time.hour, start_time.min, start_time.sec)
 
         occ_end =

@@ -5,7 +5,6 @@
       <%= render "profiles/left_nav_profile", user: helpers.current_user %>
     </div>
   </div>
-
   <%# ── Menu section ── %>
   <nav class="flex-1 min-h-0 overflow-y-auto px-3 pt-3 group-data-[collapsed=true]/sidebar:px-2">
     <div class="mb-2 group-data-[collapsed=true]/sidebar:hidden">
@@ -31,11 +30,9 @@
       <% end %>
     </div>
   </nav>
-
   <%# ── Settings section ── %>
   <div class="shrink-0 px-3 pb-3 pt-2 group-data-[collapsed=true]/sidebar:px-2">
     <div class="mb-2 group-data-[collapsed=true]/sidebar:hidden">
-      <span class="px-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500">Settings</span>
     </div>
     <div class="space-y-0.5">
       <% @settings_items.each do |item| %>
@@ -56,7 +53,6 @@
           </span>
         <% end %>
       <% end %>
-
       <%= button_to destroy_user_session_path,
       method: :delete,
       form: { class: "w-full" },

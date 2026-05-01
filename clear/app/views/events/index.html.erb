@@ -71,11 +71,7 @@
                 <p class="font-medium text-zinc-100 min-w-0 truncate max-w-xs sm:max-w-sm md:max-w-md">
                   <%= link_to event.title.presence || "(Untitled)", event_path(event, start_date: starts_at&.to_date),
             class: "hover:underline underline-offset-2",
-            data: {
-              turbo_frame: "event_drawer",
-              action: "click->drawer#start",
-              turbo_prefetch: false
-            } %>
+            data: { turbo_frame: "_top" } %>
                 </p>
                 <% if event.project_id.present? %>
                   <span class="shrink-0 truncate max-w-[8rem] text-sm text-zinc-400">
