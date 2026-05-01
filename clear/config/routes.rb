@@ -27,6 +27,8 @@ Rails.application.routes.draw do
     delete :destroy, on: :member
   end
 
+  resource :calendar_export, only: [ :show ]
+
   resources :events do
     collection do
       delete :destroy_all
