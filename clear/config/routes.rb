@@ -32,6 +32,7 @@ end
   end
 
   resource :calendar_export, only: [ :show ]
+  resource :calendar_import, only: [ :create ]
 
   resources :events do
     collection do

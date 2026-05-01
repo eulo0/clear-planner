@@ -85,6 +85,9 @@ application.register("event-popover", EventPopoverController)
 import FilepondController from "./filepond_controller"
 application.register("filepond", FilepondController)
 
+import FilePreviewController from "./file_preview_controller"
+application.register("file-preview", FilePreviewController)
+
 import FullHeightController from "./full_height_controller"
 application.register("full-height", FullHeightController)
 
