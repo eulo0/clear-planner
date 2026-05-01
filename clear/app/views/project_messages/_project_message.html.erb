@@ -1,7 +1,16 @@
-<div class="flex flex-col gap-1 p-3 rounded-2xl" style="border: 1px solid var(--studs-border); background-color: var(--studs-panel-bg-2);">
-  <div class="flex items-center gap-2">
-    <span class="text-sm font-semibold text-zinc-100"><%= project_message.user.email %></span>
-    <span class="text-xs text-zinc-500"><%= project_message.created_at.strftime("%-I:%M %p") %></span>
+<% display_name = project_message.user.username.presence || project_message.user.email %>
+<div class="flex items-start justify-start">
+  <div class="self-start inline-flex flex-col max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed"
+       style="background-color: var(--studs-panel-bg-2);
+              border: 1px solid var(--studs-border);
+              color: #f4f4f5;">
+    <div class="flex items-baseline gap-2 mb-1.5">
+      <span class="text-[10px] font-bold uppercase tracking-widest"
+            style="color: color-mix(in srgb, var(--studs-accent) 60%, #a1a1aa);">
+        <%= display_name %>
+      </span>
+      <span class="text-[10px] text-zinc-500"><%= project_message.created_at.strftime("%-I:%M %p") %></span>
+    </div>
+    <div class="whitespace-pre-wrap break-words"><%= h(project_message.body) %></div>
   </div>
-  <p class="text-sm text-zinc-300"><%= project_message.body %></p>
 </div>
