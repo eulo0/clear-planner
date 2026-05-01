@@ -93,6 +93,7 @@ class ProjectsController < ApplicationController
 
     unless project.users.include?(current_user)
       project.project_memberships.create!(user: current_user, role: :viewer)
+      project.notify_member_joined(current_user)
     end
 
     redirect_to project_path(project), notice: "You joined the group!"
