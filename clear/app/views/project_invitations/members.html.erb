@@ -1,0 +1,69 @@
+<% content_for :page_title, "Invite to #{@project.title}" %>
+<% content_for :page_subtitle, "Send an email invitation to collaborate" %>
+<% is_owner = @project.membership_for(current_user)&.owner? %>
+<div class="mx-auto max-w-lg">
+  <div class="rounded-2xl p-6" style="border: 1px solid var(--studs-border); background-color: var(--studs-panel-bg);">
+    <% pending = @project.project_invitations.pending %>
+    <% if pending.any? %>
+      <div class="mt-6 pt-5" style="border-top: 1px solid var(--studs-divider);">
+        <h3 class="text-[10px] font-bold uppercase tracking-widest mb-3" style="color: var(--studs-accent); opacity: 0.8;">
+          Pending Invitations
+        </h3>
+        <div class="space-y-2">
+          <% pending.each do |inv| %>
+            <div class="flex items-center justify-between rounded-xl px-3 py-2 text-sm"
+                 style="background-color: var(--studs-panel-bg-2); border: 1px solid var(--studs-border);">
+              <span class="text-zinc-300"><%= inv.email %></span>
+              <span class="text-[10px] text-zinc-500">Sent <%= time_ago_in_words(inv.created_at) %> ago</span>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+    <% if @members.any? %>
+      <div class="mt-6 pt-5" style="border-top: 1px solid var(--studs-divider);">
+        <h3 class="text-[10px] font-bold uppercase tracking-widest mb-3" style="color: var(--studs-accent); opacity: 0.8;">
+          Current Members
+        </h3>
+        <div class="space-y-2">
+          <% @members.each do |member| %>
+            <% membership = @project.membership_for(member) %>
+            <div class="flex items-center justify-between rounded-xl px-3 py-2 text-sm"
+                 style="background-color: var(--studs-panel-bg-2); border: 1px solid var(--studs-border);">
+              <span class="text-zinc-300"><%= member.email %></span>
+              <div class="flex items-center gap-2">
+                <% if is_owner && !membership.owner? %>
+                  <div data-controller="role-update"
+                    data-role-update-url-value="<%= project_project_membership_path(@project, membership) %>">
+                    <div data-action="dropdown:select->role-update#save">
+                      <%= render Studs::DropdownComponent.new(
+                        label: membership.role.capitalize,
+                        variant: :agenda_filter,
+                        name: "role",
+                        selected_value: membership.role,
+                        items: [
+                        { label: "Viewer", value: "viewer" },
+                        { label: "Editor", value: "editor" }
+                        ]
+                    ) %>
+                    </div>
+                  </div>
+                  <%= button_to "Remove",
+                    project_project_membership_path(@project, membership),
+                    method: :delete,
+                    class: "studs-nav-btn text-red-400",
+                    data: { turbo_confirm: "Remove #{member.email} from this group?" } %>
+                <% else %>
+                  <span class="text-[10px] text-zinc-500 uppercase tracking-widest"><%=membership.role%></span>
+                <% end %>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+    <div class="flex items-center gap-3 pt-4">
+      <%= link_to "Back", project_path(@project), class: "studs-nav-btn" %>
+    </div>
+  </div>
+</div>

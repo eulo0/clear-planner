@@ -73,7 +73,7 @@
                 { label: "Analytics",   path: "/analytics",   icon_name: "eye-stroke-rounded" },
                 { label: "Courses",     path: "/courses",     icon_name: "course-stroke-rounded" },
                 { label: "Events",      path: "/events",      icon_name: "timeline-event-stroke-rounded" },
-                { label: "Projects",    path: "/projects",    icon_name: "users-group-stroke-rounded" },
+                { label: "Groups",    path: "/projects",    icon_name: "users-group-stroke-rounded" },
                 { label: "Work Shifts", path: "/work_shifts", icon_name: "apartment-stroke-rounded" },
               ] +
               (current_user&.admin? ? [
@@ -105,20 +105,22 @@
               <% active_draft = user_signed_in? ? current_user_draft : nil %>
               <% drafts = user_signed_in? ? current_user_drafts : [] %>
               <div class="flex items-center gap-2">
-                <%= render "draft/toggle",
-                      start_date: draft_start_date,
-                      active_draft: active_draft,
-                      drafts: drafts,
-                      max_drafts: CalendarDraft::MAX_DRAFTS_PER_USER %>
-                <div class="mx-1 h-5 w-px rounded-full" style="background-color: var(--studs-border);"></div>
-                <button type="button"
-                        data-action="click->ai-chat-drawer#toggle"
-                  class="studs-topbar-icon-btn studs-topbar-icon-btn--ai"
-                  aria-label="Open AI Chat">
-                  <span class="[&>svg]:h-5 [&>svg]:w-5">
-                    <%= icon "chat-bot-stroke-rounded" %>
-                  </span>
-                </button>
+                <% if !@project %>
+                  <%= render "draft/toggle",
+                        start_date: draft_start_date,
+                        active_draft: active_draft,
+                        drafts: drafts,
+                        max_drafts: CalendarDraft::MAX_DRAFTS_PER_USER %>
+                  <div class="mx-1 h-5 w-px rounded-full" style="background-color: var(--studs-border);"></div>
+                  <button type="button"
+                          data-action="click->ai-chat-drawer#toggle"
+                    class="studs-topbar-icon-btn studs-topbar-icon-btn--ai"
+                    aria-label="Open AI Chat">
+                    <span class="[&>svg]:h-5 [&>svg]:w-5">
+                      <%= icon "chat-bot-stroke-rounded" %>
+                    </span>
+                  </button>
+                <% end %>
                 <div class="mx-1 h-5 w-px rounded-full" style="background-color: var(--studs-border);"></div>
                 <div class="relative" data-controller="notifications-dropdown">
                   <button

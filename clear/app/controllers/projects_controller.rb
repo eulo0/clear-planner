@@ -1,14 +1,15 @@
 class ProjectsController < ApplicationController
   layout "app_shell"
   before_action :authenticate_user!
-  before_action :set_project, only: %i[ show edit update destroy agenda chat]
+  before_action :set_project, only: %i[show edit update destroy agenda chat]
+  before_action :require_owner!, only: %i[edit update]
 
-  # GET /projects or /projects.json
   def index
+    @q = params[:q].to_s.strip
     @projects = current_user.projects.order(:title)
+    @projects = @projects.where("title ILIKE ?", "%#{@q}%") if @q.present?
   end
 
-  # GET /projects/1 or /projects/1.json
   def show
     @start_date =
       begin
@@ -24,36 +25,32 @@ class ProjectsController < ApplicationController
     @month_date = @start_date
   end
 
-  # GET /projects/new
   def new
     @project = Project.new
   end
 
-  # GET /projects/1/edit
   def edit
   end
 
-  # POST /projects or /projects.json
   def create
     @project = Project.new(project_params)
 
     if @project.save
-      @project.users << current_user
+      @project.project_memberships.create!(user: current_user, role: :owner)
       respond_to do |format|
-        format.html { redirect_to project_path(@project), notice: "Project created." }
-        end
+        format.html { redirect_to project_path(@project), notice: "Group created." }
+      end
     else
       respond_to do |format|
         format.html { render :new, status: :unprocessable_entity }
-        end
+      end
     end
   end
 
-  # PATCH/PUT /projects/1 or /projects/1.json
   def update
     respond_to do |format|
       if @project.update(project_params)
-        format.html { redirect_to @project, notice: "Project was successfully updated.", status: :see_other }
+        format.html { redirect_to @project, notice: "Group was successfully updated.", status: :see_other }
         format.json { render :show, status: :ok, location: @project }
       else
         format.html { render :edit, status: :unprocessable_entity }
@@ -62,29 +59,18 @@ class ProjectsController < ApplicationController
     end
   end
 
-  # DELETE /projects/1 or /projects/1.json
   def destroy
-    current_user.project_memberships.find_by(project: @project)&.destroy
-
-    respond_to do |format|
-      format.html { redirect_to projects_path, notice: "You have left the project.", status: :see_other }
-      format.json { head :no_content }
+    if current_membership.owner?
+      @project.destroy
+      respond_to do |format|
+        format.html { redirect_to projects_path, notice: "Group deleted.", status: :see_other }
+      end
+    else
+      current_membership&.destroy
+      respond_to do |format|
+        format.html { redirect_to projects_path, notice: "You have left the group.", status: :see_other }
+      end
     end
-  end
-
-  def agenda
-  @date =
-    begin
-      params[:date].present? ? Date.parse(params[:date]) : Date.current
-    rescue ArgumentError
-      Date.current
-    end
-
-  @occurrences = @project.occurrences_for_day(@date)
-
-  now = Time.current
-  @next_occurrence = @project.occurrences_for_week(now.to_date)
-                              .find { |o| o.starts_at > now }
   end
 
   def join
@@ -96,63 +82,82 @@ class ProjectsController < ApplicationController
     end
 
     unless project.users.include?(current_user)
-      project.users << current_user
+      project.project_memberships.create!(user: current_user, role: :viewer)
     end
 
     redirect_to project_path(project), notice: "You joined the project!"
   end
 
+  def agenda
+    @date =
+      begin
+        params[:date].present? ? Date.parse(params[:date]) : Date.current
+      rescue ArgumentError
+        Date.current
+      end
+
+    @occurrences = @project.occurrences_for_day(@date)
+
+    now = Time.current
+    @next_occurrence = @project.occurrences_for_week(now.to_date)
+                                .find { |o| o.starts_at > now }
+  end
+
   def chat
-      @messages = @project.project_messages.includes(:user).order(created_at: :asc)
+    @messages = @project.project_messages.includes(:user).order(created_at: :asc)
   end
 
   private
 
-    def occurrences_for_range(range_start, range_end)
-      base_events = current_user.events
+  def current_membership
+    @current_membership ||= @project.membership_for(current_user)
+  end
 
-      non_recurring_events = base_events.where(recurring: false)
-                                        .where(starts_at: range_start..range_end)
-
-      recurring_events = base_events.where(recurring: true)
-                                    .where("starts_at <= ?", range_end)
-                                    .where("repeat_until >= ?", range_start.to_date)
-
-
-      event_occurrences = (non_recurring_events + recurring_events).flat_map { |e| e.occurrences_between(range_start, range_end) }
-
-      base_courses = current_user.courses
-        .where("start_date <= ?", range_end.to_date)
-        .where("end_date >= ?", range_start.to_date)
-        .order(start_date: :asc)
-
-      course_occurrences =
-        base_courses.flat_map { |c| c.occurrences_between(range_start, range_end) }
-
-      course_items =
-        CourseItem
-          .joins(:course)
-          .where(courses: { user_id: current_user.id })
-          .where(due_at: range_start..range_end)
-          .includes(:course)
-
-      (event_occurrences + course_occurrences + course_items.to_a)
-        .sort_by(&:starts_at)
+  def require_owner!
+    unless current_membership&.owner?
+      redirect_to project_path(@project), alert: "You don't have permission to do that."
     end
+  end
 
-    # Use callbacks to share common setup or constraints between actions.
-    def set_project
-      @project = current_user.projects.find_by(id: params[:id])
-      unless @project
-        redirect_to projects_path, alert: "Project not found or you are not a member."
-      end
-    end
+  def occurrences_for_range(range_start, range_end)
+    base_events = current_user.events
 
-    # Only allow a list of trusted parameters through.
-    def project_params
-    params.require(:project).permit(
-      :title,
-      :description
-    )
+    non_recurring_events = base_events.where(recurring: false)
+                                      .where(starts_at: range_start..range_end)
+
+    recurring_events = base_events.where(recurring: true)
+                                  .where("starts_at <= ?", range_end)
+                                  .where("repeat_until >= ?", range_start.to_date)
+
+    event_occurrences = (non_recurring_events + recurring_events).flat_map { |e| e.occurrences_between(range_start, range_end) }
+
+    base_courses = current_user.courses
+      .where("start_date <= ?", range_end.to_date)
+      .where("end_date >= ?", range_start.to_date)
+      .order(start_date: :asc)
+
+    course_occurrences =
+      base_courses.flat_map { |c| c.occurrences_between(range_start, range_end) }
+
+    course_items =
+      CourseItem
+        .joins(:course)
+        .where(courses: { user_id: current_user.id })
+        .where(due_at: range_start..range_end)
+        .includes(:course)
+
+    (event_occurrences + course_occurrences + course_items.to_a)
+      .sort_by(&:starts_at)
+  end
+
+  def set_project
+    @project = current_user.projects.find_by(id: params[:id])
+    unless @project
+      redirect_to projects_path, alert: "Group not found or you are not a member."
     end
+  end
+
+  def project_params
+    params.require(:project).permit(:title, :description)
+  end
 end

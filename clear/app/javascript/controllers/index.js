@@ -112,6 +112,9 @@ application.register("recurrence-toggle", RecurrenceToggleController)
 import RemovableCardController from "./removable_card_controller"
 application.register("removable-card", RemovableCardController)
 
+import RoleUpdateController from "./role_update_controller"
+application.register("role-update", RoleUpdateController)
+
 import SearchController from "./search_controller"
 application.register("search", SearchController)
 

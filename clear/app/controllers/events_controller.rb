@@ -18,6 +18,8 @@ class EventsController < ApplicationController
   def show
     return unless turbo_frame_request?
 
+    @project = @event.project
+
     partial = if request.headers["Turbo-Frame"] == "event_popover"
                 "events/popover_detail"
     else
@@ -33,7 +35,10 @@ class EventsController < ApplicationController
     @event = current_user.events.new(starts_at: start_time)
 
     if params[:project_id].present?
-      @project = current_user.projects.find(params[:project_id])
+      @project = current_user.projects.find_by(id: params[:project_id])
+      if @project.nil?
+        redirect_to projects_path, alert: "That group no longer exists." and return
+      end
       @event.project = @project
     end
   end
@@ -51,7 +56,11 @@ class EventsController < ApplicationController
 
     @event = current_user.events.new(event_params)
     if params[:event][:project_id].present?
-      @event.project = current_user.projects.find(params[:event][:project_id])
+      project = current_user.projects.find_by(id: params[:event][:project_id])
+      if project.nil?
+        redirect_to projects_path, alert: "That group no longer exists." and return
+      end
+      @event.project = project
     end
 
     if @event.auto_schedule? && !apply_auto_schedule(@event)
@@ -297,7 +306,13 @@ class EventsController < ApplicationController
       return
     end
 
-    @event = current_user.events.find(params[:id])
+    @event = Event.where(id: params[:id])
+                  .where("user_id = ? OR project_id IN (?)", current_user.id, current_user.project_ids)
+                  .first
+    unless @event
+          redirect_to dashboard_path, alert: "Event not found."
+    end
+
     apply_draft_event_update! if in_draft_mode?
   end
 

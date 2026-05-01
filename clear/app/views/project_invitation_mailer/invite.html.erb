@@ -1,13 +1,8 @@
 <h2>You've been invited to a project!</h2>
-
 <p><strong><%= @sender.email %></strong> has invited you to collaborate on the project <strong>"<%= @project.title %>"</strong>.</p>
-
 <% if @project.description.present? %>
   <p><em><%= @project.description %></em></p>
 <% end %>
-
 <p>Click the link below to join the project:</p>
-
-<p><%= link_to "Join Project", @accept_url %></p>
-
+<p><%= link_to "Join Group", @accept_url %></p>
 <p>If you don't have an account yet, you'll be able to create one after clicking the link.</p>

@@ -2,7 +2,6 @@
   <% color = event.color.presence || "#34D399" %>
   <% start_at = event.starts_at&.in_time_zone %>
   <% end_at   = event.ends_at&.in_time_zone %>
-
   <% time_line =
       if start_at && end_at
         "#{start_at.strftime("%A, %b %-d")} · #{start_at.strftime("%-I:%M %p")} – #{end_at.strftime("%-I:%M %p")}"
@@ -12,7 +11,6 @@
         "Time not set"
       end
   %>
-
   <div class="flex h-full flex-col">
     <div class="flex items-start justify-between border-b border-zinc-800 px-6 py-4">
       <div class="min-w-0">
@@ -24,7 +22,6 @@
         </div>
         <div class="mt-1 text-xs text-zinc-500">Event details</div>
       </div>
-
       <button
         type="button"
         data-action="drawer#close"
@@ -32,30 +29,24 @@
         ✕
       </button>
     </div>
-
     <div class="scrollbars min-h-0 flex-1 overflow-y-auto px-6 py-6 space-y-4">
       <div class="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4">
         <div class="text-xs text-zinc-400">When</div>
         <div class="mt-1 text-sm text-zinc-100"><%= time_line %></div>
       </div>
-
       <div class="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4">
         <div class="text-xs text-zinc-400">Location</div>
         <div class="mt-1 text-sm text-zinc-100"><%= event.location.presence || "—" %></div>
       </div>
-
       <div class="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4">
         <div class="text-xs text-zinc-400">Description</div>
         <div class="mt-1 text-sm text-zinc-100 whitespace-pre-wrap"><%= event.description.presence || "—" %></div>
       </div>
-
       <div class="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4">
         <div class="text-xs text-zinc-400">Repeat</div>
-
         <% if event.recurring? %>
           <% day_names = %w[Sun Mon Tue Wed Thu Fri Sat] %>
           <% days = Array(event.repeat_days).map { |d| day_names[d.to_i] }.join(", ") %>
-
           <div class="mt-1 text-sm text-zinc-100">
             Weekly on <%= days.presence || "—" %>
             <% if event.repeat_until.present? %>
@@ -67,58 +58,58 @@
         <% end %>
       </div>
     </div>
-
     <div class="shrink-0 border-t border-zinc-800 bg-zinc-950/60 px-6 py-4">
-      <div class="flex items-center justify-between gap-3">
-        <div class="flex items-center gap-2">
+      <% can_edit = @project ? @project.membership_for(current_user)&.can_edit_content? : true %>
+      <% if can_edit %>
+        <div class="flex items-center justify-between gap-3">
+          <div class="flex items-center gap-2">
             <%= link_to edit_event_path(event),
                     class: "studs-nav-btn",
                     data: { turbo_frame: "event_drawer", turbo_prefetch: false } do %>
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                </svg>
-                Edit
-              <% end %>
-
-
-          <% if event.recurring? %>
-            <div data-controller="delete-options" class="relative">
-              <button
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+              </svg>
+              Edit
+            <% end %>
+            <% if event.recurring? %>
+              <div data-controller="delete-options" class="relative">
+                <button
                 type="button"
                 data-action="delete-options#toggle"
                 class="studs-nav-btn inline-flex items-center gap-1"
                 style="border-color: rgba(239,68,68,0.4); color: #fca5a5;">
-                Delete
-                <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
-                </svg>
-              </button>
-              <div
+                  Delete
+                  <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+                  </svg>
+                </button>
+                <div
                 data-delete-options-target="menu"
                 class="hidden absolute bottom-full left-0 mb-1 w-52 rounded-xl border border-zinc-700 py-1 z-50"
                 style="background-color: #18181b; box-shadow: 0 8px 30px rgba(0,0,0,0.7);">
-                <%= button_to "This event only",
+                  <%= button_to "This event only",
                       event_path(event, start_date: start_date, scope: "single"),
                       method: :delete,
                       class: "w-full text-left px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-800 transition",
                       form: { data: { turbo_frame: "event_drawer" } } %>
-                <%= button_to "All events in series",
+                  <%= button_to "All events in series",
                       event_path(event, start_date: start_date, scope: "all"),
                       method: :delete,
                       class: "w-full text-left px-3 py-2 text-sm text-rose-300 hover:bg-rose-950/40 transition",
                       form: { data: { turbo_confirm: "Delete all occurrences of this event?", turbo_frame: "event_drawer" } } %>
+                </div>
               </div>
-            </div>
-          <% else %>
-            <%= button_to event_path(event, start_date: start_date),
+            <% else %>
+              <%= button_to event_path(event, start_date: start_date),
                   method: :delete,
                   class: "studs-nav-btn",
                   style: "border-color: rgba(239,68,68,0.4); color: #fca5a5;",
                   form: { data: { turbo_confirm: "Delete this event?", turbo_frame: "event_drawer" } } do %>
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-              </svg>
-              Delete
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                </svg>
+                Delete
+              <% end %>
             <% end %>
           <% end %>
         </div>

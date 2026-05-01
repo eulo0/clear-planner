@@ -1,5 +1,5 @@
-<% content_for :page_title, "Projects" %>
-<% content_for :page_subtitle, "Current project schedules" %>
+<% content_for :page_title, "Groups" %>
+<% content_for :page_subtitle, "Current group schedules" %>
 <style>
   .course-row { transition: background-color 0.15s ease; }
   .course-row:hover { background-color: var(--studs-panel-hover); }
@@ -9,67 +9,95 @@
     <% if notice.present? %>
       <p class="py-2 px-3 bg-green-50 mb-5 text-green-500 font-medium rounded-md inline-block" id="notice"><%= notice %></p>
     <% end %>
-    <div class="flex items-center justify-between gap-4 mb-5">
-      <div class="text-lg font-semibold text-zinc-100">Projects</div>
-      <%= link_to new_project_path, class: "studs-nav-btn", data: { turbo_frame: "_top" } do %>
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
-        </svg>
-        New project
-      <% end %>
-    </div>
-    <div class="overflow-hidden rounded-2xl"
+    <%= form_with url: projects_path, method: :get,
+      data: { turbo_frame: "projects_list", controller: "search", search_target: "form" } do |f| %>
+      <div class="flex items-center justify-between gap-4 mb-5">
+        <div class="text-lg font-semibold text-zinc-100">Groups</div>
+        <div class="flex items-center gap-1.5">
+          <%= render Studs::SearchBarComponent.new(
+              class_name: "w-72",
+              placeholder: "Search groups…",
+              value: params[:q],
+              data: {
+                search_target: "input",
+                action: "input->search#search keydown->search#submit"
+              }
+            ) %>
+          <div class="mx-1 h-5 w-px rounded-full" style="background-color: var(--studs-border);"></div>
+          <%= link_to destroy_all_events_path,
+              class: "studs-nav-btn",
+              style: "border-color: rgba(239,68,68,0.4); color: #fca5a5;",
+              data: { turbo_method: :delete, turbo_confirm: "Delete all events? This cannot be undone." } do %>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+            </svg>
+            Delete all
+          <% end %>
+          <div class="mx-1 h-5 w-px rounded-full" style="background-color: var(--studs-border);"></div>
+          <%= link_to new_project_path, class: "studs-nav-btn", data: { turbo_frame: "_top" } do %>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+            </svg>
+            New Group
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+    <%= turbo_frame_tag "projects_list" do %>
+      <div class="overflow-hidden rounded-2xl"
          style="border: 1px solid var(--studs-border); background-color: var(--studs-panel-bg-2);">
-      <% if @projects.any? %>
-        <% @projects.each_with_index do |project, i| %>
-          <div class="project-row flex items-start justify-between gap-4 p-4"
-     style="<%= i > 0 ? "border-top: 1px solid var(--studs-divider);" : "" %>">
-            <div class="min-w-0 flex-1">
-              <p class="font-medium text-zinc-100 truncate min-w-0">
-                <%= link_to project.title.presence || "(Untitled)", project_path(project),
+        <% if @projects.any? %>
+          <% @projects.each_with_index do |project, i| %>
+            <div class="project-row flex items-start justify-between gap-4 p-4"
+              style="<%= i > 0 ? "border-top: 1px solid var(--studs-divider);" : "" %>">
+              <div class="min-w-0 flex-1">
+                <p class="font-medium text-zinc-100 truncate min-w-0">
+                  <%= link_to project.title.presence || "(Untitled)", project_path(project),
             class: "hover:underline underline-offset-2",
             data: { turbo_frame: "_top" } %>
-              </p>
-              <% if project.description.present? %>
-                <p class="mt-1 text-sm text-zinc-400"><%= project.description %></p>
-              <% end %>
-            </div>
-            <div class="flex shrink-0 items-center gap-1.5">
-              <%= link_to edit_project_path(project),
+                </p>
+                <% if project.description.present? %>
+                  <p class="mt-1 text-sm text-zinc-400"><%= project.description %></p>
+                <% end %>
+              </div>
+              <div class="flex shrink-0 items-center gap-1.5">
+                <%= link_to edit_project_path(project),
                     class: "studs-nav-btn",
                     data: { turbo_frame: "_top" } do %>
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                </svg>
-                Edit
-              <% end %>
-              <%= link_to project_path(project),
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                  </svg>
+                  Edit
+                <% end %>
+                <%= link_to project_path(project),
                     class: "studs-nav-btn",
                     data: { turbo_frame: "_top" } do %>
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-                </svg>
-                Show
-              <% end %>
-              <%= button_to project_path(project),
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                  </svg>
+                  Show
+                <% end %>
+                <%= button_to project_path(project),
                     method: :delete,
                     form: { data: { turbo_confirm: "Delete this project?", turbo_frame: "_top" } },
                     class: "studs-nav-btn",
                     style: "border-color: rgba(239,68,68,0.4); color: #fca5a5;" do %>
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                </svg>
-                Delete
-              <% end %>
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                  </svg>
+                  Delete
+                <% end %>
+              </div>
             </div>
+          <% end %>
+        <% else %>
+          <div class="flex flex-col items-center justify-center py-16 text-center">
+            <div class="mb-3 opacity-30"><%= icon "users-group-stroke-rounded", class: "h-10 w-10 text-zinc-300" %></div>
+            <p class="text-sm font-medium text-zinc-300">No projects yet</p>
+            <p class="mt-1 text-xs text-zinc-500">Create your first project to get started</p>
           </div>
         <% end %>
-      <% else %>
-        <div class="flex flex-col items-center justify-center py-16 text-center">
-          <div class="mb-3 opacity-30"><%= icon "users-group-stroke-rounded", class: "h-10 w-10 text-zinc-300" %></div>
-          <p class="text-sm font-medium text-zinc-300">No projects yet</p>
-          <p class="mt-1 text-xs text-zinc-500">Create your first project to get started</p>
-        </div>
-      <% end %>
-    </div>
+      </div>
+    <% end %>
   </div>
+</div>
