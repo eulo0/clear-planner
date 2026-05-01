@@ -16,9 +16,9 @@ Rails.application.configure do
   config.server_timing = true
 
   # Use this Section for Testing with Letter Opener
-  # config.action_mailer.raise_delivery_errors = false
-  # config.action_mailer.delivery_method = :letter_opener_web
-  # config.action_mailer.perform_deliveries = true
+  config.action_mailer.raise_delivery_errors = false
+  config.action_mailer.delivery_method = :letter_opener_web
+  config.action_mailer.perform_deliveries = true
 
   # Use this Section for Testing with SMTP
   # config.action_mailer.raise_delivery_errors = true
