@@ -23,12 +23,41 @@ class User < ApplicationRecord
   THEME_DEFAULT = "green".freeze
 
   def theme
-    THEMES.include?(super) ? super : THEME_DEFAULT
+    return super if THEMES.include?(super)
+    return super if custom_themes.key?(super)
+    THEME_DEFAULT
   end
 
   def update_theme(params)
     theme_name = params[:theme].to_s
-    update(theme: THEMES.include?(theme_name) ? theme_name : THEME_DEFAULT)
+    if THEMES.include?(theme_name) || custom_themes.key?(theme_name)
+      update(theme: theme_name)
+    else
+      update(theme: THEME_DEFAULT)
+    end
+  end
+
+  def custom_theme?
+    custom_themes.key?(theme)
+  end
+
+  def current_custom_theme_variables
+    return {} unless custom_theme?
+    custom_themes[theme] || {}
+  end
+
+  def save_custom_theme(name, variables)
+    updated = (custom_themes || {}).merge(name => variables)
+    update(custom_themes: updated)
+  end
+
+  def delete_custom_theme(name)
+    updated = (custom_themes || {}).except(name)
+    was_active = theme == name
+    update(
+      custom_themes: updated,
+      theme: was_active ? THEME_DEFAULT : theme
+    )
   end
   # ─────────────────────────────────────────────────────────
 

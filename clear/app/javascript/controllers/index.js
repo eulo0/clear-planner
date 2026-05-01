@@ -52,6 +52,9 @@ application.register("course-filter", CourseFilterController)
 import CurrentTimeController from "./current_time_controller"
 application.register("current-time", CurrentTimeController)
 
+import CustomThemeController from "./custom_theme_controller"
+application.register("custom-theme", CustomThemeController)
+
 import DeleteOptionsController from "./delete_options_controller"
 application.register("delete-options", DeleteOptionsController)
 

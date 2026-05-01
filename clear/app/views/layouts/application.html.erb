@@ -60,7 +60,6 @@
                           class: "-ml-16 h-[56px] w-auto origin-left scale-[1.35] object-contain" %>
             <span class="-mt-1 text-xl font-bold tracking-wide text-zinc-50">Clear</span>
           <% end %>
-
           <% if on_homepage %>
             <nav class="hidden items-center gap-10 md:flex md:absolute md:left-1/2 md:-translate-x-1/2">
               <%= link_to "AI", root_path, class: "home-nav-hover text-sm font-medium text-zinc-50 transition hover:text-white" %>
@@ -68,7 +67,6 @@
               <%= link_to "Resources", "https://github.com/ChaseDow/senior_capstone/wiki", rel: "noopener", class: "home-nav-hover text-sm font-medium text-zinc-50 transition hover:text-white" %>
               <%= link_to "Support", root_path, class: "home-nav-hover text-sm font-medium text-zinc-50 transition hover:text-white" %>
             </nav>
-
             <div class="flex items-center gap-2 mr-[-50px]">
               <%= link_to "Get Started For Free",
                     new_user_registration_path,
@@ -83,22 +81,22 @@
         </div>
       </header>
     <% end %>
-  <% if notice.present? || alert.present? %>
-    <div class="fixed top-4 left-0 right-0 z-50 px-4">
-      <div class="mx-auto w-full max-w-2xl space-y-3">
-        <% if notice.present? %>
-          <div class="rounded-2xl border border-emerald-900 bg-emerald-950/40 px-4 py-3 text-sm text-emerald-200 backdrop-blur-md">
-            <%= notice %>
-          </div>
-        <% end %>
-        <% if alert.present? %>
-          <div class="rounded-2xl border border-rose-900 bg-rose-950/40 px-4 py-3 text-sm text-rose-200 backdrop-blur-md">
-            <%= alert %>
-          </div>
-        <% end %>
+    <% if notice.present? || alert.present? %>
+      <div class="fixed top-4 left-0 right-0 z-50 px-4">
+        <div class="mx-auto w-full max-w-2xl space-y-3">
+          <% if notice.present? %>
+            <div class="rounded-2xl border border-emerald-900 bg-emerald-950/40 px-4 py-3 text-sm text-emerald-200 backdrop-blur-md">
+              <%= notice %>
+            </div>
+          <% end %>
+          <% if alert.present? %>
+            <div class="rounded-2xl border border-rose-900 bg-rose-950/40 px-4 py-3 text-sm text-rose-200 backdrop-blur-md">
+              <%= alert %>
+            </div>
+          <% end %>
+        </div>
       </div>
-    </div>
-  <% end %>
-  <%= yield %>
-</body>
+    <% end %>
+    <%= yield %>
+  </body>
 </html>

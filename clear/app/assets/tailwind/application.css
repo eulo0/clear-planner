@@ -200,6 +200,10 @@ body[data-theme="mono"] {
   --studs-sidebar-bg: #111111;
 }
 
+body[data-theme] {
+  background-color: var(--studs-body-bg, #09090b);
+}
+
 /* =========================
    Repeat Day Picker
    ========================= */
