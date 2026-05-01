@@ -9,6 +9,11 @@ class GeminiClient
   MAX_RETRIES = 3
   BASE_BACKOFF = 2 # seconds
 
+  GENERATION_CONFIG = {
+    maxOutputTokens: 512,
+    temperature: 0.4
+  }.freeze
+
   class RateLimitExhausted < StandardError; end
 
   def self.api_key
@@ -23,7 +28,7 @@ class GeminiClient
   def self.chat(messages:, system_instruction: nil, tools: nil)
     contents = build_contents(messages)
 
-    payload = { contents: contents }
+    payload = { contents: contents, generationConfig: GENERATION_CONFIG }
     payload[:systemInstruction] = { parts: [ { text: system_instruction } ] } if system_instruction.present?
     payload[:tools] = tools if tools.present?
 
@@ -49,7 +54,7 @@ class GeminiClient
       parts: [ { functionResponse: { name: function_name, response: response_data } } ]
     }
 
-    payload = { contents: contents }
+    payload = { contents: contents, generationConfig: GENERATION_CONFIG }
     payload[:systemInstruction] = { parts: [ { text: system_instruction } ] } if system_instruction.present?
     payload[:tools] = tools if tools.present?
 
