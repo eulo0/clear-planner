@@ -65,19 +65,51 @@
       Weights exceed 100%. Please reduce before saving.
     </div>
     <%= form_with url: update_grade_weights_course_path(@course), method: :patch, class: "space-y-3" do %>
-      <div class="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+      <div id="weight-rows" class="space-y-2">
         <% CourseItem.kinds.keys.each do |kind| %>
-          <div>
-            <label class="block text-[10px] font-bold uppercase tracking-widest mb-1" style="color: var(--studs-accent); opacity: 0.8;"><%= kind.humanize %></label>
+          <% weight = @course.grade_weights[kind] %>
+          <% next unless weight.to_f > 0 %>
+          <div class="weight-row flex items-center gap-3" data-kind="<%= kind %>">
+            <span class="text-sm text-zinc-300 w-28 shrink-0"><%= kind.humanize %></span>
             <input type="number" name="grade_weights[<%= kind %>]"
-                   value="<%= @course.grade_weights[kind].presence %>"
-                   min="0" max="100" step="any"
-                   placeholder="0"
-                   class="grade-weight-input w-full rounded-2xl px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 bg-zinc-950/60 focus:outline-none focus:ring-2 transition-all duration-150 border"
+                   value="<%= weight %>"
+                   min="0" max="100" step="any" placeholder="0"
+                   class="grade-weight-input flex-1 rounded-2xl px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 bg-zinc-950/60 focus:outline-none focus:ring-2 transition-all duration-150 border"
                    style="border-color: var(--studs-border); --tw-ring-color: var(--studs-accent);">
+            <button type="button"
+                    class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border text-zinc-400 hover:text-rose-300 hover:border-rose-500/40 hover:bg-rose-950/30 transition"
+                    style="border-color: var(--studs-border);"
+                    onclick="removeWeightRow(this, '<%= kind %>')">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
           </div>
         <% end %>
       </div>
+
+      <p id="no-weights-msg" class="text-xs text-zinc-500 <%= @course.grade_weights.values.any? { |w| w.to_f > 0 } ? 'hidden' : '' %>">
+        No categories added yet. Use the dropdown below to add one.
+      </p>
+
+      <div class="flex items-center gap-2">
+        <select id="kind-select"
+                class="flex-1 rounded-2xl px-3 py-2 text-sm text-zinc-100 bg-zinc-950/60 focus:outline-none focus:ring-2 transition-all duration-150 border"
+                style="border-color: var(--studs-border); --tw-ring-color: var(--studs-accent);">
+          <option value="">— Add a category —</option>
+          <% CourseItem.kinds.keys.each do |kind| %>
+            <% next if @course.grade_weights[kind].to_f > 0 %>
+            <option value="<%= kind %>"><%= kind.humanize %></option>
+          <% end %>
+        </select>
+        <button type="button" onclick="addWeightRow()" class="studs-nav-btn shrink-0">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+          </svg>
+          Add
+        </button>
+      </div>
+
       <div class="pt-2" style="border-top: 1px solid var(--studs-divider);">
         <button type="submit" id="weights-submit-btn" class="studs-btn-accent">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
@@ -179,23 +211,87 @@
 </div>
 
 <script>
-  (function () {
+  const ALL_KINDS = <%= CourseItem.kinds.keys.map { |k| [k, k.humanize] }.to_json.html_safe %>;
+
+  function updateTotal() {
     const inputs = document.querySelectorAll(".grade-weight-input");
-    const totalEl = document.getElementById("weights-total-value");
+    const total = Array.from(inputs).reduce((sum, el) => sum + (parseFloat(el.value) || 0), 0);
+    document.getElementById("weights-total-value").textContent = Math.round(total * 10) / 10;
+    const over = total > 100.001;
     const warning = document.getElementById("weights-over-warning");
     const submitBtn = document.getElementById("weights-submit-btn");
+    warning.classList.toggle("hidden", !over);
+    submitBtn.disabled = over;
+    submitBtn.style.opacity = over ? "0.4" : "";
+    submitBtn.style.cursor = over ? "not-allowed" : "";
+  }
 
-    function update() {
-      const total = Array.from(inputs).reduce((sum, el) => sum + (parseFloat(el.value) || 0), 0);
-      totalEl.textContent = Math.round(total * 10) / 10;
-      const over = total > 100.001;
-      warning.classList.toggle("hidden", !over);
-      submitBtn.disabled = over;
-      submitBtn.style.opacity = over ? "0.4" : "";
-      submitBtn.style.cursor = over ? "not-allowed" : "";
-    }
+  function activeKinds() {
+    return Array.from(document.querySelectorAll("#weight-rows .weight-row")).map(r => r.dataset.kind);
+  }
 
-    inputs.forEach(el => el.addEventListener("input", update));
-    update();
-  })();
+  function refreshDropdown() {
+    const active = activeKinds();
+    const select = document.getElementById("kind-select");
+    const prev = select.value;
+    select.innerHTML = '<option value="">— Add a category —</option>';
+    ALL_KINDS.forEach(([kind, label]) => {
+      if (!active.includes(kind)) {
+        const opt = document.createElement("option");
+        opt.value = kind;
+        opt.textContent = label;
+        if (kind === prev) opt.selected = true;
+        select.appendChild(opt);
+      }
+    });
+  }
+
+  function refreshEmptyMsg() {
+    const hasRows = document.querySelectorAll("#weight-rows .weight-row").length > 0;
+    document.getElementById("no-weights-msg").classList.toggle("hidden", hasRows);
+  }
+
+  function addWeightRow() {
+    const select = document.getElementById("kind-select");
+    const kind = select.value;
+    if (!kind) return;
+    const label = select.options[select.selectedIndex].textContent;
+
+    const row = document.createElement("div");
+    row.className = "weight-row flex items-center gap-3";
+    row.dataset.kind = kind;
+    row.innerHTML = `
+      <span class="text-sm text-zinc-300 w-28 shrink-0">${label}</span>
+      <input type="number" name="grade_weights[${kind}]"
+             min="0" max="100" step="any" placeholder="0"
+             class="grade-weight-input flex-1 rounded-2xl px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 bg-zinc-950/60 focus:outline-none focus:ring-2 transition-all duration-150 border"
+             style="border-color: var(--studs-border); --tw-ring-color: var(--studs-accent);">
+      <button type="button"
+              class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border text-zinc-400 hover:text-rose-300 hover:border-rose-500/40 hover:bg-rose-950/30 transition"
+              style="border-color: var(--studs-border);"
+              onclick="removeWeightRow(this, '${kind}')">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    `;
+
+    document.getElementById("weight-rows").appendChild(row);
+    row.querySelector(".grade-weight-input").addEventListener("input", updateTotal);
+    row.querySelector(".grade-weight-input").focus();
+
+    refreshDropdown();
+    refreshEmptyMsg();
+    updateTotal();
+  }
+
+  function removeWeightRow(btn, kind) {
+    btn.closest(".weight-row").remove();
+    refreshDropdown();
+    refreshEmptyMsg();
+    updateTotal();
+  }
+
+  document.querySelectorAll(".grade-weight-input").forEach(el => el.addEventListener("input", updateTotal));
+  updateTotal();
 </script>
