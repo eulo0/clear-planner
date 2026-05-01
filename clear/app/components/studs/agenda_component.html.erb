@@ -19,7 +19,6 @@
 
 <div
   class="h-full w-full flex flex-col rounded-2xl overflow-hidden
-         bg-zinc-950/95
          shadow-xl shadow-black/50
          <%= @class_name %>"
   style="border: 1px solid var(--studs-border);"
@@ -27,7 +26,15 @@
   data-agenda-count="<%= agenda_count %>"
 >
 
-  <div class="px-4 py-3 studs-topbar">
+  <% theme = helpers.try(:current_user)&.theme%>
+  <% header_style =
+    if %w[nebula aurora sunset].include?(theme)
+      # Uses different colors for visibility on Agenda Page
+      "background-color: color-mix(in srgb, var(--studs-accent) 12%, var(--studs-sidebar-bg) 88%);"
+    end %>
+  <% header_attrs = { class: "px-4 py-3 studs-topbar" } %>
+  <% header_attrs[:style] = header_style if header_style.present? %>
+  <%= tag.div(**header_attrs) do %>
     <div class="flex items-center justify-between">
       <div class="min-w-0">
         <div class="text-sm font-semibold text-zinc-100">
@@ -38,7 +45,7 @@
         </div>
       </div>
     </div>
-  </div>
+  <% end %>
 
   <div class="flex-1 min-h-0 bg-zinc-950/95">
     <div class="h-full overflow-auto px-3 py-3">
