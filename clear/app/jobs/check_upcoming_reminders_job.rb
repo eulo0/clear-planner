@@ -39,7 +39,7 @@ class CheckUpcomingRemindersJob < ApplicationJob
     window_start = REMINDER_WINDOW_MIN.from_now
     window_end   = REMINDER_WINDOW_MAX.from_now
 
-    Course.includes(:user).find_each do |course|
+    Course.includes(:user, course_exceptions).find_each do |course|
       course.occurrences_between(window_start, window_end).each do |occ|
         next unless occ.starts_at.between?(window_start, window_end)
 

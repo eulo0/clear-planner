@@ -55,8 +55,9 @@
                       <%= i > 0 ? "border-top: 1px solid var(--studs-divider);" : "" %>">
             <div class="min-w-0 flex-1">
               <p class="font-medium text-zinc-100 min-w-0 truncate max-w-xs sm:max-w-sm md:max-w-md">
-                <%= link_to shift.title.presence || "(Untitled)", edit_work_shift_path(shift),
-                      class: "hover:underline underline-offset-2" %>
+                <%= link_to shift.title.presence || "(Untitled)", work_shift_path(shift),
+                      class: "hover:underline underline-offset-2",
+                      data: { turbo_frame: "_top" } %>
                 <% if shift.recurring? %>
                   <span class="rounded-full px-2 py-0.5 text-[10px] font-semibold"
                         style="border: 1px solid var(--studs-border); background-color: var(--studs-panel-hover); color: var(--studs-accent);">

@@ -1,5 +1,6 @@
 class WorkShift < ApplicationRecord
   belongs_to :user
+  has_many :work_shift_exceptions, dependent: :destroy
 
   validates :title, presence: true
   validates :color, presence: true
@@ -40,11 +41,13 @@ class WorkShift < ApplicationRecord
       window_end_date   = [ window_end_date, repeat_until ].min if repeat_until.present?
       return [] if window_end_date < window_start_date
 
+      excluded_dates = work_shift_exceptions.map(&:excluded_date).to_set
+
       days_set = Array(repeat_days).reject(&:blank?).map(&:to_i)
       out = []
       d = window_start_date
       while d <= window_end_date
-        if days_set.include?(d.wday)
+        if days_set.include?(d.wday) && !excluded_dates.include?(d)
           occ_start = Time.zone.local(d.year, d.month, d.day, start_time.hour, start_time.min)
           occ_end   = Time.zone.local(d.year, d.month, d.day, end_time.hour, end_time.min)
           out << Occurrence.new(event: self, starts_at: occ_start, ends_at: occ_end)
