@@ -1,5 +1,9 @@
 <%= turbo_frame_tag "dashboard_calendar", class: "block h-full min-h-0 w-full" do %>
   <div data-controller="calendar-view" class="h-full min-h-0 w-full flex flex-col">
+    <%= render "dashboard/week_load_bar",
+         events: events,
+         draft: local_assigns[:draft],
+         start_date: start_date %>
     <div data-calendar-view-target="weeklyWrapper" class="w-full min-w-0">
       <%= render "dashboard/calendar",
            events: events,
