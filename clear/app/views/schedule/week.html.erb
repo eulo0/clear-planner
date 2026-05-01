@@ -1,5 +1,14 @@
 <% content_for :page_title, "Schedule" %>
 <% content_for :page_subtitle, "Your week at a glance"%>
+<% hex_to_rgba = ->(hex, alpha) {
+     hex = hex.to_s.gsub("#", "")
+     hex = hex[0..5]
+     r = hex[0..1].to_i(16)
+     g = hex[2..3].to_i(16)
+     b = hex[4..5].to_i(16)
+     "rgba(#{r},#{g},#{b},#{alpha})"
+   }
+%>
 <div class="rounded-2xl p-6" style="border: 1px solid var(--studs-border); background-color: var(--studs-panel-bg);">
   <div class="mb-6 flex items-center justify-between relative">
     <!-- Left button -->
@@ -38,15 +47,16 @@
         <div class="flex-1 space-y-2 overflow-y-auto p-2">
           <% if @items_by_day[day].present? %>
             <% @items_by_day[day].each do |item| %>
-              <% bg = item.try(:color).presence || "#3f3f46" %>
+              <% bg = item.try(:color).presence || "#34D399" %>
               <% text_color = item.try(:contrast_text_color) || "#F9FAFB" %>
-              <div class="rounded-xl px-2 py-2 text-sm" style="background-color: <%= bg %>;">
-                <div class="font-medium truncate" style="color: <%= text_color %>;">
+              <div class="rounded-xl border px-2.5 py-1.5 text-sm backdrop-blur-sm"
+                   style="background-color: <%= hex_to_rgba.(bg, 0.55) %>; color: <%= text_color %>; border-color: <%= hex_to_rgba.(bg, 0.20) %>; border-left: 3px solid <%= bg %>;">
+                <div class="font-bold truncate text-[12px]">
                   <%= item.title %>
                 </div>
                 <% if item.starts_at.present? %>
-                  <div class="text-xs" style="color: <%= text_color %>">
-                    <%= item.starts_at.strftime("%I:%M %p") %>
+                  <div class="opacity-60 text-[10px] font-medium mt-0.5">
+                    <%= item.starts_at.strftime("%-I:%M %p") %>
                   </div>
                 <% end %>
               </div>
