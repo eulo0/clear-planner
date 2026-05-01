@@ -56,6 +56,8 @@ class AiChatController < ApplicationController
     chat_history = trim_for_api(history)
     system_inst = build_system_instruction
     tools = gemini_tools
+    fn_response = nil
+    refresh_draft_ui = false
 
     result = GeminiClient.chat(messages: chat_history, system_instruction: system_inst, tools: tools)
     GeminiRateTracker.record!
@@ -64,6 +66,7 @@ class AiChatController < ApplicationController
     if result[:function_call]
       fc = result[:function_call]
       fn_response = execute_function(fc[:name], fc[:args])
+      refresh_draft_ui = fn_response[:refresh_draft_ui]
 
       chat_history << { role: "assistant", parts: [ { functionCall: { name: fc[:name], args: fc[:args] } } ] }
 
@@ -85,7 +88,7 @@ class AiChatController < ApplicationController
 
     respond_to do |format|
       format.turbo_stream do
-        render turbo_stream: [
+        streams = [
           turbo_stream.append("ai_chat_messages",
             partial: "ai_chat/message",
             locals: { m: { "role" => "user", "content" => user_text } }
@@ -100,6 +103,39 @@ class AiChatController < ApplicationController
           turbo_stream.update("ai_chat_input", ""),
           turbo_stream.replace("ai_chat_usage", partial: "ai_chat/usage", locals: { rate: updated_rate })
         ]
+
+        if refresh_draft_ui
+          start_date = parse_start_date(params[:start_date])
+          draft = current_user_draft
+          week_start  = start_date.beginning_of_week
+          range_start = week_start.beginning_of_day
+          range_end   = (week_start + 6.days).end_of_day
+          occurrences = calendar_occurrences_for_range(range_start, range_end, draft: draft)
+
+          streams << turbo_stream.replace(
+            "dashboard_calendar",
+            partial: "dashboard/calendar_frame",
+            locals: { events: occurrences, start_date: start_date, draft: draft }
+          )
+          streams << turbo_stream.replace(
+            "draft_toggle",
+            partial: "draft/toggle",
+            locals: {
+              start_date: start_date.iso8601,
+              active_draft: draft,
+              drafts: current_user_drafts.to_a,
+              max_drafts: CalendarDraft::MAX_DRAFTS_PER_USER
+            }
+          )
+          streams << turbo_stream.replace(
+            "draft_banner",
+            partial: "draft/banner",
+            locals: { start_date: start_date.iso8601, active_draft: draft }
+          )
+          streams << turbo_stream.replace("agenda_list", partial: "agenda/list")
+        end
+
+        render turbo_stream: streams
       end
 
       format.html do
@@ -129,9 +165,31 @@ class AiChatController < ApplicationController
 
   private
 
+  def in_draft_mode?
+    current_user_draft.present?
+  end
+
+  def parse_start_date(raw)
+    raw.present? ? Date.parse(raw) : Date.current
+  rescue ArgumentError
+    Date.current
+  end
+
   def gemini_tools
     [ {
       functionDeclarations: [
+        {
+          name: "select_draft",
+          description: "Enter draft mode by selecting an existing calendar draft. Use this when the user asks to switch/change drafts or use a specific draft.",
+          parameters: {
+            type: "OBJECT",
+            properties: {
+              name: { type: "STRING", description: "Draft name to select (case-insensitive)" },
+              draft_id: { type: "INTEGER", description: "Optional draft ID to select" }
+            },
+            required: []
+          }
+        },
         {
           name: "create_event",
           description: "Create a new event on the user's calendar. Use this when the user asks to add, schedule, or create an event.",
@@ -155,7 +213,7 @@ class AiChatController < ApplicationController
           parameters: {
             type: "OBJECT",
             properties: {
-              event_id: { type: "INTEGER", description: "The ID of the event to edit" },
+              event_id: { type: "STRING", description: "The ID of the event to edit (can be a draft temp id like d_abc12345)" },
               title: { type: "STRING", description: "New title" },
               description: { type: "STRING", description: "New description" },
               starts_at: { type: "STRING", description: "New start date/time in ISO 8601 format" },
@@ -163,6 +221,17 @@ class AiChatController < ApplicationController
               duration_minutes: { type: "INTEGER", description: "New duration in minutes" },
               location: { type: "STRING", description: "New location" },
               color: { type: "STRING", description: "New hex color like #34D399" }
+            },
+            required: [ "event_id" ]
+          }
+        },
+        {
+          name: "delete_event",
+          description: "Delete an event. Use this when the user asks to remove or delete an event.",
+          parameters: {
+            type: "OBJECT",
+            properties: {
+              event_id: { type: "STRING", description: "The ID of the event to delete (can be a draft temp id like d_abc12345)" }
             },
             required: [ "event_id" ]
           }
@@ -197,7 +266,7 @@ class AiChatController < ApplicationController
           parameters: {
             type: "OBJECT",
             properties: {
-              shift_id: { type: "INTEGER", description: "The ID of the work shift to edit" },
+              shift_id: { type: "STRING", description: "The ID of the work shift to edit (can be a draft temp id like d_abc12345)" },
               title: { type: "STRING", description: "New title" },
               start_date: { type: "STRING", description: "New start date in YYYY-MM-DD format" },
               start_time: { type: "STRING", description: "New start time in HH:MM 24-hour format" },
@@ -222,7 +291,7 @@ class AiChatController < ApplicationController
           parameters: {
             type: "OBJECT",
             properties: {
-              shift_id: { type: "INTEGER", description: "The ID of the work shift to delete" }
+              shift_id: { type: "STRING", description: "The ID of the work shift to delete (can be a draft temp id like d_abc12345)" }
             },
             required: [ "shift_id" ]
           }
@@ -233,10 +302,14 @@ class AiChatController < ApplicationController
 
   def execute_function(name, args)
     case name
+    when "select_draft"
+      select_draft_from_ai(args)
     when "create_event"
       create_event_from_ai(args)
     when "edit_event"
       edit_event_from_ai(args)
+    when "delete_event"
+      delete_event_from_ai(args)
     when "create_work_shift"
       create_work_shift_from_ai(args)
     when "edit_work_shift"
@@ -248,7 +321,46 @@ class AiChatController < ApplicationController
     end
   end
 
+  def select_draft_from_ai(args)
+    name = args["name"].to_s
+    draft_id = args["draft_id"].presence
+
+    draft =
+      if draft_id.present?
+        current_user.calendar_drafts.find_by(id: draft_id)
+      elsif name.present?
+        current_user.calendar_drafts.find_by("LOWER(name) = ?", name.downcase)
+      end
+
+    return { success: false, errors: [ "Draft not found" ] } unless draft
+
+    session[:calendar_draft_mode] = true
+    session[:active_calendar_draft_id] = draft.id
+    @current_user_draft = draft
+    @current_user_drafts = nil
+
+    { success: true, draft_id: draft.id, name: draft.name, refresh_draft_ui: true }
+  end
+
   def create_event_from_ai(args)
+    if in_draft_mode?
+      data = {
+        title: args["title"],
+        description: args["description"],
+        starts_at: args["starts_at"],
+        ends_at: args["ends_at"],
+        duration_minutes: args["duration_minutes"],
+        location: args["location"],
+        color: args["color"]
+      }.compact
+
+      event = current_user.events.new(data)
+      return { success: false, errors: event.errors.full_messages } unless event.valid?
+
+      temp_id = current_user_draft.add_create("event", data)
+      return { success: true, event_id: temp_id, title: data[:title], starts_at: data[:starts_at], refresh_draft_ui: true }
+    end
+
     event = current_user.events.new(
       title: args["title"],
       description: args["description"],
@@ -267,7 +379,54 @@ class AiChatController < ApplicationController
   end
 
   def edit_event_from_ai(args)
-    event = current_user.events.find_by(id: args["event_id"])
+    event_id = args["event_id"].to_s
+    return { success: false, errors: [ "Event ID is required" ] } if event_id.blank?
+
+    if in_draft_mode?
+      if event_id.start_with?("d_")
+        op = current_user_draft&.find_create_op("event", event_id)
+        return { success: false, errors: [ "Draft event not found" ] } unless op
+
+        base = op.fetch("data", {})
+        updates = {}
+        updates["title"] = args["title"] if args["title"].present?
+        updates["description"] = args["description"] if args.key?("description")
+        updates["starts_at"] = args["starts_at"] if args["starts_at"].present?
+        updates["ends_at"] = args["ends_at"] if args.key?("ends_at")
+        updates["duration_minutes"] = args["duration_minutes"] if args.key?("duration_minutes")
+        updates["location"] = args["location"] if args.key?("location")
+        updates["color"] = args["color"] if args["color"].present?
+
+        merged = base.merge(updates)
+        event = current_user.events.new(merged)
+        return { success: false, errors: event.errors.full_messages } unless event.valid?
+
+        updated = current_user_draft&.update_create("event", event_id, merged)
+        return { success: false, errors: [ "Draft event not found" ] } unless updated
+
+        return { success: true, event_id: event_id, title: merged["title"], refresh_draft_ui: true }
+      end
+
+      event = current_user.events.find_by(id: event_id)
+      return { success: false, errors: [ "Event not found" ] } unless event
+
+      updates = {}
+      updates[:title] = args["title"] if args["title"].present?
+      updates[:description] = args["description"] if args.key?("description")
+      updates[:starts_at] = args["starts_at"] if args["starts_at"].present?
+      updates[:ends_at] = args["ends_at"] if args.key?("ends_at")
+      updates[:duration_minutes] = args["duration_minutes"] if args.key?("duration_minutes")
+      updates[:location] = args["location"] if args.key?("location")
+      updates[:color] = args["color"] if args["color"].present?
+
+      event.assign_attributes(updates)
+      return { success: false, errors: event.errors.full_messages } unless event.valid?
+
+      current_user_draft.add_update("event", event.id, updates)
+      return { success: true, event_id: event.id, title: event.title, refresh_draft_ui: true }
+    end
+
+    event = current_user.events.find_by(id: event_id)
     return { success: false, errors: [ "Event not found" ] } unless event
 
     updates = {}
@@ -286,7 +445,55 @@ class AiChatController < ApplicationController
     end
   end
 
+  def delete_event_from_ai(args)
+    event_id = args["event_id"].to_s
+    return { success: false, errors: [ "Event ID is required" ] } if event_id.blank?
+
+    if in_draft_mode?
+      if event_id.start_with?("d_")
+        deleted = current_user_draft&.delete_create("event", event_id)
+        return { success: false, errors: [ "Draft event not found" ] } unless deleted
+
+        return { success: true, event_id: event_id, refresh_draft_ui: true }
+      end
+
+      event = current_user.events.find_by(id: event_id)
+      return { success: false, errors: [ "Event not found" ] } unless event
+
+      current_user_draft.add_delete("event", event.id)
+      return { success: true, event_id: event.id, title: event.title, refresh_draft_ui: true }
+    end
+
+    event = current_user.events.find_by(id: event_id)
+    return { success: false, errors: [ "Event not found" ] } unless event
+
+    title = event.title
+    event.destroy
+    { success: true, event_id: event_id, title: title }
+  end
+
   def create_work_shift_from_ai(args)
+    if in_draft_mode?
+      data = {
+        title: args["title"],
+        description: args["description"],
+        start_date: args["start_date"],
+        start_time: args["start_time"],
+        end_time: args["end_time"],
+        location: args["location"],
+        color: args["color"].presence || "#34D399",
+        recurring: args.key?("recurring") ? args["recurring"] : true,
+        repeat_days: args["repeat_days"] || [],
+        repeat_until: args["repeat_until"]
+      }.compact
+
+      shift = current_user.work_shifts.new(data)
+      return { success: false, errors: shift.errors.full_messages } unless shift.valid?
+
+      temp_id = current_user_draft.add_create("shift", data)
+      return { success: true, shift_id: temp_id, title: data[:title], start_date: data[:start_date], refresh_draft_ui: true }
+    end
+
     shift = current_user.work_shifts.new(
       title: args["title"],
       description: args["description"],
@@ -308,7 +515,60 @@ class AiChatController < ApplicationController
   end
 
   def edit_work_shift_from_ai(args)
-    shift = current_user.work_shifts.find_by(id: args["shift_id"])
+    shift_id = args["shift_id"].to_s
+    return { success: false, errors: [ "Work shift ID is required" ] } if shift_id.blank?
+
+    if in_draft_mode?
+      if shift_id.start_with?("d_")
+        op = current_user_draft&.find_create_op("shift", shift_id)
+        return { success: false, errors: [ "Draft shift not found" ] } unless op
+
+        base = op.fetch("data", {})
+        updates = {}
+        updates["title"] = args["title"] if args["title"].present?
+        updates["description"] = args["description"] if args.key?("description")
+        updates["start_date"] = args["start_date"] if args["start_date"].present?
+        updates["start_time"] = args["start_time"] if args["start_time"].present?
+        updates["end_time"] = args["end_time"] if args["end_time"].present?
+        updates["location"] = args["location"] if args.key?("location")
+        updates["color"] = args["color"] if args["color"].present?
+        updates["recurring"] = args["recurring"] if args.key?("recurring")
+        updates["repeat_days"] = args["repeat_days"] if args.key?("repeat_days")
+        updates["repeat_until"] = args["repeat_until"] if args.key?("repeat_until")
+
+        merged = base.merge(updates)
+        shift = current_user.work_shifts.new(merged)
+        return { success: false, errors: shift.errors.full_messages } unless shift.valid?
+
+        updated = current_user_draft&.update_create("shift", shift_id, merged)
+        return { success: false, errors: [ "Draft shift not found" ] } unless updated
+
+        return { success: true, shift_id: shift_id, title: merged["title"], refresh_draft_ui: true }
+      end
+
+      shift = current_user.work_shifts.find_by(id: shift_id)
+      return { success: false, errors: [ "Work shift not found" ] } unless shift
+
+      updates = {}
+      updates[:title] = args["title"] if args["title"].present?
+      updates[:description] = args["description"] if args.key?("description")
+      updates[:start_date] = args["start_date"] if args["start_date"].present?
+      updates[:start_time] = args["start_time"] if args["start_time"].present?
+      updates[:end_time] = args["end_time"] if args["end_time"].present?
+      updates[:location] = args["location"] if args.key?("location")
+      updates[:color] = args["color"] if args["color"].present?
+      updates[:recurring] = args["recurring"] if args.key?("recurring")
+      updates[:repeat_days] = args["repeat_days"] if args.key?("repeat_days")
+      updates[:repeat_until] = args["repeat_until"] if args.key?("repeat_until")
+
+      shift.assign_attributes(updates)
+      return { success: false, errors: shift.errors.full_messages } unless shift.valid?
+
+      current_user_draft.add_update("shift", shift.id, updates)
+      return { success: true, shift_id: shift.id, title: shift.title, refresh_draft_ui: true }
+    end
+
+    shift = current_user.work_shifts.find_by(id: shift_id)
     return { success: false, errors: [ "Work shift not found" ] } unless shift
 
     updates = {}
@@ -331,12 +591,30 @@ class AiChatController < ApplicationController
   end
 
   def delete_work_shift_from_ai(args)
-    shift = current_user.work_shifts.find_by(id: args["shift_id"])
+    shift_id = args["shift_id"].to_s
+    return { success: false, errors: [ "Work shift ID is required" ] } if shift_id.blank?
+
+    if in_draft_mode?
+      if shift_id.start_with?("d_")
+        deleted = current_user_draft&.delete_create("shift", shift_id)
+        return { success: false, errors: [ "Draft shift not found" ] } unless deleted
+
+        return { success: true, shift_id: shift_id, refresh_draft_ui: true }
+      end
+
+      shift = current_user.work_shifts.find_by(id: shift_id)
+      return { success: false, errors: [ "Work shift not found" ] } unless shift
+
+      current_user_draft.add_delete("shift", shift.id)
+      return { success: true, shift_id: shift.id, title: shift.title, refresh_draft_ui: true }
+    end
+
+    shift = current_user.work_shifts.find_by(id: shift_id)
     return { success: false, errors: [ "Work shift not found" ] } unless shift
 
     title = shift.title
     shift.destroy
-    { success: true, shift_id: args["shift_id"], title: title }
+    { success: true, shift_id: shift_id, title: title }
   end
 
   def build_system_instruction
@@ -363,6 +641,16 @@ class AiChatController < ApplicationController
     parts << "You are a helpful academic assistant for a calendar and course management app called CLEAR."
     parts << "The user's name is #{name} (email: #{user.email}). Address them by their first name."
     parts << "Today's date is #{Date.today.strftime('%A, %B %d, %Y')}."
+    if current_user_draft.present?
+      parts << "Current draft is \"#{current_user_draft.name}\" (ID: #{current_user_draft.id})."
+    else
+      parts << "Current draft is none (Main Calendar)."
+    end
+
+    drafts = current_user_drafts.to_a
+    if drafts.any?
+      parts << "Available drafts: " + drafts.map { |d| "#{d.name} (ID: #{d.id})" }.join(", ")
+    end
 
     if courses.any?
       course_lines = courses.map do |c|
