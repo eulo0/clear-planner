@@ -1,26 +1,12 @@
 <div class="relative overflow-hidden">
-  <% hero_video_ids = %w[
-    DC_mNhhz--Q
-    e9GtBjeOb7s
-    67pOiB3-TvA
-    0-GRuqbcXwk
-    SOQX2KLTOro
-  ] %>
-  <% hero_playlist = hero_video_ids.join(",") %>
-
   <div>
     <section class="relative">
       <div class="relative border-y" style="border-color: var(--studs-border);">
         <div class="landing-video-lock relative h-[calc(100vh-4.5rem)]">
-          <iframe
-            class="pointer-events-none h-full w-full object-cover"
-            src="https://www.youtube.com/embed/<%= hero_video_ids.first %>?playlist=<%= hero_playlist %>&autoplay=1&mute=1&loop=1&controls=0&modestbranding=1&rel=0&playsinline=1&disablekb=1"
-            title="Clear app preview videos"
-            tabindex="-1"
-            allow="autoplay; encrypted-media; picture-in-picture"
-            referrerpolicy="strict-origin-when-cross-origin"
-            allowfullscreen>
-          </iframe>
+          <video class="pointer-events-none h-full w-full object-cover object-top"
+                 autoplay muted loop playsinline tabindex="-1">
+            <source src="<%= asset_path('Clear_files/plan_beyond.mp4') %>" type="video/mp4">
+          </video>
           <div class="pointer-events-none absolute inset-0 bg-black" style="animation: landing-video-cover-hide 0.35s ease 2.2s forwards;"></div>
           <div class="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/10 via-black/24 to-black/72"></div>
 
@@ -72,28 +58,28 @@
       <% features = [
         {
           title: "Plan Easily",
-          body: "Simplicity is our philosophy. There is no clutter or learning curve. Everything you need is right where you expect it.",
-          video_id: "DC_mNhhz--Q"
+          body: "There is no clutter or learning curve. Everything is right where you expect it.",
+          local_video: "Clear_files/plan_beyond.mp4"
         },
         {
           title: "Plan Fast",
           body: "Tired of schedululing your class times or assignments each time on your planner? Our syllabus parser can take care of that in seconds.",
-          video_id: "e9GtBjeOb7s"
+          local_video: "Clear_files/plan_beyond.mp4"
         },
         {
           title: "Plan Ahead",
           body: "Stay ahead of deadlines. Our AI prepares study sessions before exams and assignment due dates, so you can stay on track without cramming.",
-          video_id: "67pOiB3-TvA"
+          local_video: "Clear_files/plan_beyond.mp4"
         },
         {
           title: "Plan Together",
           body: "Whether it's group projects or a hobby together, collaborate with your classmates in one shared space without any hassle.",
-          video_id: "0-GRuqbcXwk"
+          local_video: "Clear_files/plan_beyond.mp4"
         },
         {
           title: "Plan Beyond",
           body: "Life happens. Plans change. Use our draft system to make alternative schedules as backups when life gets unpredictable.",
-          video_id: "SOQX2KLTOro"
+          local_video: "Clear_files/plan_beyond.mp4"
         }
       ] %>
 
@@ -109,16 +95,10 @@
               <div class="landing-video-lock landing-preview-frame landing-preview-frame--green">
                 <div class="landing-preview-frame__inner">
                   <div class="landing-preview-frame__media">
-                    <iframe
-                      class="pointer-events-none"
-                      src="https://www.youtube.com/embed/<%= feature[:video_id] %>?autoplay=1&mute=1&loop=1&playlist=<%= feature[:video_id] %>&controls=0&modestbranding=1&rel=0&playsinline=1&disablekb=1"
-                      title="<%= "#{feature[:title]} preview video" %>"
-                      loading="lazy"
-                      tabindex="-1"
-                      allow="autoplay; encrypted-media; picture-in-picture"
-                      referrerpolicy="strict-origin-when-cross-origin"
-                      allowfullscreen>
-                    </iframe>
+                    <video class="pointer-events-none w-full h-full object-cover object-top"
+                           autoplay muted loop playsinline tabindex="-1">
+                      <source src="<%= asset_path(feature[:local_video]) %>" type="video/mp4">
+                    </video>
                     <div class="pointer-events-none absolute inset-0 bg-black" style="animation: landing-video-cover-hide 0.35s ease 2.2s forwards;"></div>
                   </div>
                 </div>
@@ -161,7 +141,7 @@
   .landing-preview-frame {
     --landing-preview-pad: 12px;
     --landing-preview-accent: var(--studs-accent);
-    --landing-preview-aspect: 5 / 4;
+    --landing-preview-aspect: 16 / 9;
     padding: var(--landing-preview-pad);
     border-radius: 1.5rem;
     background:
