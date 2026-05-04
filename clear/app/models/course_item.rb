@@ -32,15 +32,28 @@ class CourseItem < ApplicationRecord
   private
 
   def create_assignment_notification
-    base_message = due_at ? "#{title} due: #{due_at.strftime("%-b %-d at %-I:%M %p")}" : "#{title} due: No date set"
-    message = course.project.present? ? %(#{base_message} in group "#{course.project.title}") : base_message
+    base_message    = due_at ? "#{title} due: #{due_at.strftime("%-b %-d at %-I:%M %p")}" : "#{title} due: No date set"
+    project         = course.project
+    creator_message = project.present? ? %(#{base_message} in group "#{project.title}") : base_message
 
     Notification.create!(
       user: course.user,
       notifiable: self,
       category: "assignment_due",
-      message: message
+      message: creator_message
     )
+
+    return unless project.present?
+
+    creator_name = course.user.username.presence || course.user.email
+    project.users.where.not(id: course.user_id).find_each do |member|
+      Notification.create!(
+        user: member,
+        notifiable: self,
+        category: "assignment_due",
+        message: %(#{creator_name} added #{base_message} in group "#{project.title}")
+      )
+    end
   end
 
   public

@@ -136,15 +136,27 @@ class Course < ApplicationRecord
   private
 
   def create_notification
-    base_message = start_time ? "#{title} at #{start_time.strftime("%-I:%M %p")}" : title
-    message = project.present? ? %(#{base_message} in group "#{project.title}") : base_message
+    base_message    = start_time ? "#{title} at #{start_time.strftime("%-I:%M %p")}" : title
+    creator_message = project.present? ? %(#{base_message} in group "#{project.title}") : base_message
 
     Notification.create!(
       user: user,
       notifiable: self,
       category: "course_added",
-      message: message
+      message: creator_message
     )
+
+    return unless project.present?
+
+    creator_name = user.username.presence || user.email
+    project.users.where.not(id: user.id).find_each do |member|
+      Notification.create!(
+        user: member,
+        notifiable: self,
+        category: "course_added",
+        message: %(#{creator_name} added #{base_message} in group "#{project.title}")
+      )
+    end
   end
 
   def derive_end_time_from_duration
