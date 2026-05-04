@@ -165,7 +165,13 @@ class CoursesController < ApplicationController
   end
 
   def update_grade_weights
-    if @course.update(grade_weights: grade_weights_params)
+    weights = grade_weights_params
+    total = weights.values.sum(&:to_f)
+    if total > 100
+      redirect_to grades_course_path(@course), alert: "Grade weights total #{total.round(1)}% — must not exceed 100%."
+      return
+    end
+    if @course.update(grade_weights: weights)
       redirect_to grades_course_path(@course), notice: "Grade weights updated."
     else
       redirect_to grades_course_path(@course), alert: "Failed to update grade weights."
