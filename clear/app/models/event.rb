@@ -119,11 +119,14 @@ class Event < ApplicationRecord
   end
 
   def create_notification
+    base_message = starts_at ? "#{title} at #{starts_at.strftime("%-b %-d at %-I:%M %p")}" : title
+    message = project.present? ? %(#{base_message} in group "#{project.title}") : base_message
+
     Notification.create!(
       user: user,
       notifiable: self,
       category: (priority.present? && priority > 0) ? "high_priority" : "event_created",
-      message: starts_at ? "#{title} at #{starts_at.strftime("%-b %-d at %-I:%M %p")}" : title
+      message: message
     )
   end
 

@@ -136,11 +136,14 @@ class Course < ApplicationRecord
   private
 
   def create_notification
+    base_message = start_time ? "#{title} at #{start_time.strftime("%-I:%M %p")}" : title
+    message = project.present? ? %(#{base_message} in group "#{project.title}") : base_message
+
     Notification.create!(
       user: user,
       notifiable: self,
       category: "course_added",
-      message: start_time ? "#{title} at #{start_time.strftime("%-I:%M %p")}" : title
+      message: message
     )
   end
 
