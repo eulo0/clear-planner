@@ -67,31 +67,40 @@ class AiChatController < ApplicationController
     chat_history = trim_for_api(history)
     system_inst = build_system_instruction
     tools = gemini_tools
-    fn_response = nil
     refresh_draft_ui = false
 
     result = GeminiClient.chat(messages: chat_history, system_instruction: system_inst, tools: tools)
     GeminiRateTracker.record!
 
-    # Handle function calls
-    if result[:function_call]
-      fc = result[:function_call]
-      fn_response = execute_function(fc[:name], fc[:args])
-      refresh_draft_ui = fn_response[:refresh_draft_ui]
+    # Agentic loop: keep executing tool calls until the model returns a text-only turn.
+    # Capped to avoid runaway loops if the model keeps emitting calls.
+    iterations = 0
+    while result[:function_calls].any? && iterations < MAX_TOOL_ITERATIONS
+      iterations += 1
+      calls = result[:function_calls]
 
-      chat_history << { role: "assistant", parts: [ { functionCall: { name: fc[:name], args: fc[:args] } } ] }
+      function_responses = calls.map do |fc|
+        fn_response = execute_function(fc[:name], fc[:args])
+        refresh_draft_ui = true if fn_response[:refresh_draft_ui]
+        { name: fc[:name], response: fn_response }
+      end
 
-      final = GeminiClient.continue_with_function_response(
-        messages: chat_history,
-        function_name: fc[:name],
-        response_data: fn_response,
-        system_instruction: system_inst,
-        tools: tools
-      )
+      chat_history << {
+        role: "assistant",
+        parts: calls.map { |fc| { functionCall: { name: fc[:name], args: fc[:args] } } }
+      }
+      chat_history << {
+        role: "user",
+        parts: function_responses.map { |fr| { functionResponse: { name: fr[:name], response: fr[:response] } } }
+      }
+
+      result = GeminiClient.chat(messages: chat_history, system_instruction: system_inst, tools: tools)
       GeminiRateTracker.record!
-      assistant_text = final[:text]
-    else
-      assistant_text = result[:text]
+    end
+
+    assistant_text = result[:text]
+    if assistant_text.blank? && iterations >= MAX_TOOL_ITERATIONS
+      assistant_text = "I made several changes but stopped to avoid an infinite loop. Let me know if you want me to continue."
     end
 
     history << { "role" => "assistant", "content" => assistant_text }
@@ -715,6 +724,10 @@ class AiChatController < ApplicationController
              "When the user asks to schedule or add something, use create_event. " \
              "When the user asks to change, move, reschedule, or update an event, use edit_event with the event's ID. " \
              "Each event listed above has an [ID:...] you can use. Always confirm what was created or changed."
+    parts << "\nWhen a single user request requires MULTIPLE changes (e.g. \"create three events\", \"add a shift " \
+             "and an event\", \"reschedule these two\"), call the tools as many times as needed in the same turn — " \
+             "you may emit multiple function calls. Do not stop after one tool call if more are needed to fulfill " \
+             "the request. Only produce a final text reply after all required tool calls have been made."
     parts << "\nYou can also manage work shifts: create with create_work_shift, edit with edit_work_shift, " \
              "or delete with delete_work_shift. Each work shift listed above has an [ID:...] you can use. " \
              "For recurring shifts, repeat_days uses weekday numbers (0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat)."
@@ -743,6 +756,7 @@ class AiChatController < ApplicationController
 
   API_HISTORY_LIMIT = 20
   MAX_USER_MESSAGE_CHARS = 2000
+  MAX_TOOL_ITERATIONS = 8
 
   def trim_for_api(history)
     trimmed = if history.length > API_HISTORY_LIMIT

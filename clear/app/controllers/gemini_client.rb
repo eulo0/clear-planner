@@ -10,7 +10,7 @@ class GeminiClient
   BASE_BACKOFF = 2 # seconds
 
   GENERATION_CONFIG = {
-    maxOutputTokens: 512,
+    maxOutputTokens: 2048,
     temperature: 0.4
   }.freeze
 
@@ -24,7 +24,8 @@ class GeminiClient
     ENV.fetch("GEMINI_MODEL", DEFAULT_MODEL)
   end
 
-  # Returns a hash: { text: "..." } or { function_call: { name:, args: } }
+  # Returns a hash: { text: "...", function_calls: [{ name:, args: }, ...] }
+  # Both keys are always present; function_calls is [] when the model returned only text.
   def self.chat(messages:, system_instruction: nil, tools: nil)
     contents = build_contents(messages)
 
@@ -36,33 +37,13 @@ class GeminiClient
 
     candidate_parts = body.dig("candidates", 0, "content", "parts") || []
 
-    fc = candidate_parts.find { |p| p["functionCall"] }
-    if fc
-      { function_call: { name: fc.dig("functionCall", "name"), args: fc.dig("functionCall", "args") || {} } }
-    else
-      text = candidate_parts.filter_map { |p| p["text"] }.join
-      { text: text }
+    function_calls = candidate_parts.filter_map do |p|
+      next unless p["functionCall"]
+      { name: p.dig("functionCall", "name"), args: p.dig("functionCall", "args") || {} }
     end
-  end
-
-  # Send a function response back and get the final answer
-  def self.continue_with_function_response(messages:, function_name:, response_data:, system_instruction: nil, tools: nil)
-    contents = build_contents(messages)
-
-    contents << {
-      role: "user",
-      parts: [ { functionResponse: { name: function_name, response: response_data } } ]
-    }
-
-    payload = { contents: contents, generationConfig: GENERATION_CONFIG }
-    payload[:systemInstruction] = { parts: [ { text: system_instruction } ] } if system_instruction.present?
-    payload[:tools] = tools if tools.present?
-
-    body = send_request_with_retry(payload)
-
-    candidate_parts = body.dig("candidates", 0, "content", "parts") || []
     text = candidate_parts.filter_map { |p| p["text"] }.join
-    { text: text }
+
+    { text: text, function_calls: function_calls }
   end
 
   def self.build_contents(messages)
