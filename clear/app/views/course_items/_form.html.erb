@@ -27,11 +27,13 @@
     </div>
     <div class="md:col-span-3">
       <%= f.label :kind, class: label_classes, style: label_style do %>Type <span class="text-red-400">*</span><% end %>
-      <%= f.select :kind,
-            CourseItem.kinds.keys.map { |k| [k.humanize, k] },
-            {},
-            class: input_classes,
-            style: input_style %>
+      <%= render Studs::DropdownComponent.new(
+            label: "— select type —",
+            variant: :duration,
+            name: "#{f.object_name}[kind]",
+            selected_value: course_item.kind,
+            items: CourseItem.kinds.keys.map { |k| { label: k.humanize, value: k } }
+          ) %>
     </div>
     <div class="md:col-span-3">
       <%= f.label :due_at, "Due", class: label_classes, style: label_style %>
