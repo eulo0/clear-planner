@@ -3,7 +3,6 @@ class ProjectMessage < ApplicationRecord
 
   belongs_to :user
   belongs_to :project
-  has_many :project_messages, dependent: :destroy
 
   validates :body, presence: true
 
