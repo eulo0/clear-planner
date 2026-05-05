@@ -12,7 +12,8 @@ class User < ApplicationRecord
   has_many :sent_project_invitations, class_name: "ProjectInvitation", foreign_key: :sender_id, dependent: :destroy
 
   devise :invitable, :database_authenticatable, :registerable,
-         :recoverable, :rememberable, :validatable
+         :recoverable, :rememberable, :validatable, :confirmable,
+         :omniauthable, omniauth_providers: [ :google_oauth2 ]
 
   enum :role, { user: 0, admin: 1 }
   has_one_attached :avatar
@@ -63,5 +64,40 @@ class User < ApplicationRecord
 
   def avatar_thumbnail
     avatar.variant(resize: "150x150!").processed
+  end
+
+  def self.from_omniauth(auth)
+    email = auth&.info&.email.to_s.strip.downcase
+    return nil if email.blank?
+    return nil unless auth&.info&.email_verified.to_s == "true"
+
+    user = find_by(provider: auth.provider, uid: auth.uid)
+    user ||= find_by(email: email)
+
+    if user
+      user.update(provider: auth.provider, uid: auth.uid)
+    else
+      username = email.split("@").first
+      # This is so their username isn't an invalid length by the model
+      username = "User" if username.length < 2 || username.length > 32
+
+      user = new(
+        email:    email,
+        username: username,
+        password: Devise.friendly_token[0, 20],
+        provider: auth.provider,
+        uid:      auth.uid
+      )
+      if user.respond_to?(:skip_confirmation!) && user.has_attribute?(:confirmed_at)
+        user.skip_confirmation!
+      end
+      user.save
+    end
+
+    user
+  end
+
+  def password_required?
+    super && provider.blank?
   end
 end

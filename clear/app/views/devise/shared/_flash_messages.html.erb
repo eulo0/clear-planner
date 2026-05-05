@@ -1,0 +1,24 @@
+<% sign_in_page = action_name == "new" && (controller_path == "users/auth" || controller_name == "sessions") %>
+
+<% flash.each do |name, message| %>
+  <% next if name.to_s == "confirmation_sent" || message.blank? %>
+  <% tone = name.to_s == "alert" ? "rose" : "emerald" %>
+  <div class="mb-4 rounded-2xl border px-4 py-3 text-sm <%= tone == 'rose' ? 'border-rose-900 bg-rose-950/40 text-rose-200' : 'border-emerald-900 bg-emerald-950/40 text-emerald-200' %>">
+    <%= message %>
+
+    <% show_resend = sign_in_page &&
+                     message.to_s.downcase.include?("confirm") &&
+                     !message.to_s.downcase.include?("successfully confirmed") %>
+    <% if show_resend %>
+      <% resend_email = params.dig(resource_name, :email).presence ||
+                        params[:email].presence ||
+                        session[:prefill_sign_in_email].presence ||
+                        (defined?(resource) && resource.respond_to?(:email) ? resource.email : nil) %>
+      <%= render "devise/shared/confirmation_resend", resend_email: resend_email %>
+    <% end %>
+  </div>
+<% end %>
+
+<% if sign_in_page && flash[:confirmation_sent].present? && flash[:alert].blank? && flash[:notice].blank? %>
+  <p class="mb-4 text-xs text-zinc-400"><%= flash[:confirmation_sent] %></p>
+<% end %>
