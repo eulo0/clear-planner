@@ -225,37 +225,6 @@
         <% end %>
       <% end %>
 
-      <!-- Category summary -->
-      <% if active_weights.any? %>
-        <div class="px-5 py-2 text-[10px] font-bold uppercase tracking-widest"
-             style="background-color: var(--studs-panel-hover); border-bottom: 1px solid var(--studs-divider); border-top: 1px solid var(--studs-border); color: var(--studs-accent); opacity: 0.9;">
-          Category Totals
-        </div>
-        <% active_weights.each do |kind, weight| %>
-          <% items = graded_by_kind[kind] || [] %>
-          <% earned = items.sum { |i| i.points_earned.to_f } %>
-          <% possible = items.sum { |i| i.points_possible.to_f } %>
-          <% avg = items.any? ? (items.sum { |i| i.grade_percentage } / items.size).round(1) : nil %>
-          <div class="grid grid-cols-12 items-center gap-4 px-5 py-3"
-               style="border-bottom: 1px solid var(--studs-divider);">
-            <div class="col-span-6 text-sm font-medium text-zinc-300">
-              <%= kind.humanize %>
-              <span class="ml-2 text-xs text-zinc-400"><%= weight.to_i %>% weight</span>
-            </div>
-            <div class="col-span-4 text-sm text-zinc-300">
-              <% if possible > 0 %>
-                <%= earned.to_s.sub(/\.0$/, '') %> / <%= possible.to_s.sub(/\.0$/, '') %>
-              <% else %>
-                <span class="text-zinc-400">0.00 / 0.00</span>
-              <% end %>
-            </div>
-            <div class="col-span-2 text-right text-sm font-semibold" style="color: var(--studs-accent);">
-              <%= avg ? "#{avg}%" : "N/A" %>
-            </div>
-          </div>
-        <% end %>
-      <% end %>
-
       <!-- Total row -->
       <div class="grid grid-cols-12 items-center gap-4 px-5 py-4">
         <div class="col-span-6 text-base font-bold text-zinc-100">Total</div>
