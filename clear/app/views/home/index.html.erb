@@ -7,7 +7,7 @@
                  autoplay muted loop playsinline tabindex="-1">
             <source src="<%= asset_path('Clear_files/plan_beyond.mp4') %>" type="video/mp4">
           </video>
-          <div class="pointer-events-none absolute inset-0 bg-black" style="animation: landing-video-cover-hide 0.35s ease 2.2s forwards;"></div>
+          <div class="pointer-events-none absolute inset-0 bg-black" style="animation: landing-video-cover-hide 0.4s ease 0.6s forwards;"></div>
           <div class="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/10 via-black/24 to-black/72"></div>
 
           <div class="absolute inset-x-0 mx-auto w-full max-w-7xl px-6"
@@ -58,27 +58,27 @@
       <% features = [
         {
           title: "Plan Easily",
-          body: "There is no clutter or learning curve. Everything is right where you expect it.",
-          local_video: "Clear_files/plan_beyond.mp4"
+          body: "Our app has no learning curve. Creating an event is as simple as it should be.",
+          local_video: "Clear_files/plan_easily.mp4"
         },
         {
           title: "Plan Fast",
-          body: "Tired of schedululing your class times or assignments each time on your planner? Our syllabus parser can take care of that in seconds.",
+          body: "There's no need to type out all your assignment due dates. Our syllabus parser takes care of that in seconds.",
           local_video: "Clear_files/plan_beyond.mp4"
         },
         {
           title: "Plan Ahead",
-          body: "Stay ahead of deadlines. Our AI prepares study sessions before exams and assignment due dates, so you can stay on track without cramming.",
+          body: "Our AI can prepare study sessions before exams and assignment due dates, so you can stay on track without cramming.",
           local_video: "Clear_files/plan_beyond.mp4"
         },
         {
           title: "Plan Together",
-          body: "Whether it's group projects or a hobby together, collaborate with your classmates in one shared space without any hassle.",
+          body: "Collaborate with your classmates in one shared space without any hassle.",
           local_video: "Clear_files/plan_beyond.mp4"
         },
         {
           title: "Plan Beyond",
-          body: "Life happens. Plans change. Use our draft system to make alternative schedules as backups when life gets unpredictable.",
+          body: "Life happens. Plans change. Use our draft system to create backups when life gets unpredictable.",
           local_video: "Clear_files/plan_beyond.mp4"
         }
       ] %>
@@ -99,7 +99,7 @@
                            autoplay muted loop playsinline tabindex="-1">
                       <source src="<%= asset_path(feature[:local_video]) %>" type="video/mp4">
                     </video>
-                    <div class="pointer-events-none absolute inset-0 bg-black" style="animation: landing-video-cover-hide 0.35s ease 2.2s forwards;"></div>
+                    <div class="pointer-events-none absolute inset-0 bg-black" style="animation: landing-video-cover-hide 0.4s ease 0.6s forwards;"></div>
                   </div>
                 </div>
               </div>
@@ -191,6 +191,7 @@
     width: 100%;
     transform: none;
   }
+
 
   @keyframes landing-video-cover-hide {
     from { opacity: 1; visibility: visible; }
