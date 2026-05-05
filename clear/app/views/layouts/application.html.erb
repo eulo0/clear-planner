@@ -79,21 +79,7 @@
         </div>
       </header>
     <% end %>
-  <% if (notice.present? || alert.present?) && !(controller.respond_to?(:devise_controller?) && controller.devise_controller?) %>
-    <div class="fixed top-4 left-0 right-0 z-50 px-4">
-      <div class="mx-auto w-full max-w-2xl space-y-3">
-        <% if notice.present? %>
-          <div class="rounded-2xl border border-emerald-900 bg-emerald-950/40 px-4 py-3 text-sm text-emerald-200 backdrop-blur-md">
-            <%= notice %>
-          </div>
-        <% end %>
-        <% if alert.present? %>
-          <div class="rounded-2xl border border-rose-900 bg-rose-950/40 px-4 py-3 text-sm text-rose-200 backdrop-blur-md">
-            <%= alert %>
-          </div>
-        <% end %>
-      </div>
-    <% end %>
+  <%= render "shared/toasts" if controller_name == "home" %>
     <%= yield %>
   </body>
 </html>
