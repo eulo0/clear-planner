@@ -45,11 +45,17 @@ Rails.application.routes.draw do
     collection do
       delete :destroy_all
     end
+    member do
+      post :convert
+    end
   end
 
   resources :work_shifts do
     collection do
       delete :destroy_all
+    end
+    member do
+      post :convert
     end
   end
 
@@ -68,6 +74,7 @@ Rails.application.routes.draw do
     member do
       patch :update_grade_weights
       get   :grades
+      post  :convert
     end
     resources :course_items, only: %i[index create show edit update destroy]
   end

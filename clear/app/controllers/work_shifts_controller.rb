@@ -1,10 +1,12 @@
 # frozen_string_literal: true
 
 class WorkShiftsController < ApplicationController
+  include OccurrenceConvertible
+
   layout "app_shell"
 
   before_action :authenticate_user!
-  before_action :set_work_shift, only: %i[show edit update destroy]
+  before_action :set_work_shift, only: %i[show edit update destroy convert]
 
   def index
     @q = params[:q].to_s.strip
@@ -183,6 +185,10 @@ class WorkShiftsController < ApplicationController
   end
 
   private
+
+  def convertible_source
+    @work_shift
+  end
 
   def render_draft_calendar_update
     draft       = current_user_draft

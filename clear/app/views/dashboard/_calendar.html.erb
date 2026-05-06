@@ -253,7 +253,7 @@
     <!-- Event popover -->
     <div
       data-event-popover-target="popover"
-      class="hidden absolute z-[100] w-80 rounded-xl border border-zinc-700"
+      class="hidden absolute z-[100] w-fit min-w-80 rounded-xl border border-zinc-700"
       style="background-color: #18181b; box-shadow: 0 8px 30px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.06);">
       <%= turbo_frame_tag "event_popover",
             class: "block",
