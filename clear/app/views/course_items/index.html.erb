@@ -26,10 +26,7 @@
   </div>
 
   <!-- Add item form -->
-  <div class="rounded-2xl p-4" style="border: 1px solid var(--studs-border); background-color: var(--studs-panel-bg-2);">
-    <div class="text-[10px] font-bold uppercase tracking-widest mb-3" style="color: var(--studs-accent); opacity: 0.8;">New item</div>
-    <%= render "form", course: @course, course_item: @course_item %>
-  </div>
+  <%= render "new_item_section", course: @course, course_item: @course_item %>
 
   <!-- Items list -->
   <div class="overflow-hidden rounded-2xl" style="border: 1px solid var(--studs-border); background-color: var(--studs-panel-bg-2);">
