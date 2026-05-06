@@ -181,6 +181,7 @@ class Course < ApplicationRecord
 
   def sync_repeat_days_from_meeting_days
     return if meeting_days.blank?
+    return unless meeting_days_changed? || repeat_days.blank?
 
     map = {
       "M" => 1,

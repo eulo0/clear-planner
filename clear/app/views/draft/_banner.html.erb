@@ -1,7 +1,6 @@
 <%= turbo_frame_tag "draft_banner" do %>
   <% draft = local_assigns[:active_draft] %>
   <% start_date = local_assigns[:start_date].presence || Date.current.iso8601 %>
-
   <% if draft.present? %>
     <div class="mb-3 flex items-center gap-3 rounded-xl border border-amber-300/65 bg-amber-500/16 px-4 py-2.5 text-sm text-amber-100 shadow-[0_0_0_1px_rgba(251,191,36,0.26)]"
          data-controller="draft-cache">
@@ -13,6 +12,10 @@
         <%= draft.operation_count %> pending <%= "change".pluralize(draft.operation_count) %>
       </span>
       <div class="ml-auto flex items-center gap-2">
+        <%= link_to "View",
+              draft_changes_path(start_date: start_date, draft_id: draft.id),
+              data: { turbo_frame: "draft_changes_modal", turbo_prefetch: false, action: "click->modal#start" },
+              class: "inline-flex items-center rounded-lg border border-cyan-400/60 bg-cyan-500/18 px-3 py-1.5 text-xs font-semibold text-cyan-100 hover:bg-cyan-500/28 transition cursor-pointer" %>
         <%= button_to "Apply",
               apply_draft_path(start_date: start_date),
               method: :patch,
