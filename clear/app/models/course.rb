@@ -95,6 +95,10 @@ class Course < ApplicationRecord
     out
   end
 
+  def grade_weights
+    super || {}
+  end
+
   def overall_grade
     use_weighted = grade_calculation == "weighted" && grade_weights.values.sum(&:to_f) > 0
     use_weighted ? weighted_grade : points_grade

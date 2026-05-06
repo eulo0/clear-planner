@@ -65,10 +65,10 @@
           <div class="grid grid-cols-2 gap-1.5 sm:grid-cols-3 lg:grid-cols-4">
             <% active_weights.each do |kind, weight| %>
               <% items = graded_by_kind[kind] || [] %>
-              <% avg = items.any? ? (items.sum { |i| i.grade_percentage } / items.size).round(1) : nil %>
+              <% avg = items.any? ? (items.sum { |i| i.points_earned.to_f / i.points_possible.to_f } / items.size * 100).round(1) : nil %>
               <div class="rounded-xl px-3 py-2 text-center" style="border: 1px solid var(--studs-border); background-color: var(--studs-panel-hover);">
                 <div class="text-[10px] font-semibold uppercase tracking-wide text-zinc-300"><%= kind.humanize %></div>
-                <div class="text-xs text-zinc-400 mt-0.5"><%= weight.to_i %>% weight</div>
+                <div class="text-xs text-zinc-400 mt-0.5"><%= sprintf("%g", weight.to_f.round(1)) %>% weight</div>
                 <div class="text-sm font-semibold mt-1" style="color: var(--studs-accent);">
                   <%= avg ? "#{avg}%" : "—" %>
                 </div>
@@ -86,11 +86,11 @@
           <div class="flex flex-wrap items-center gap-6 text-sm">
             <div>
               <span class="text-zinc-400">Points earned:</span>
-              <span class="font-semibold text-zinc-100 ml-1"><%= total_earned.to_i %></span>
+              <span class="font-semibold text-zinc-100 ml-1"><%= sprintf("%g", total_earned.round(1)) %></span>
             </div>
             <div>
               <span class="text-zinc-400">Points possible:</span>
-              <span class="font-semibold text-zinc-100 ml-1"><%= total_possible.to_i %></span>
+              <span class="font-semibold text-zinc-100 ml-1"><%= sprintf("%g", total_possible.round(1)) %></span>
             </div>
             <div>
               <span class="text-zinc-400">Items graded:</span>
@@ -320,7 +320,6 @@
                          placeholder="—"
                          data-actual="<%= item.points_earned.to_s %>"
                          data-possible="<%= item.points_possible %>"
-                         data-item-id="<%= item.id %>"
                          min="0" step="any">
                   <span class="text-zinc-400 text-xs">/ <%= item.points_possible %></span>
                 </div>
@@ -510,7 +509,13 @@
       });
 
       // Show/hide What-If banner
-      const hasChanges = inputs.some(i => i.value.trim() !== (i.dataset.actual || "").trim());
+      const hasChanges = inputs.some(i => {
+        const actual  = i.dataset.actual || "";
+        const current = i.value.trim();
+        if (actual === "" && current === "") return false;
+        if (actual === "" || current === "") return true;
+        return parseFloat(current) !== parseFloat(actual);
+      });
       document.getElementById("whatif-banner").classList.toggle("hidden", !hasChanges);
 
       // Collect graded inputs (non-empty value, possible > 0)
@@ -569,6 +574,12 @@
     function resetWhatIf() {
       document.querySelectorAll(".whatif-input").forEach(input => {
         input.value = input.dataset.actual || "";
+        const pctSpan = input.closest(".whatif-row")?.querySelector(".whatif-pct");
+        if (pctSpan) {
+          const actualDisplay = pctSpan.dataset.actualDisplay;
+          pctSpan.textContent = actualDisplay || "—";
+          pctSpan.style.color = actualDisplay ? "var(--studs-accent)" : "var(--studs-text-muted, #71717a)";
+        }
       });
       recalculate();
     }

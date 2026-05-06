@@ -161,7 +161,10 @@ class CoursesController < ApplicationController
   end
 
   def grades
-    @items_by_kind = @course.course_items.order(:due_at).group_by(&:kind)
+    @course.course_items.load
+    @items_by_kind = @course.course_items
+                            .sort_by { |i| i.due_at&.to_f || Float::INFINITY }
+                            .group_by(&:kind)
   end
 
   def update_grade_weights
