@@ -1,5 +1,8 @@
 Rails.application.routes.draw do
   resources :projects do
+    collection do
+      delete :destroy_all
+    end
     get :agenda, on: :member
     get :chat, on: :member
     get :join, on: :collection

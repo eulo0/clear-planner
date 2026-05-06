@@ -11,6 +11,11 @@ class ProjectsController < ApplicationController
   end
 
   def show
+    session.delete(:calendar_draft_mode)
+    session.delete(:active_calendar_draft_id)
+    @current_user_draft = nil
+    @current_user_drafts = nil
+
     @start_date =
       begin
         params[:start_date].present? ? Date.parse(params[:start_date]) : Date.current
@@ -59,6 +64,11 @@ class ProjectsController < ApplicationController
     end
   end
 
+  def destroy_all
+      current_user.projects.destroy_all
+      redirect_to projects_path, notice: "All groups deleted."
+  end
+
   def destroy
     if current_membership.owner?
       @project.destroy
@@ -85,7 +95,7 @@ class ProjectsController < ApplicationController
       project.project_memberships.create!(user: current_user, role: :viewer)
     end
 
-    redirect_to project_path(project), notice: "You joined the project!"
+    redirect_to project_path(project), notice: "You joined the group!"
   end
 
   def agenda

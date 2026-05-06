@@ -48,7 +48,7 @@ class User < ApplicationRecord
   end
 
   def save_custom_theme(name, variables)
-    updated = (custom_themes || {}).merge(name => variables)
+    updated = (custom_themes || {}).merge("\u200B#{name}" => variables)
     update(custom_themes: updated)
   end
 
