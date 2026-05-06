@@ -10,28 +10,60 @@ module OccurrenceConvertible
     source = convertible_source
     target_type = params[:target_type].to_s
 
+    if past_occurrence?(source, params[:start_date])
+      return render_convert_error("You can't change the type of a past occurrence.")
+    end
+
     result = OccurrenceTypeConverter.call(source: source, target_type: target_type)
 
     if result.success?
       render_dashboard_refresh
     else
       Rails.logger.warn("OccurrenceTypeConverter failed: source=#{source.class}##{source.id} -> #{target_type} errors=#{result.errors.inspect}")
-      respond_to do |format|
-        format.turbo_stream do
-          message = result.errors.first || "Could not change type."
-          escaped = ERB::Util.html_escape(message)
-          banner = %(<div class="p-4 text-sm text-rose-300 border-b border-rose-900 bg-rose-950/40">#{escaped}</div>).html_safe
-          render turbo_stream: [
-            turbo_stream.update("event_drawer", banner),
-            turbo_stream.update("event_popover", banner)
-          ], status: :unprocessable_entity
-        end
-        format.html { redirect_back fallback_location: dashboard_path, alert: result.errors.first }
-      end
+      render_convert_error(result.errors.first || "Could not change type.")
     end
   end
 
   private
+
+  def render_convert_error(message)
+    flash.now[:alert] = message
+    respond_to do |format|
+      format.turbo_stream do
+        render turbo_stream: turbo_stream.replace(
+          "toast-container",
+          partial: "shared/toasts",
+          locals: { notice: nil, alert: message }
+        ), status: :unprocessable_entity
+      end
+      format.html { redirect_back fallback_location: dashboard_path, alert: message }
+    end
+  end
+
+  def past_occurrence?(source, raw_start_date)
+    occurrence_at = occurrence_datetime_for(source, raw_start_date)
+    return false unless occurrence_at
+
+    occurrence_at < Time.current
+  end
+
+  def occurrence_datetime_for(source, raw_start_date)
+    date = parse_convert_start_date(raw_start_date)
+
+    case source
+    when Event
+      if source.recurring? && source.starts_at.present?
+        tod = source.starts_at.in_time_zone
+        date.in_time_zone.change(hour: tod.hour, min: tod.min)
+      else
+        source.starts_at
+      end
+    when Course, WorkShift
+      return nil unless source.start_time
+      tod = source.start_time
+      date.in_time_zone.change(hour: tod.hour, min: tod.min)
+    end
+  end
 
   def render_dashboard_refresh
     start_date  = parse_convert_start_date(params[:start_date])

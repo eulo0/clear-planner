@@ -66,10 +66,42 @@ class OccurrenceTypeConverter
   def common_attrs
     {
       title: @source.title.presence || "Untitled",
-      description: @source.description,
+      description: combined_description,
       color: @source.color,
       location: @source.location
     }
+  end
+
+  # Folds source fields that don't exist on the target into the description so
+  # they aren't silently lost (e.g. Course's professor/term when converting
+  # to an Event).
+  def combined_description
+    base = @source.description.to_s.strip
+    preserved = preserved_fields_text
+    return base.presence if preserved.blank?
+    return preserved if base.blank?
+    "#{base}\n\n#{preserved}"
+  end
+
+  def preserved_fields_text
+    fields = preserved_source_fields.select { |_label, value| value.present? }
+    return nil if fields.empty?
+    fields.map { |label, value| "#{label}: #{value}" }.join("\n")
+  end
+
+  def preserved_source_fields
+    case @source_kind
+    when "course"
+      [
+        [ "Code",         @source.code ],
+        [ "Term",         @source.term ],
+        [ "Professor",    @source.professor ],
+        [ "Office",       @source.office ],
+        [ "Office hours", @source.office_hours ]
+      ]
+    else
+      []
+    end
   end
 
   def time_attrs
