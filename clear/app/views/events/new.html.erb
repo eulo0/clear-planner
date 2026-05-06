@@ -1,7 +1,17 @@
-<div class="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-6">
-  <div class="mb-4">
-    <div class="text-base font-semibold text-zinc-100">New event</div>
-    <div class="text-sm text-zinc-500">Create a one-time or repeating event.</div>
+<div class="rounded-2xl p-6" style="border: 1px solid var(--studs-border); background-color: var(--studs-panel-bg);">
+  <div class="mb-6 pb-4" style="border-bottom: 1px solid var(--studs-divider);">
+    <div class="flex items-center justify-between">
+      <div>
+        <div class="text-base font-semibold text-zinc-100">New event</div>
+        <div class="mt-0.5 text-sm text-zinc-500">Create a one-time or repeating event.</div>
+      </div>
+      <button type="button" onclick="history.back()" class="studs-nav-btn">
+        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+        </svg>
+        Back
+      </button>
+    </div>
   </div>
 
   <%= render "form", event: @event, turbo: false %>

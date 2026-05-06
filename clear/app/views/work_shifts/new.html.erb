@@ -1,9 +1,19 @@
 <% content_for :page_title, "Work Shifts" %>
 <% content_for :page_subtitle, "Your work schedule" %>
 <div class="rounded-2xl p-6" style="border: 1px solid var(--studs-border); background-color: var(--studs-panel-bg);">
-  <div class="mb-4">
-    <div class="text-base font-semibold text-zinc-100">New shift</div>
-    <div class="text-sm text-zinc-500">Add a work shift to your schedule.</div>
+  <div class="mb-6 pb-4" style="border-bottom: 1px solid var(--studs-divider);">
+    <div class="flex items-center justify-between">
+      <div>
+        <div class="text-base font-semibold text-zinc-100">New shift</div>
+        <div class="mt-0.5 text-sm text-zinc-500">Add a work shift to your schedule.</div>
+      </div>
+      <button type="button" onclick="history.back()" class="studs-nav-btn">
+        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+        </svg>
+        Back
+      </button>
+    </div>
   </div>
   <%= render "form", work_shift: @work_shift, turbo: false %>
 </div>

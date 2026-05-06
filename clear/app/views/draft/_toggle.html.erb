@@ -120,8 +120,8 @@
         <div class="border-t border-zinc-700/60 p-2">
           <%= button_to exit_draft_path(start_date: draft_start_date),
                 method: :patch,
-                form: { data: { turbo_stream: true, action: "click->draft-cache#clear" } },
-                class: "inline-flex w-full items-center justify-center rounded-md border border-amber-300/65 bg-amber-500/16 px-2 py-1.5 text-sm font-normal leading-5 text-amber-100 hover:bg-amber-500/20" do %>
+                form: { data: { turbo_stream: true, action: "click->draft-cache#clearSearch" } },
+                class: "inline-flex w-full items-center justify-center rounded-md border border-amber-300/55 bg-amber-500/10 px-2 py-1.5 text-sm font-normal leading-5 text-amber-100 hover:bg-amber-500/20" do %>
             Exit Draft Mode
           <% end %>
         </div>
@@ -129,3 +129,4 @@
     </div>
   </div>
 <% end %>
+
