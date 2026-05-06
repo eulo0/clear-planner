@@ -54,6 +54,12 @@
         <div class="mt-1 text-sm text-zinc-100 whitespace-pre-wrap"><%= work_shift.description.presence || "—" %></div>
       </div>
 
+      <% if @project.present? && work_shift.user.present? %>
+        <div class="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4">
+          <div class="text-xs text-zinc-400">Created by</div>
+          <div class="mt-1 text-sm text-zinc-100"><%= work_shift.user.username.presence || work_shift.user.email %></div>
+        </div>
+      <% end %>
       <div class="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4">
         <div class="text-xs text-zinc-400">Repeat</div>
         <% if work_shift.recurring? %>

@@ -4,15 +4,24 @@
      edit_course_course_item_path(notifiable.course, notifiable)
    elsif %w[high_priority event_created event_reminder].include?(notification.category) && notifiable.is_a?(Event)
      event_path(notifiable)
+   elsif notification.category == "group_member_joined" && notifiable.is_a?(Project)
+     project_path(notifiable)
    end %>
+<% in_group = case notifiable
+              when Event, Course then notifiable.project.present?
+              when CourseItem    then notifiable.course&.project.present?
+              else false
+              end %>
+<% group_prefix = in_group ? "Group " : "" %>
 <% category_label = if %w[assignment_due assignment_reminder].include?(notification.category) && notifiable.is_a?(CourseItem)
-     notification.category == "assignment_reminder" ? "Due soon" : "#{notifiable.kind.humanize} added"
+     notification.category == "assignment_reminder" ? "Due soon" : "#{group_prefix}#{notifiable.kind.humanize} added"
    else
      {
-       "event_created"      => "Event added",
-       "course_added"       => "Course added",
+       "event_created"      => "#{group_prefix}Event added",
+       "course_added"       => "#{group_prefix}Course added",
        "high_priority"      => "High priority",
        "group"              => "Group",
+       "group_member_joined" => "Group",
        "event_reminder"     => "Starting soon",
        "course_reminder"    => "Class starting soon",
        "assignment_reminder" => "Due soon"

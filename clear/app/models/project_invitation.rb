@@ -17,10 +17,14 @@ class ProjectInvitation < ApplicationRecord
   def accept!(user)
     return if accepted?
 
+    already_member = project.users.include?(user)
+
     transaction do
       update!(accepted_at: Time.current)
-      project.users << user unless project.users.include?(user)
+      project.users << user unless already_member
     end
+
+    project.notify_member_joined(user) unless already_member
   end
 
   private

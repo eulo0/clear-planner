@@ -42,6 +42,12 @@
         <div class="text-xs text-zinc-400">Description</div>
         <div class="mt-1 text-sm text-zinc-100 whitespace-pre-wrap"><%= event.description.presence || "—" %></div>
       </div>
+      <% if @project.present? && event.user.present? %>
+        <div class="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4">
+          <div class="text-xs text-zinc-400">Created by</div>
+          <div class="mt-1 text-sm text-zinc-100"><%= event.user.username.presence || event.user.email %></div>
+        </div>
+      <% end %>
       <div class="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4">
         <div class="text-xs text-zinc-400">Repeat</div>
         <% if event.recurring? %>

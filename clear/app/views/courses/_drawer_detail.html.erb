@@ -88,6 +88,13 @@
         </div>
       <% end %>
 
+      <% if @project.present? && course.user.present? %>
+        <div class="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4">
+          <div class="text-xs text-zinc-400">Created by</div>
+          <div class="mt-1 text-sm text-zinc-100"><%= course.user.username.presence || course.user.email %></div>
+        </div>
+      <% end %>
+
       <!-- Course Items (LIST ONLY) -->
       <div class="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4">
         <div class="flex items-start justify-between gap-3">

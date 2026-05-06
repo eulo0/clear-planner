@@ -119,12 +119,29 @@ class Event < ApplicationRecord
   end
 
   def create_notification
+    base_message = starts_at ? "#{title} at #{starts_at.strftime("%-b %-d at %-I:%M %p")}" : title
+    category     = (priority.present? && priority > 0) ? "high_priority" : "event_created"
+
+    creator_message = project.present? ? %(#{base_message} in group "#{project.title}") : base_message
+
     Notification.create!(
       user: user,
       notifiable: self,
-      category: (priority.present? && priority > 0) ? "high_priority" : "event_created",
-      message: starts_at ? "#{title} at #{starts_at.strftime("%-b %-d at %-I:%M %p")}" : title
+      category: category,
+      message: creator_message
     )
+
+    return unless project.present?
+
+    creator_name = user.username.presence || user.email
+    project.users.where.not(id: user.id).find_each do |member|
+      Notification.create!(
+        user: member,
+        notifiable: self,
+        category: category,
+        message: %(#{creator_name} added #{base_message} in group "#{project.title}")
+      )
+    end
   end
 
   def srgb_linear(channel_0_255)

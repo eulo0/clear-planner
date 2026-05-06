@@ -16,6 +16,26 @@ class Project < ApplicationRecord
     project_memberships.find_by(user: user)
   end
 
+  def notify_member_joined(new_user)
+    display_name = new_user.username.presence || new_user.email
+
+    Notification.create!(
+      user: new_user,
+      notifiable: self,
+      category: "group_member_joined",
+      message: %(You joined "#{title}")
+    )
+
+    users.where.not(id: new_user.id).find_each do |member|
+      Notification.create!(
+        user: member,
+        notifiable: self,
+        category: "group_member_joined",
+        message: %(#{display_name} joined "#{title}")
+      )
+    end
+  end
+
   def role_for(user)
     membership_for(user)&.role
   end
