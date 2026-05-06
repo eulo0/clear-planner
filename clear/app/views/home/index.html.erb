@@ -1,19 +1,98 @@
-<div class="relative overflow-hidden">
+<style>
+  .landing-video-cover {
+    animation: landing-video-cover-hide 0.4s ease 0.6s forwards;
+  }
 
+  .landing-feature-card {
+    border: 1px solid color-mix(in srgb, var(--studs-border) 55%, var(--studs-accent) 45%);
+    background-color: color-mix(in srgb, var(--studs-panel-hover) 94%, var(--studs-panel-bg-2) 6%);
+  }
+
+  /* For the background on the feature cards */
+  .landing-preview-frame {
+    --landing-preview-pad: 12px;
+    --landing-preview-accent: var(--studs-accent);
+    --landing-preview-aspect: 16 / 9;
+    padding: var(--landing-preview-pad);
+    border-radius: 1.5rem;
+    background:
+      radial-gradient(120% 120% at 30% 20%,
+        color-mix(in srgb, var(--landing-preview-accent) 70%, transparent) 0%,
+        transparent 60%),
+      linear-gradient(135deg,
+        color-mix(in srgb, var(--landing-preview-accent) 55%, #000 45%) 0%,
+        color-mix(in srgb, var(--landing-preview-accent) 20%, #0b0b10 80%) 100%);
+    outline: 1px solid color-mix(in srgb, var(--landing-preview-accent) 55%, transparent);
+    box-shadow:
+      0 24px 60px rgba(0, 0, 0, 0.55),
+      0 0 50px color-mix(in srgb, var(--landing-preview-accent) 35%, transparent);
+  }
+
+  .landing-preview-frame--green { --landing-preview-accent: #10b981; }
+
+  @media (min-width: 640px) { .landing-preview-frame { --landing-preview-pad: 14px; } }
+  @media (min-width: 1024px) { .landing-preview-frame { --landing-preview-pad: 16px; } }
+
+  
+
+  /* This is for painting the borders on top of the video */
+  .landing-hero-glow::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 2;
+    border: 3px solid color-mix(in srgb, var(--studs-accent) 78%, var(--studs-border));
+    box-shadow: 0 0 48px color-mix(in srgb, var(--studs-accent) 38%, transparent);
+  }
+  /* Brief black transition to handle bug where theres a black flash */
+  .landing-hero-video {
+    opacity: 0;
+    transition: opacity 600ms ease;
+  }
+
+  /* This is because the plan beyond videos are cropped differently. */
+  .landing-hero-video--beyond,
+  .landing-preview-video--beyond {
+    transform: scale(1.02);
+    transform-origin: center;
+    object-position: 50% 12%;
+  }
+
+  @keyframes landing-video-cover-hide {
+    from { opacity: 1; visibility: visible; }
+    to { opacity: 0; visibility: hidden; }
+  }
+</style>
+
+<div class="relative overflow-hidden">
   <div>
     <section class="relative">
-      <div class="relative border-y" style="border-color: var(--studs-border);">
-        <div class="relative h-[calc(100vh-4.5rem)]">
-          <%= image_tag "Preview.gif", alt: "Clear app preview", class: "h-full w-full object-cover" %>
+      <div class="landing-hero-glow relative w-full">
+        <% hero_videos = [
+          { local_video: "Clear_files/plan_ahead.mp4" },
+          { local_video: "Clear_files/plan_beyond.mp4", video_class: "landing-hero-video--beyond" },
+          { local_video: "Clear_files/plan_together.mp4" }
+        ] %>
+        <div class="landing-video-lock relative overflow-hidden h-[calc(100vh-4.5rem)]"
+             data-controller="hero-video">
+          <% hero_videos.each do |video| %>
+            <video class="landing-hero-video <%= video[:video_class] %> pointer-events-none absolute inset-0 h-full w-full object-cover object-top"
+                   muted playsinline tabindex="-1"
+                   data-hero-video-target="video">
+              <source src="<%= asset_path(video[:local_video]) %>" type="video/mp4">
+            </video>
+          <% end %>
+          <div class="landing-video-cover pointer-events-none absolute inset-0 bg-black"></div>
           <div class="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/10 via-black/24 to-black/72"></div>
 
           <div class="absolute inset-x-0 mx-auto w-full max-w-7xl px-6"
                style="bottom: 10%;">
-            <h1 class="max-w-[14ch] text-[clamp(2rem,4.6vw+0.4rem,5.2rem)] font-semibold leading-[0.98] tracking-tight text-zinc-50">
+            <h1 class="max-w-[14ch] text-[clamp(1.9rem,3.8vw+0.35rem,3.4rem)] font-semibold leading-[0.98] tracking-tight text-zinc-50">
               <span class="block">Life is uncertain.</span>
               <span class="block whitespace-nowrap">Your plan shouldn&rsquo;t be.</span>
             </h1>
-            <p class="mt-[clamp(0.75rem,1.6vh,1.25rem)] whitespace-nowrap text-[clamp(0.92rem,0.65vw+0.62rem,1.22rem)] leading-relaxed text-zinc-100/95">
+            <p class="mt-[clamp(0.75rem,1.6vh,1.25rem)] whitespace-nowrap text-[clamp(0.9rem,0.55vw+0.55rem,1.1rem)] leading-relaxed text-zinc-100/95">
               Plan with AI, test in drafts, and collaborate in real time with confidence.
             </p>
 
@@ -55,40 +134,51 @@
       <% features = [
         {
           title: "Plan Easily",
-          body: "Simplicity is our philosophy. There is no clutter or learning curve. Everything you need is right where you expect it."
+          body: "Our app has no learning curve. Creating an event is as simple as it should be.",
+          local_video: "Clear_files/plan_easily.mp4"
         },
         {
           title: "Plan Fast",
-          body: "Tired of schedululing your class times or assignments each time on your planner? Our syllabus parser can take care of that in seconds."
+          body: "You don't have to type out all your due assignments. Upload a syllabus and our parser can handle that in seconds.",
+          local_video: "Clear_files/plan_fast.mp4"
         },
         {
           title: "Plan Ahead",
-          body: "Stay ahead of deadlines. Our AI prepares study sessions before exams and assignment due dates, so you can stay on track without cramming."
+          body: "Our AI can prepare study sessions before exams and assignment due dates, so you can stay on track without cramming.",
+          local_video: "Clear_files/plan_ahead.mp4"
         },
         {
           title: "Plan Together",
-          body: "Whether it's group projects or a hobby together, collaborate with your classmates in one shared space without any hassle."
+          body: "Collaborate with your classmates in one shared space without any hassle.",
+          local_video: "Clear_files/plan_together.mp4"
         },
         {
           title: "Plan Beyond",
-          body: "Life happens. Plans change. Use our draft system to make alternative schedules as backups when life gets unpredictable."
+          body: "Life happens. Plans change. Use our draft system to create backups when life gets unpredictable.",
+          local_video: "Clear_files/plan_beyond.mp4"
         }
       ] %>
 
       <div class="space-y-10 sm:space-y-18">
         <% features.each_with_index do |feature, index| %>
-          <article class="group grid gap-6 rounded-[1.75rem] p-5 backdrop-blur-xl transition-all duration-300 sm:p-6 <%= index.odd? ? 'lg:grid-cols-[1.1fr_0.9fr]' : 'lg:grid-cols-[0.9fr_1.1fr]' %> lg:items-center lg:gap-8"
-                   style="border: 1px solid color-mix(in srgb, var(--studs-border) 55%, var(--studs-accent) 45%); background-color: color-mix(in srgb, var(--studs-panel-hover) 94%, var(--studs-panel-bg-2) 6%);">
-            <div class="<%= index.odd? ? 'lg:order-2' : '' %>">
+          <article class="landing-feature-card group grid gap-6 rounded-[1.75rem] p-5 backdrop-blur-xl transition-all duration-300 sm:p-6 <%= index.odd? ? "lg:grid-cols-[1.1fr_0.9fr]" : "lg:grid-cols-[0.9fr_1.1fr]" %> lg:items-center lg:gap-8">
+            <div class="<%= index.odd? ? "lg:order-2" : "" %>">
               <h3 class="text-3xl font-semibold tracking-tight text-zinc-50 sm:text-4xl"><%= feature[:title] %></h3>
               <p class="mt-3 max-w-xl text-base leading-relaxed text-zinc-100/95 sm:text-lg"><%= feature[:body] %></p>
             </div>
 
-            <div class="<%= index.odd? ? 'lg:order-1' : '' %>">
-              <div class="overflow-hidden rounded-2xl shadow-xl shadow-black/35" style="border: 1px solid var(--studs-border); background-color: #09090b;">
-                <%= image_tag "Preview.gif", alt: "Feature GIF placeholder", class: "h-52 w-full object-cover sm:h-72" %>
+            <div class="<%= index.odd? ? "lg:order-1" : "" %>">
+              <div class="landing-video-lock landing-preview-frame landing-preview-frame--green">
+                <div style="border-radius: 1.25rem; overflow: hidden; background: #050507; border: 1px solid color-mix(in srgb, var(--studs-border) 75%, transparent);">
+                  <div style="position: relative; width: 100%; aspect-ratio: var(--landing-preview-aspect);">
+                    <video class="<%= feature[:title] == "Plan Beyond" ? "landing-preview-video--beyond" : "" %> pointer-events-none w-full h-full object-cover object-center"
+                           autoplay muted loop playsinline tabindex="-1">
+                      <source src="<%= asset_path(feature[:local_video]) %>" type="video/mp4">
+                    </video>
+                    <div class="landing-video-cover pointer-events-none absolute inset-0 bg-black"></div>
+                  </div>
+                </div>
               </div>
-              <p class="mt-2 text-xs text-zinc-400">GIF placeholder for this feature section</p>
             </div>
           </article>
         <% end %>

@@ -94,6 +94,9 @@ application.register("full-height", FullHeightController)
 import HelloController from "./hello_controller"
 application.register("hello", HelloController)
 
+import HeroVideoController from "./hero_video_controller"
+application.register("hero-video", HeroVideoController)
+
 import ModalController from "./modal_controller"
 application.register("modal", ModalController)
 
