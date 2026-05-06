@@ -1,8 +1,6 @@
-You've been invited to a project!
-
-<%= @sender.email %> has invited you to collaborate on the project "<%= @project.title %>".
+You've been invited to a group!
+<%= @sender.email %> has invited you to collaborate on the group "<%= @project.title %>".
 <%= @project.description.present? ? "\n#{@project.description}\n" : "" %>
-Join the project by visiting this link:
+Join the group by visiting this link:
 <%= @accept_url %>
-
 If you don't have an account yet, you'll be able to create one after clicking the link.

@@ -31,7 +31,10 @@
       </div>
     </div>
     <nav class="flex items-center gap-1.5">
-      <div data-action="dropdown:select->calendar-view#toggle">
+      <div
+  data-action="dropdown:select->calendar-view#toggle"
+        data-calendar-view-base-url-value="<%= @project ? project_path(@project) : dashboard_path %>"
+        >
         <%= render Studs::DropdownComponent.new(
           label: "Monthly",
           variant: :dashboard_view,
@@ -44,12 +47,13 @@
         ) %>
       </div>
       <div class="mx-1 h-5 w-px rounded-full" style="background-color: var(--studs-border);"></div>
-      <div
+      <% if !@project %>
+        <div
         data-controller="course-filter"
         data-course-filter-base-url-value="<%= dashboard_path %>"
         data-course-filter-start-date-value="<%= month_date.iso8601 %>"
         data-action="dropdown:select->course-filter#navigate">
-        <%= render Studs::DropdownComponent.new(
+          <%= render Studs::DropdownComponent.new(
           label: "All",
           variant: :dashboard_view,
           name: "course_filter",
@@ -62,9 +66,28 @@
             { label: "All Work Shifts", value: "work_shifts" },
           ]
         ) %>
-      </div>
-      <div class="mx-1 h-5 w-px rounded-full" style="background-color: var(--studs-border);"></div>
+        </div>
+        <div class="mx-1 h-5 w-px rounded-full" style="background-color: var(--studs-border);"></div>
+      <% end %>
       <% if @project %>
+        <% if @project.membership_for(current_user)&.can_manage_members? %>
+          <%= link_to new_project_project_invitation_path(@project),
+                class: "studs-nav-btn",
+                data: { turbo_frame: "_top" } do %>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+            </svg>
+            Invite
+          <% end %>
+        <% end %>
+        <%= link_to members_project_project_invitations_path(@project),
+                class: "studs-nav-btn",
+                data: { turbo_frame: "_top" } do %>
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+          </svg>
+          Members
+        <% end %>
         <%= link_to project_path(@project, start_date: prev_month), class: nav_btn, data: { turbo_frame: "dashboard_calendar" } do %>
           <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
             <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
@@ -90,6 +113,16 @@
             <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 10h16M4 14h10"/>
           </svg>
           Agenda
+        </button>
+        <button
+          type="button"
+          class="<%= nav_btn %>"
+          data-action="click->chat-drawer#open"
+          >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+          </svg>
+          Chat
         </button>
       <% else %>
         <%= link_to dashboard_path(start_date: prev_month, filter: course_filter_id), class: nav_btn, data: { turbo_frame: "dashboard_calendar" } do %>

@@ -43,7 +43,6 @@ class ThemesController < ApplicationController
     end
 
     if current_user.save_custom_theme(name, variables)
-      current_user.update(theme: name)
       redirect_to profile_path, notice: "Custom theme saved!"
     else
       redirect_back fallback_location: profile_path, alert: "Couldn't save theme."
