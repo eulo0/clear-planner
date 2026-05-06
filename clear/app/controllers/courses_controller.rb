@@ -1,8 +1,10 @@
 class CoursesController < ApplicationController
+  include OccurrenceConvertible
+
   layout "app_shell"
 
   before_action :authenticate_user!
-  before_action :set_course, only: %i[show edit update destroy update_grade_weights grades]
+  before_action :set_course, only: %i[show edit update destroy update_grade_weights grades convert]
 
   def index
     @q = params[:q].to_s.strip
@@ -228,6 +230,10 @@ class CoursesController < ApplicationController
   end
 
   private
+
+  def convertible_source
+    @course
+  end
 
   def set_course
     if params[:id].to_s.start_with?("d_")

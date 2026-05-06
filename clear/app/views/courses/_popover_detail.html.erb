@@ -1,5 +1,6 @@
 <%= turbo_frame_tag "event_popover" do %>
   <% course_identifier = local_assigns[:course_identifier] || course %>
+  <div class="w-[26rem]">
   <!-- Header -->
   <div class="flex items-center justify-between gap-3 px-4 pt-3 pb-2">
     <div class="flex items-center gap-2 min-w-0">
@@ -120,5 +121,7 @@
         <% end %>
       </div>
     </div>
+    <%= render "shared/change_type_dropdown", source_type: "course", record: course, start_date: start_date, variant: :popover %>
+  </div>
   </div>
 <% end %>

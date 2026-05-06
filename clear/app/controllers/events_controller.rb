@@ -2,11 +2,12 @@
 
 class EventsController < ApplicationController
   include Pagy::Method
+  include OccurrenceConvertible
 
   layout "app_shell"
 
   before_action :authenticate_user!
-  before_action :set_event, only: %i[show edit update destroy]
+  before_action :set_event, only: %i[show edit update destroy convert]
 
   def index
     @q = params[:q].to_s.strip
@@ -286,6 +287,10 @@ class EventsController < ApplicationController
   end
 
   private
+
+  def convertible_source
+    @event
+  end
 
   def set_event
     if params[:id].to_s.start_with?("d_")

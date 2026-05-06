@@ -118,6 +118,7 @@
           Delete
         <% end %>
       <% end %>
+      <%= render "shared/change_type_dropdown", source_type: "event", record: event, start_date: start_date, variant: :popover %>
     <% end %>
   </div>
 <% end %>
