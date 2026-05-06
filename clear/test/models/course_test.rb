@@ -254,5 +254,4 @@ class CourseTest < ActiveSupport::TestCase
     assert_not course.valid?
     assert course.errors[:grade_calculation].any?
   end
-
 end
