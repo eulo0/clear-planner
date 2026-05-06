@@ -102,7 +102,7 @@
 
       <div class="flex items-center gap-2">
         <select id="kind-select"
-                class="flex-1 rounded-2xl px-3 py-2 text-sm text-zinc-100 bg-zinc-950/60 focus:outline-none focus:ring-2 transition-all duration-150 border"
+                class="flex-1 rounded-2xl px-3 py-2 text-sm text-zinc-100 bg-zinc-950/60 focus:outline-none transition-all duration-150 border"
                 style="border-color: var(--studs-border); --tw-ring-color: var(--studs-accent);">
           <option value="">— Add a category —</option>
           <% CourseItem.kinds.keys.each do |kind| %>
@@ -217,6 +217,12 @@
     <% end %>
   </div>
 </div>
+
+<style>
+  .grade-weight-input::-webkit-inner-spin-button,
+  .grade-weight-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  .grade-weight-input { -moz-appearance: textfield; }
+</style>
 
 <script>
   const ALL_KINDS = <%= CourseItem.kinds.keys.map { |k| [k, k.humanize] }.to_json.html_safe %>;
