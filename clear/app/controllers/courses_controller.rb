@@ -178,6 +178,26 @@ class CoursesController < ApplicationController
     end
   end
 
+  def update_grade_calculation
+    mode = params[:grade_calculation].to_s
+    unless Course::GRADE_CALCULATION_MODES.include?(mode)
+      redirect_to grades_course_path(@course), alert: "Invalid grade calculation mode."
+      return
+    end
+    @course.update_columns(grade_calculation: mode)
+    redirect_to grades_course_path(@course), notice: "Grade calculation updated."
+  end
+
+  def update_grading_scale
+    preset = params[:grading_scale_preset].to_s
+    unless Course::GRADING_SCALE_PRESETS.key?(preset)
+      redirect_to grades_course_path(@course), alert: "Invalid grading scale."
+      return
+    end
+    @course.update_columns(grading_scale_preset: preset)
+    redirect_to grades_course_path(@course), notice: "Grading scale updated."
+  end
+
   def destroy_all
     current_user.courses.destroy_all
     redirect_to courses_path, notice: "All courses deleted."
@@ -328,7 +348,7 @@ class CoursesController < ApplicationController
 
   def grade_weights_params
     allowed_kinds = CourseItem.kinds.keys
-    raw = params.require(:grade_weights).permit(*allowed_kinds).to_h
+    raw = (params[:grade_weights]&.permit(*allowed_kinds) || {}).to_h
     raw.transform_values { |v| v.to_s.strip.empty? ? nil : v.to_f.clamp(0, 100) }.compact
   end
 

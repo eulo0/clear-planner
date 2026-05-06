@@ -8,6 +8,7 @@ class CourseTest < ActiveSupport::TestCase
       end_date: Date.today + 16.weeks,
       start_time: Time.zone.parse("09:00"),
       meeting_days: "MWF",
+      grade_calculation: "weighted",
       user: users(:one)
     }.merge(overrides)
   end
@@ -113,5 +114,181 @@ class CourseTest < ActiveSupport::TestCase
     ))
     assert_not course.valid?
     assert course.errors[:end_time].any?
+  end
+
+  # grade_weights validation
+
+  test "grade weights summing to 100 are valid" do
+    course = Course.new(valid_course_attrs(grade_weights: { "assignment" => 60, "exam" => 40 }))
+    assert course.valid?, course.errors.full_messages.to_sentence
+  end
+
+  test "grade weights exceeding 100 are invalid" do
+    course = Course.new(valid_course_attrs(grade_weights: { "assignment" => 70, "exam" => 40 }))
+    assert_not course.valid?
+    assert course.errors[:grade_weights].any?
+  end
+
+  test "empty grade weights are valid" do
+    course = Course.new(valid_course_attrs)
+    assert course.valid?, course.errors.full_messages.to_sentence
+  end
+
+  # letter_grade
+
+  test "letter_grade returns A for 90 and above" do
+    course = Course.new
+    assert_equal "A", course.letter_grade(90)
+    assert_equal "A", course.letter_grade(100)
+  end
+
+  test "letter_grade returns B for 80 to 89.9" do
+    course = Course.new
+    assert_equal "B", course.letter_grade(80)
+    assert_equal "B", course.letter_grade(89.9)
+  end
+
+  test "letter_grade returns C for 70 to 79.9" do
+    course = Course.new
+    assert_equal "C", course.letter_grade(70)
+    assert_equal "C", course.letter_grade(79.9)
+  end
+
+  test "letter_grade returns D for 60 to 69.9" do
+    course = Course.new
+    assert_equal "D", course.letter_grade(60)
+    assert_equal "D", course.letter_grade(69.9)
+  end
+
+  test "letter_grade returns F below 60" do
+    course = Course.new
+    assert_equal "F", course.letter_grade(59.9)
+    assert_equal "F", course.letter_grade(0)
+  end
+
+  # overall_grade
+
+  test "overall_grade returns nil when no grade weights are set" do
+    course = Course.create!(valid_course_attrs)
+    assert_nil course.overall_grade
+  end
+
+  test "overall_grade returns nil when no items are graded" do
+    course = Course.create!(valid_course_attrs(grade_weights: { "assignment" => 100 }))
+    course.course_items.create!(title: "HW 1", kind: :assignment)
+    assert_nil course.overall_grade
+  end
+
+  test "overall_grade calculates correctly for a single category" do
+    course = Course.create!(valid_course_attrs(grade_weights: { "assignment" => 100 }))
+    course.course_items.create!(title: "HW 1", kind: :assignment, points_possible: 100, points_earned: 90)
+    course.course_items.create!(title: "HW 2", kind: :assignment, points_possible: 50, points_earned: 40)
+    # avg ratio = (0.9 + 0.8) / 2 = 0.85 → 85.0%
+    assert_equal 85.0, course.overall_grade
+  end
+
+  test "overall_grade weights categories proportionally" do
+    course = Course.create!(valid_course_attrs(grade_weights: { "assignment" => 60, "exam" => 40 }))
+    course.course_items.create!(title: "HW 1", kind: :assignment, points_possible: 100, points_earned: 100)
+    course.course_items.create!(title: "Exam 1", kind: :exam, points_possible: 100, points_earned: 70)
+    # (60 * 1.0 + 40 * 0.7) / 100 * 100 = 88.0%
+    assert_equal 88.0, course.overall_grade
+  end
+
+  test "overall_grade ignores weighted categories with no graded items" do
+    course = Course.create!(valid_course_attrs(grade_weights: { "assignment" => 60, "exam" => 40 }))
+    course.course_items.create!(title: "HW 1", kind: :assignment, points_possible: 100, points_earned: 80)
+    # exam has a weight but no graded items — only assignment contributes
+    assert_equal 80.0, course.overall_grade
+  end
+
+  test "overall_grade supports bonus points above possible" do
+    course = Course.create!(valid_course_attrs(grade_weights: { "assignment" => 100 }))
+    course.course_items.create!(title: "HW 1", kind: :assignment, points_possible: 100, points_earned: 110)
+    assert_equal 110.0, course.overall_grade
+  end
+
+  # points mode
+
+  test "overall_grade in points mode returns nil when no items are graded" do
+    course = Course.create!(valid_course_attrs(grade_calculation: "points"))
+    assert_nil course.overall_grade
+  end
+
+  test "overall_grade in points mode sums all items" do
+    course = Course.create!(valid_course_attrs(grade_calculation: "points"))
+    course.course_items.create!(title: "HW 1", kind: :assignment, points_possible: 100, points_earned: 90)
+    course.course_items.create!(title: "HW 2", kind: :assignment, points_possible: 50, points_earned: 40)
+    # (90+40) / (100+50) * 100 = 86.7%
+    assert_equal 86.7, course.overall_grade
+  end
+
+  test "overall_grade in points mode spans multiple categories" do
+    course = Course.create!(valid_course_attrs(grade_calculation: "points"))
+    course.course_items.create!(title: "HW 1",   kind: :assignment, points_possible: 100, points_earned: 100)
+    course.course_items.create!(title: "Exam 1", kind: :exam,       points_possible: 100, points_earned: 70)
+    # (100+70) / (100+100) * 100 = 85.0%
+    assert_equal 85.0, course.overall_grade
+  end
+
+  test "overall_grade falls back to points when weighted but weights sum to zero" do
+    course = Course.create!(valid_course_attrs(grade_calculation: "weighted", grade_weights: {}))
+    course.course_items.create!(title: "HW 1", kind: :assignment, points_possible: 100, points_earned: 75)
+    assert_equal 75.0, course.overall_grade
+  end
+
+  # grade_calculation validation
+
+  test "grade_calculation of points is valid" do
+    course = Course.new(valid_course_attrs(grade_calculation: "points"))
+    assert course.valid?, course.errors.full_messages.to_sentence
+  end
+
+  test "grade_calculation of weighted is valid" do
+    course = Course.new(valid_course_attrs(grade_calculation: "weighted"))
+    assert course.valid?, course.errors.full_messages.to_sentence
+  end
+
+  test "grade_calculation of unknown value is invalid" do
+    course = Course.new(valid_course_attrs(grade_calculation: "magic"))
+    assert_not course.valid?
+    assert course.errors[:grade_calculation].any?
+  end
+
+  # grading scale presets
+
+  test "letter_grade uses 10-point scale by default" do
+    course = Course.new(valid_course_attrs)
+    assert_equal "A", course.letter_grade(90)
+    assert_equal "B", course.letter_grade(80)
+    assert_equal "C", course.letter_grade(70)
+    assert_equal "D", course.letter_grade(60)
+    assert_equal "F", course.letter_grade(59.9)
+  end
+
+  test "letter_grade uses 7-point scale when selected" do
+    course = Course.new(valid_course_attrs(grading_scale_preset: "seven_point"))
+    assert_equal "A", course.letter_grade(93)
+    assert_equal "B", course.letter_grade(85)
+    assert_equal "B", course.letter_grade(92.9)
+    assert_equal "C", course.letter_grade(77)
+    assert_equal "D", course.letter_grade(70)
+    assert_equal "F", course.letter_grade(69.9)
+  end
+
+  test "grading_scale_preset of ten_point is valid" do
+    course = Course.new(valid_course_attrs(grading_scale_preset: "ten_point"))
+    assert course.valid?, course.errors.full_messages.to_sentence
+  end
+
+  test "grading_scale_preset of seven_point is valid" do
+    course = Course.new(valid_course_attrs(grading_scale_preset: "seven_point"))
+    assert course.valid?, course.errors.full_messages.to_sentence
+  end
+
+  test "grading_scale_preset of unknown value is invalid" do
+    course = Course.new(valid_course_attrs(grading_scale_preset: "twelve_point"))
+    assert_not course.valid?
+    assert course.errors[:grading_scale_preset].any?
   end
 end

@@ -73,6 +73,8 @@ Rails.application.routes.draw do
     end
     member do
       patch :update_grade_weights
+      patch :update_grade_calculation
+      patch :update_grading_scale
       get   :grades
       post  :convert
     end
