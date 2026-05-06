@@ -107,6 +107,6 @@
         <% end %>
       </div>
     </div>
-    <%= render "shared/change_type_dropdown", source_type: "work_shift", record: work_shift, start_date: start_date, variant: :popover %>
+    <%= render "shared/change_type_dropdown", source_type: "work_shift", record: work_shift, start_date: start_date, variant: :popover if work_shift.persisted? %>
   </div>
 <% end %>

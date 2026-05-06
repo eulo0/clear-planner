@@ -129,7 +129,7 @@
         <% end %>
       </div>
     </div>
-    <%= render "shared/change_type_dropdown", source_type: "course", record: course, start_date: start_date, variant: :popover %>
+    <%= render "shared/change_type_dropdown", source_type: "course", record: course, start_date: start_date, variant: :popover if course.persisted? %>
   </div>
   </div>
 <% end %>
