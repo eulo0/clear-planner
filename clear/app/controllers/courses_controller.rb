@@ -4,7 +4,7 @@ class CoursesController < ApplicationController
   layout "app_shell"
 
   before_action :authenticate_user!
-  before_action :set_course, only: %i[show edit update destroy update_grade_weights grades convert]
+  before_action :set_course, only: %i[show edit update destroy update_grade_weights update_grade_calculation grades convert]
 
   def index
     @q = params[:q].to_s.strip
@@ -189,16 +189,6 @@ class CoursesController < ApplicationController
     end
     @course.update_columns(grade_calculation: mode)
     redirect_to grades_course_path(@course), notice: "Grade calculation updated."
-  end
-
-  def update_grading_scale
-    preset = params[:grading_scale_preset].to_s
-    unless Course::GRADING_SCALE_PRESETS.key?(preset)
-      redirect_to grades_course_path(@course), alert: "Invalid grading scale."
-      return
-    end
-    @course.update_columns(grading_scale_preset: preset)
-    redirect_to grades_course_path(@course), notice: "Grading scale updated."
   end
 
   def destroy_all

@@ -255,40 +255,4 @@ class CourseTest < ActiveSupport::TestCase
     assert course.errors[:grade_calculation].any?
   end
 
-  # grading scale presets
-
-  test "letter_grade uses 10-point scale by default" do
-    course = Course.new(valid_course_attrs)
-    assert_equal "A", course.letter_grade(90)
-    assert_equal "B", course.letter_grade(80)
-    assert_equal "C", course.letter_grade(70)
-    assert_equal "D", course.letter_grade(60)
-    assert_equal "F", course.letter_grade(59.9)
-  end
-
-  test "letter_grade uses 7-point scale when selected" do
-    course = Course.new(valid_course_attrs(grading_scale_preset: "seven_point"))
-    assert_equal "A", course.letter_grade(93)
-    assert_equal "B", course.letter_grade(85)
-    assert_equal "B", course.letter_grade(92.9)
-    assert_equal "C", course.letter_grade(77)
-    assert_equal "D", course.letter_grade(70)
-    assert_equal "F", course.letter_grade(69.9)
-  end
-
-  test "grading_scale_preset of ten_point is valid" do
-    course = Course.new(valid_course_attrs(grading_scale_preset: "ten_point"))
-    assert course.valid?, course.errors.full_messages.to_sentence
-  end
-
-  test "grading_scale_preset of seven_point is valid" do
-    course = Course.new(valid_course_attrs(grading_scale_preset: "seven_point"))
-    assert course.valid?, course.errors.full_messages.to_sentence
-  end
-
-  test "grading_scale_preset of unknown value is invalid" do
-    course = Course.new(valid_course_attrs(grading_scale_preset: "twelve_point"))
-    assert_not course.valid?
-    assert course.errors[:grading_scale_preset].any?
-  end
 end

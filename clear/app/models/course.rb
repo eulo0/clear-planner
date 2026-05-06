@@ -41,14 +41,10 @@ class Course < ApplicationRecord
   validate :repeat_days_present
   validate :repeat_days_are_valid_weekdays
   GRADE_CALCULATION_MODES = %w[points weighted].freeze
-  GRADING_SCALE_PRESETS = {
-    "ten_point"   => { "A" => 90, "B" => 80, "C" => 70, "D" => 60 },
-    "seven_point" => { "A" => 93, "B" => 85, "C" => 77, "D" => 70 }
-  }.freeze
+  GRADING_SCALE = { "A" => 90, "B" => 80, "C" => 70, "D" => 60 }.freeze
 
   validate :grade_weights_do_not_exceed_100
   validates :grade_calculation, inclusion: { in: GRADE_CALCULATION_MODES }
-  validates :grading_scale_preset, inclusion: { in: GRADING_SCALE_PRESETS.keys }
 
   # Used by the dashboard calendar
   Occurrence = Struct.new(:event, :starts_at, :ends_at, :draft_status, keyword_init: true) do
@@ -105,8 +101,7 @@ class Course < ApplicationRecord
   end
 
   def letter_grade(percentage)
-    scale = GRADING_SCALE_PRESETS.fetch(grading_scale_preset, GRADING_SCALE_PRESETS["ten_point"])
-    scale.each { |letter, threshold| return letter if percentage >= threshold }
+    GRADING_SCALE.each { |letter, threshold| return letter if percentage >= threshold }
     "F"
   end
 
