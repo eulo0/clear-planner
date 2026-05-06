@@ -363,6 +363,7 @@ class CalendarDraft < ApplicationRecord
       next unless starts_at
 
       ends_at = data[:ends_at].present? ? (Time.zone.parse(data[:ends_at].to_s) rescue nil) : nil
+      ends_at ||= starts_at + 1.hour
       recurring = ActiveModel::Type::Boolean.new.cast(data[:recurring])
       repeat_days = Array(data[:repeat_days]).reject(&:blank?).map(&:to_i)
       repeat_until = data[:repeat_until].present? ? (Date.parse(data[:repeat_until].to_s) rescue nil) : nil
