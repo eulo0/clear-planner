@@ -70,6 +70,9 @@ application.register("draft-cache", DraftCacheController)
 import DraftDropdownController from "./draft_dropdown_controller"
 application.register("draft-dropdown", DraftDropdownController)
 
+import DraftSelectController from "./draft_select_controller"
+application.register("draft-select", DraftSelectController)
+
 import DrawerController from "./drawer_controller"
 application.register("drawer", DrawerController)
 
