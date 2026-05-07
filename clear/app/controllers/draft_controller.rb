@@ -15,6 +15,7 @@ class DraftController < ApplicationController
     return render_calendar_turbo_stream(draft: current_user_draft) unless draft
 
     activate_draft!(draft)
+    flash.now[:notice] = "You are now in draft: #{draft.name}."
     render_calendar_turbo_stream(draft: draft)
   end
 
@@ -27,6 +28,7 @@ class DraftController < ApplicationController
     draft = current_user.calendar_drafts.new(name: params[:name])
     if draft.save
       activate_draft!(draft)
+      flash.now[:notice] = "You are now in draft #{draft.name}."
       render_calendar_turbo_stream(draft: draft)
     else
       flash.now[:alert] = draft.errors.full_messages.to_sentence

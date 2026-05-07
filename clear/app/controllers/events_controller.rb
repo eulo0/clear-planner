@@ -63,6 +63,7 @@ class EventsController < ApplicationController
 
       current_user_draft.add_create("event", event_params.to_h)
       if params[:from_ai_chat].present?
+        flash.now[:notice] = "Event created."
         render turbo_stream: turbo_stream.replace("toast-container", partial: "shared/toasts")
         return
       end
@@ -94,6 +95,7 @@ class EventsController < ApplicationController
 
     if save_event_with_displacement(@event)
       if params[:from_ai_chat].present?
+        flash.now[:notice] = "Event created."
         render turbo_stream: turbo_stream.replace("toast-container", partial: "shared/toasts")
         return
       end
