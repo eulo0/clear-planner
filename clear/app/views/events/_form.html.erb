@@ -22,7 +22,8 @@
                       action: ("turbo:submit-end->ai-form#onSubmitEnd" if ai_chat) } do |f| %>
   <%= hidden_field_tag :start_date, start_date_param if start_date_param.present? %>
   <%= hidden_field_tag :from_ai_chat, "1" if ai_chat %>
-  <%= f.hidden_field :project_id, value: @event.project_id || params[:project_id] %>
+  <% project_id_value = ai_chat ? nil : (event.project_id || params[:project_id]) %>
+  <%= f.hidden_field :project_id, value: project_id_value %>
   <% if event.errors.any? %>
     <div class="rounded-2xl p-4 text-red-300"
          style="border: 1px solid rgba(239,68,68,0.3); background-color: rgba(127,29,29,0.2);">
