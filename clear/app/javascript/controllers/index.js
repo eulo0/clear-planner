@@ -22,6 +22,12 @@ application.register("agenda-search-placeholder", AgendaSearchPlaceholderControl
 import AiChatDrawerController from "./ai_chat_drawer_controller"
 application.register("ai-chat-drawer", AiChatDrawerController)
 
+import AiCreateFormController from "./ai_create_form_controller"
+application.register("ai-create-form", AiCreateFormController)
+
+import AiFormController from "./ai_form_controller"
+application.register("ai-form", AiFormController)
+
 import AiUsageController from "./ai_usage_controller"
 application.register("ai-usage", AiUsageController)
 
@@ -85,11 +91,11 @@ application.register("duration-fill", DurationFillController)
 import EventPopoverController from "./event_popover_controller"
 application.register("event-popover", EventPopoverController)
 
-import FilepondController from "./filepond_controller"
-application.register("filepond", FilepondController)
-
 import FilePreviewController from "./file_preview_controller"
 application.register("file-preview", FilePreviewController)
+
+import FilepondController from "./filepond_controller"
+application.register("filepond", FilepondController)
 
 import FullHeightController from "./full_height_controller"
 application.register("full-height", FullHeightController)

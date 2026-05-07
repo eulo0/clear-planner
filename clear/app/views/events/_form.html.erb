@@ -1,6 +1,7 @@
 <% start_date_param = local_assigns[:start_date].presence || params[:start_date].presence %>
 <% turbo_enabled = local_assigns.key?(:turbo) ? local_assigns[:turbo] : true %>
 <% cancel_drawer = local_assigns[:cancel_drawer] %>
+<% ai_chat = local_assigns[:ai_chat] %>
 <% event_identifier = local_assigns[:event_identifier] %>
 <% draft_temp_event = event_identifier.to_s.start_with?("d_") %>
 <% form_url =
@@ -16,8 +17,11 @@
               url: form_url,
               method: (draft_temp_event ? :patch : nil),
               class: "space-y-5",
-              data: { drawer_close_on_success: "false", turbo: turbo_enabled, controller: "duration-fill auto-schedule-toggle" } do |f| %>
+              data: { drawer_close_on_success: "false", turbo: turbo_enabled, controller: "duration-fill auto-schedule-toggle",
+                      turbo_stream: (true if ai_chat),
+                      action: ("turbo:submit-end->ai-form#onSubmitEnd" if ai_chat) } do |f| %>
   <%= hidden_field_tag :start_date, start_date_param if start_date_param.present? %>
+  <%= hidden_field_tag :from_ai_chat, "1" if ai_chat %>
   <%= f.hidden_field :project_id, value: @event.project_id || params[:project_id] %>
   <% if event.errors.any? %>
     <div class="rounded-2xl p-4 text-red-300"
@@ -188,7 +192,9 @@
       </svg>
       <%= (event.persisted? || draft_temp_event) ? "Update event" : "Create event" %>
     </button>
-    <% if cancel_drawer %>
+    <% if ai_chat %>
+      <button type="button" class="studs-nav-btn" data-action="click->ai-form#cancel">Cancel</button>
+    <% elsif cancel_drawer %>
       <button type="button" class="studs-nav-btn" data-action="drawer#close">Cancel</button>
     <% else %>
       <% path = @event.project.present? ? project_path(@event.project) : dashboard_path %>

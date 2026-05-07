@@ -48,10 +48,24 @@ class EventsController < ApplicationController
     if in_draft_mode?
       @event = current_user.events.new(event_params)
       unless @event.valid?
+        if params[:from_ai_chat].present?
+          flash.now[:alert] = @event.errors.full_messages.to_sentence
+          respond_to do |format|
+            format.turbo_stream do
+              render turbo_stream: turbo_stream.replace("toast-container", partial: "shared/toasts"),
+                     status: :unprocessable_entity
+            end
+          end
+          return
+        end
         return render_draft_event_form_error(:new)
       end
 
       current_user_draft.add_create("event", event_params.to_h)
+      if params[:from_ai_chat].present?
+        render turbo_stream: turbo_stream.replace("toast-container", partial: "shared/toasts")
+        return
+      end
       return render_draft_calendar_update
     end
 
@@ -79,6 +93,11 @@ class EventsController < ApplicationController
     end
 
     if save_event_with_displacement(@event)
+      if params[:from_ai_chat].present?
+        render turbo_stream: turbo_stream.replace("toast-container", partial: "shared/toasts")
+        return
+      end
+
       respond_to do |format|
         format.html { redirect_to event_path(@event), notice: "Event created." }
 
@@ -106,6 +125,17 @@ class EventsController < ApplicationController
         end
       end
     else
+      if params[:from_ai_chat].present?
+        flash.now[:alert] = @event.errors.full_messages.to_sentence
+        respond_to do |format|
+          format.turbo_stream do
+            render turbo_stream: turbo_stream.replace("toast-container", partial: "shared/toasts"),
+                   status: :unprocessable_entity
+          end
+        end
+        return
+      end
+
       respond_to do |format|
         format.html { render :new, status: :unprocessable_entity }
 
