@@ -52,26 +52,20 @@
               </div>
               <div class="flex-1 space-y-2 overflow-y-auto p-2">
                 <% if items_by_day[day].present? %>
-                  <% items_by_day[day].sort_by(&:starts_at).each do |item| %>
-                    <% bg           = item.try(:color).presence || "#34D399" %>
-                    <% text_color   = item.try(:contrast_text_color) || "#F9FAFB" %>
-                    <% draft_status = item.respond_to?(:draft_status) ? item.draft_status : nil %>
-                    <div class="rounded-xl border px-2.5 py-1.5 text-sm backdrop-blur-sm"
-                         style="background-color: <%= hex_to_rgba.(bg, 0.55) %>; color: <%= text_color %>; border-color: <%= hex_to_rgba.(bg, 0.20) %>; border-left: 3px solid <%= bg %>;">
-                      <div class="font-bold truncate text-[12px]"><%= item.title %></div>
-                      <% if item.starts_at.present? %>
-                        <div class="opacity-60 text-[10px] font-medium mt-0.5"><%= item.starts_at.strftime("%-I:%M %p") %></div>
-                      <% end %>
-                      <% if draft_status.present? %>
-                        <% badge_color = draft_status == "deleted" ? "#f87171" : draft_status == "updated" ? "#fbbf24" : "#34d399" %>
-                        <span class="inline-block rounded px-1 text-[8px] font-bold uppercase tracking-wide mt-0.5"
-                              style="background-color: <%= hex_to_rgba.(badge_color, 0.25) %>; color: <%= badge_color %>;">
-                          <%= draft_status %>
-                        </span>
-                      <% end %>
-                    </div>
-                  <% end %>
-                <% else %>
+	                  <% items_by_day[day].sort_by(&:starts_at).each do |item| %>
+	                    <% bg           = item.try(:color).presence || "#34D399" %>
+	                    <% text_color   = item.try(:contrast_text_color) || "#F9FAFB" %>
+	                    <% draft_status = item.respond_to?(:draft_status) ? item.draft_status : nil %>
+	                    <% next if draft_status == "deleted" %>
+	                    <div class="rounded-xl border px-2.5 py-1.5 text-sm backdrop-blur-sm"
+	                         style="background-color: <%= hex_to_rgba.(bg, 0.55) %>; color: <%= text_color %>; border-color: <%= hex_to_rgba.(bg, 0.20) %>; border-left: 3px solid <%= bg %>;">
+	                      <div class="font-bold truncate text-[12px]"><%= item.title %></div>
+	                      <% if item.starts_at.present? %>
+	                        <div class="opacity-60 text-[10px] font-medium mt-0.5"><%= item.starts_at.strftime("%-I:%M %p") %></div>
+	                      <% end %>
+	                    </div>
+	                  <% end %>
+	                <% else %>
                   <div class="mt-6 text-center text-xs text-zinc-500 italic">Nothing scheduled for this day.</div>
                 <% end %>
               </div>
