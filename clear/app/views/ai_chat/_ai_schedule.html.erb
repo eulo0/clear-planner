@@ -1,0 +1,85 @@
+<% occurrences  = local_assigns[:occurrences] || [] %>
+<% start_date   = local_assigns[:start_date].presence&.to_date || Date.current %>
+<% pages        = [0, 1].map { |w| (0..6).map { |d| start_date + (w * 7 + d).days } } %>
+<% items_by_day = occurrences.group_by { |o| o.starts_at.in_time_zone.to_date } %>
+<% hex_to_rgba  = ->(hex, alpha) {
+     hex = hex.to_s.gsub("#", "")[0..5]
+     r, g, b = hex[0..1].to_i(16), hex[2..3].to_i(16), hex[4..5].to_i(16)
+     "rgba(#{r},#{g},#{b},#{alpha})"
+   }
+%>
+
+<div class="flex items-start justify-start ai-chat-pop mt-4">
+  <div class="w-full max-w-[95%] rounded-2xl px-4 py-3"
+       style="background-color: var(--studs-panel-bg-2); border: 1px solid var(--studs-border);"
+       data-controller="ai-schedule">
+    <div style="zoom: 0.72;">
+
+      <%# Fixed header %>
+      <div class="mb-6 flex items-center justify-between relative">
+        <button type="button" class="studs-nav-btn"
+                data-ai-schedule-prev
+                data-action="click->ai-schedule#prev">← Prev</button>
+
+        <div class="absolute left-1/2 -translate-x-1/2 text-center pointer-events-none">
+          <h1 class="text-xl font-semibold text-zinc-100">Schedule</h1>
+          <% pages.each_with_index do |week_days, i| %>
+            <p class="text-sm text-zinc-400 whitespace-nowrap" data-ai-schedule-week-label
+               style="<%= i > 0 ? 'display:none' : '' %>">
+              Week of <%= week_days.first.strftime("%B %-d, %Y") %>
+            </p>
+          <% end %>
+        </div>
+
+        <button type="button" class="studs-nav-btn"
+                data-ai-schedule-next
+                data-action="click->ai-schedule#next">Next →</button>
+      </div>
+
+      <%# Pages %>
+      <% pages.each_with_index do |week_days, i| %>
+        <div data-ai-schedule-page class="grid grid-cols-7 gap-4 h-130"
+             style="<%= i > 0 ? 'display:none' : '' %>">
+          <% week_days.each do |day| %>
+            <div class="overflow-hidden rounded-2xl"
+                 style="border: 1px solid var(--studs-border); background-color: var(--studs-panel-bg-2); <%= day == Date.current ? "box-shadow: 0 0 0 2px color-mix(in srgb, var(--studs-accent) 50%, transparent);" : "" %>">
+              <div class="mb-3 pt-3 text-center">
+                <div class="text-sm font-semibold"
+                     style="<%= day == Date.current ? "color: var(--studs-accent);" : "color: #e4e4e7;" %>">
+                  <%= day.strftime("%A") %>
+                </div>
+                <div class="text-xs text-zinc-500"><%= day.strftime("%b %d") %></div>
+              </div>
+              <div class="flex-1 space-y-2 overflow-y-auto p-2">
+                <% if items_by_day[day].present? %>
+                  <% items_by_day[day].sort_by(&:starts_at).each do |item| %>
+                    <% bg           = item.try(:color).presence || "#34D399" %>
+                    <% text_color   = item.try(:contrast_text_color) || "#F9FAFB" %>
+                    <% draft_status = item.respond_to?(:draft_status) ? item.draft_status : nil %>
+                    <div class="rounded-xl border px-2.5 py-1.5 text-sm backdrop-blur-sm"
+                         style="background-color: <%= hex_to_rgba.(bg, 0.55) %>; color: <%= text_color %>; border-color: <%= hex_to_rgba.(bg, 0.20) %>; border-left: 3px solid <%= bg %>;">
+                      <div class="font-bold truncate text-[12px]"><%= item.title %></div>
+                      <% if item.starts_at.present? %>
+                        <div class="opacity-60 text-[10px] font-medium mt-0.5"><%= item.starts_at.strftime("%-I:%M %p") %></div>
+                      <% end %>
+                      <% if draft_status.present? %>
+                        <% badge_color = draft_status == "deleted" ? "#f87171" : draft_status == "updated" ? "#fbbf24" : "#34d399" %>
+                        <span class="inline-block rounded px-1 text-[8px] font-bold uppercase tracking-wide mt-0.5"
+                              style="background-color: <%= hex_to_rgba.(badge_color, 0.25) %>; color: <%= badge_color %>;">
+                          <%= draft_status %>
+                        </span>
+                      <% end %>
+                    </div>
+                  <% end %>
+                <% else %>
+                  <div class="mt-6 text-center text-xs text-zinc-500 italic">Nothing scheduled for this day.</div>
+                <% end %>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      <% end %>
+
+    </div>
+  </div>
+</div>

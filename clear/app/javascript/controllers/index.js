@@ -28,6 +28,9 @@ application.register("ai-create-form", AiCreateFormController)
 import AiFormController from "./ai_form_controller"
 application.register("ai-form", AiFormController)
 
+import AiScheduleController from "./ai_schedule_controller"
+application.register("ai-schedule", AiScheduleController)
+
 import AiUsageController from "./ai_usage_controller"
 application.register("ai-usage", AiUsageController)
 
