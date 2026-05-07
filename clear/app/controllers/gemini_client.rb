@@ -10,7 +10,7 @@ class GeminiClient
   BASE_BACKOFF = 2 # seconds
 
   GENERATION_CONFIG = {
-    maxOutputTokens: 2048,
+    maxOutputTokens: 8192,
     temperature: 0.4
   }.freeze
 

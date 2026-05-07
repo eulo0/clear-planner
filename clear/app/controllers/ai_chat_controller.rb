@@ -758,6 +758,16 @@ class AiChatController < ApplicationController
         line += " (#{c.term})" if c.term.present?
         line
       end
+      if current_user_draft.present?
+        current_user_draft.operations.select { |o| o["type"] == "create" && o["model"] == "course" }.each do |op|
+          d = op["data"]
+          line = "- [DRAFT] #{d["title"].presence || "(untitled)"}"
+          line += " (#{d["code"]})" if d["code"].present?
+          line += " #{d["meeting_days"]}" if d["meeting_days"].present?
+          line += " #{d["start_time"]}–#{d["end_time"]}" if d["start_time"].present?
+          course_lines << line
+        end
+      end
       parts << "\nThe user's courses:\n#{course_lines.join("\n")}"
     end
 
@@ -771,6 +781,18 @@ class AiChatController < ApplicationController
           line += " — #{e.description}" if e.description.present?
           line
         end
+
+        if current_user_draft.present?
+          current_user_draft.operations.select { |o| o["type"] == "create" && o["model"] == "event" }.each do |op|
+            d = op["data"]
+            starts_at = d["starts_at"].present? ? (Time.zone.parse(d["starts_at"]) rescue nil) : nil
+            next unless starts_at && starts_at >= Time.current && starts_at <= 14.days.from_now
+            line = "- [ID:#{op["temp_id"]}] [DRAFT] #{d["title"].presence || "(untitled)"} on #{starts_at.strftime('%a %b %d at %l:%M%P')}"
+            line += " at #{d["location"]}" if d["location"].present?
+            event_lines << line
+          end
+        end
+
         parts << "\nUpcoming events (next 14 days):\n#{event_lines.join("\n")}"
       end
 
@@ -803,7 +825,56 @@ class AiChatController < ApplicationController
         line += " at #{s.location}" if s.location.present?
         line
       end
+      if current_user_draft.present?
+        current_user_draft.operations.select { |o| o["type"] == "create" && o["model"] == "shift" }.each do |op|
+          d = op["data"]
+          line = "- [ID:#{op["temp_id"]}] [DRAFT] #{d["title"].presence || "(untitled)"}"
+          line += " #{d["start_time"]}–#{d["end_time"]}" if d["start_time"].present?
+          line += " starting #{d["start_date"]}" if d["start_date"].present?
+          line += " at #{d["location"]}" if d["location"].present?
+          shift_lines << line
+        end
+      end
       parts << "\nUser's work shifts:\n#{shift_lines.join("\n")}"
+    end
+
+    # Pre-compute blocked slots per day for the next 14 days
+    blocked = Hash.new { |h, k| h[k] = [] }
+    range = (Date.current..14.days.from_now.to_date)
+
+    upcoming_events.each do |e|
+      next unless e.starts_at && e.ends_at
+      blocked[e.starts_at.to_date] << "#{e.starts_at.strftime("%-I:%M%P")}–#{e.ends_at.strftime("%-I:%M%P")} (#{e.title})"
+    end
+
+    courses.each do |c|
+      next unless c.start_time && c.end_time
+      days = Array(c.repeat_days).map(&:to_i)
+      range.each do |d|
+        next unless days.include?(d.wday)
+        next if c.respond_to?(:start_date) && c.start_date.present? && d < c.start_date
+        next if c.respond_to?(:end_date)   && c.end_date.present?   && d > c.end_date
+        blocked[d] << "#{c.start_time.strftime("%-I:%M%P")}–#{c.end_time.strftime("%-I:%M%P")} (#{c.title} course)"
+      end
+    end
+
+    work_shifts.each do |s|
+      next unless s.start_time && s.end_time
+      range.each do |d|
+        if s.recurring?
+          next unless Array(s.repeat_days).map(&:to_i).include?(d.wday)
+          next if d < s.start_date
+          next if s.repeat_until.present? && d > s.repeat_until
+        else
+          next unless d == s.start_date
+        end
+        blocked[d] << "#{s.start_time.strftime("%-I:%M%P")}–#{s.end_time.strftime("%-I:%M%P")} (#{s.title} shift)"
+      end
+    end
+
+    if blocked.any?
+      blocked_lines = blocked.sort.map { |day, slots| "  #{day.strftime("%a %b %-d")}: #{slots.sort.join(", ")}" }
+      parts << "\nOccupied time slots — do NOT schedule anything overlapping these:\n#{blocked_lines.join("\n")}"
     end
 
     if current_user_draft.present?
