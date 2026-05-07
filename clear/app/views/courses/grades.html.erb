@@ -13,19 +13,6 @@
       <div class="text-sm text-zinc-400">Grade breakdown by assignment type.</div>
     </div>
     <div class="flex items-center gap-2 shrink-0">
-<<<<<<< HEAD
-      <%= link_to courses_path, class: "studs-nav-btn" do %>
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
-        </svg>
-        Back to courses
-      <% end %>
-      <%= link_to course_course_items_path(@course), class: "studs-nav-btn" do %>
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
-        </svg>
-        Back to items
-=======
       <%= link_to courses_path, class: "studs-nav-btn inline-flex items-center gap-2" do %>
         <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
           <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
@@ -37,7 +24,6 @@
           <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
         </svg>
         Back to Items
->>>>>>> 5af2db2 (made Overall grades and grade weights a dropdown. Improved validation for grades weights > 100%)
       <% end %>
     </div>
   </div>
@@ -327,20 +313,14 @@
 </div>
 
 <style>
-<<<<<<< HEAD
+  details[open] > summary .toggle-chevron { transform: rotate(0deg); }
+  details:not([open]) > summary .toggle-chevron { transform: rotate(-90deg); }
   .grade-weight-input::-webkit-inner-spin-button,
   .grade-weight-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
   .grade-weight-input { -moz-appearance: textfield; }
-=======
-  details[open] > summary .toggle-chevron { transform: rotate(0deg); }
-  details:not([open]) > summary .toggle-chevron { transform: rotate(-90deg); }
-<<<<<<< HEAD
->>>>>>> 5af2db2 (made Overall grades and grade weights a dropdown. Improved validation for grades weights > 100%)
-=======
   input[type=number]::-webkit-inner-spin-button,
   input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
   input[type=number] { -moz-appearance: textfield; }
->>>>>>> 6c55ece (Improvments to grades page. Allows user to modify grade scale, see their what if score, and removed grade weight autofill when a course item of X-type gets added.)
 </style>
 
 <script>
