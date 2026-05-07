@@ -1,10 +1,14 @@
-<% draft_rows = [["Main Calendar", "current"]] + current_user_drafts.map { |d| [d.name, d.id.to_s] } %>
-<% selected_draft = current_user_draft&.id&.to_s || "current" %>
+<% drafts = local_assigns[:drafts] || (defined?(current_user_drafts) ? current_user_drafts.to_a : []) %>
+<% draft_start_date = local_assigns[:start_date].presence || Date.current.iso8601 %>
+<% can_create = drafts.size < 5 %>
+<% btn_base = "w-full inline-flex items-center justify-between rounded-2xl px-3 py-1.5 text-left border transition-all duration-150 hover:-translate-y-px hover:shadow-[0_4px_12px_rgba(0,0,0,0.3),0_0_0_2px_var(--studs-accent),inset_0_1px_0_rgba(255,255,255,0.10)]" %>
+<% btn_style = "border-color: var(--studs-border); background-color: color-mix(in srgb, var(--studs-panel-bg) 55%, #09090b); color: #f4f4f5; font-size: 0.875rem; font-family: inherit;" %>
 
-<div class="flex items-start justify-start ai-chat-pop mt-4">
+<div class="flex items-start justify-start ai-chat-pop mt-4" data-controller="draft-select">
   <div
     class="self-start inline-flex flex-col w-full max-w-[62%] rounded-2xl px-4 py-3 text-sm leading-relaxed"
     style="background-color: var(--studs-panel-bg-2); border: 1px solid var(--studs-border); color: #f4f4f5;"
+    data-draft-select-card
   >
     <div class="mb-1.5">
       <span class="text-[10px] font-bold uppercase tracking-widest"
@@ -15,20 +19,57 @@
 
     <p class="prose prose-invert prose-sm max-w-none whitespace-pre-wrap mb-1">Pick a draft to use for this chat.</p>
     <p class="text-xs text-zinc-400 mb-3">This sets the calendar context for your conversation.</p>
-    <div class="space-y-1.5">
-      <% draft_rows.each do |label, value| %>
-        <% selected = selected_draft == value %>
-          <button
-            type="button"
-          class="w-full inline-flex items-center justify-between rounded-2xl px-3 py-1.5 text-left border transition duration-150 hover:brightness-110"
-          style="<%= selected ? 'border-color: color-mix(in srgb, var(--studs-accent) 65%, var(--studs-border)); background-color: color-mix(in srgb, var(--studs-accent) 16%, var(--studs-panel-bg-2)); color: #ecfeff; box-shadow: 0 0 0 1px color-mix(in srgb, var(--studs-accent) 22%, transparent) inset; font-size: 0.875rem; font-family: inherit;' : 'border-color: var(--studs-border); background-color: color-mix(in srgb, var(--studs-panel-bg) 55%, #09090b); color: #f4f4f5; font-size: 0.875rem; font-family: inherit;' %>"
-          data-draft-value="<%= value %>">
-          <span class="truncate"><%= label %></span>
-        </button>
+
+    <div class="space-y-1.5" data-draft-options>
+      <%= button_to exit_draft_path(start_date: draft_start_date),
+            method: :patch,
+            form: { data: { turbo_stream: true, action: "submit->draft-select#dismiss" } },
+            class: btn_base, style: btn_style,
+            data: { action: "click->draft-select#pick", draft_select_target: "option" } do %>
+        <span class="truncate">Main Calendar</span>
+      <% end %>
+
+      <% drafts.each do |draft| %>
+        <%= button_to enter_draft_path(start_date: draft_start_date, draft_id: draft.id),
+              method: :post,
+              form: { data: { turbo_stream: true, action: "submit->draft-select#dismiss" } },
+              class: btn_base, style: btn_style,
+              data: { action: "click->draft-select#pick", draft_select_target: "option" } do %>
+          <span class="truncate"><%= draft.name %></span>
+        <% end %>
       <% end %>
     </div>
+
+    <% if can_create %>
+      <div class="mt-1.5" data-new-draft-section>
+        <button
+          type="button"
+          class="w-full inline-flex items-center gap-2 rounded-2xl px-3 py-1.5 text-left border border-dashed transition-all duration-150 hover:-translate-y-px hover:shadow-[0_4px_12px_rgba(0,0,0,0.3),0_0_0_2px_var(--studs-accent),inset_0_1px_0_rgba(255,255,255,0.10)]"
+          style="border-color: color-mix(in srgb, var(--studs-border) 70%, transparent); color: #71717a; font-size: 0.875rem; font-family: inherit;"
+          data-action="click->draft-select#showNewForm">
+          <span>+ New draft</span>
+        </button>
+
+        <div style="display:none">
+          <%= form_with url: create_draft_path, method: :post,
+                data: { turbo_stream: true, action: "turbo:submit-end->draft-select#onNewDraftSubmit" } do |f| %>
+            <%= f.hidden_field :start_date, value: draft_start_date %>
+            <div class="w-full inline-flex items-center gap-2 rounded-2xl px-3 py-1.5 border" style="<%= btn_style %>">
+              <%= f.text_field :name, placeholder: "Draft name",
+                    class: "flex-1 min-w-0 bg-transparent text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none" %>
+              <button type="submit"
+                      class="shrink-0 inline-flex h-6 w-6 items-center justify-center rounded-md border border-zinc-700 text-emerald-300 transition-all duration-150 hover:-translate-y-px hover:bg-emerald-950/30">✓</button>
+              <button type="button"
+                      class="shrink-0 inline-flex h-6 w-6 items-center justify-center rounded-md border border-zinc-700 text-rose-300 transition-all duration-150 hover:-translate-y-px hover:bg-rose-950/30"
+                      data-action="click->draft-select#hideNewForm">×</button>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+
     <div class="flex items-center gap-2 pt-3 mt-3" style="border-top: 1px solid var(--studs-divider);">
-      <button type="button" class="studs-nav-btn">Cancel</button>
+      <button type="button" class="studs-nav-btn" data-action="click->draft-select#cancel">Cancel</button>
     </div>
   </div>
 </div>

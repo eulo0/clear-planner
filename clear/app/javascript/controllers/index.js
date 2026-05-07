@@ -22,6 +22,15 @@ application.register("agenda-search-placeholder", AgendaSearchPlaceholderControl
 import AiChatDrawerController from "./ai_chat_drawer_controller"
 application.register("ai-chat-drawer", AiChatDrawerController)
 
+import AiCreateFormController from "./ai_create_form_controller"
+application.register("ai-create-form", AiCreateFormController)
+
+import AiFormController from "./ai_form_controller"
+application.register("ai-form", AiFormController)
+
+import AiScheduleController from "./ai_schedule_controller"
+application.register("ai-schedule", AiScheduleController)
+
 import AiUsageController from "./ai_usage_controller"
 application.register("ai-usage", AiUsageController)
 
@@ -70,6 +79,9 @@ application.register("draft-cache", DraftCacheController)
 import DraftDropdownController from "./draft_dropdown_controller"
 application.register("draft-dropdown", DraftDropdownController)
 
+import DraftSelectController from "./draft_select_controller"
+application.register("draft-select", DraftSelectController)
+
 import DrawerController from "./drawer_controller"
 application.register("drawer", DrawerController)
 
@@ -82,11 +94,11 @@ application.register("duration-fill", DurationFillController)
 import EventPopoverController from "./event_popover_controller"
 application.register("event-popover", EventPopoverController)
 
-import FilepondController from "./filepond_controller"
-application.register("filepond", FilepondController)
-
 import FilePreviewController from "./file_preview_controller"
 application.register("file-preview", FilePreviewController)
+
+import FilepondController from "./filepond_controller"
+application.register("filepond", FilepondController)
 
 import FullHeightController from "./full_height_controller"
 application.register("full-height", FullHeightController)

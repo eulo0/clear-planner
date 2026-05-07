@@ -75,6 +75,7 @@ class AiChatController < ApplicationController
     # Agentic loop: keep executing tool calls until the model returns a text-only turn.
     # Capped to avoid runaway loops if the model keeps emitting calls.
     iterations = 0
+    partials_to_render = []
     while result[:function_calls].any? && iterations < MAX_TOOL_ITERATIONS
       iterations += 1
       calls = result[:function_calls]
@@ -82,6 +83,7 @@ class AiChatController < ApplicationController
       function_responses = calls.map do |fc|
         fn_response = execute_function(fc[:name], fc[:args])
         refresh_draft_ui = true if fn_response[:refresh_draft_ui]
+        partials_to_render << fn_response.delete(:partial) if fn_response[:partial]
         { name: fc[:name], response: fn_response }
       end
 
@@ -123,6 +125,10 @@ class AiChatController < ApplicationController
           turbo_stream.update("ai_chat_input", ""),
           turbo_stream.replace("ai_chat_usage", partial: "ai_chat/usage", locals: { rate: updated_rate })
         ]
+
+        partials_to_render.each do |p|
+          streams << turbo_stream.append("ai_chat_messages", partial: p[:name], locals: p[:locals])
+        end
 
         if refresh_draft_ui
           start_date = parse_start_date(params[:start_date])
@@ -315,6 +321,39 @@ class AiChatController < ApplicationController
             },
             required: [ "shift_id" ]
           }
+        },
+        {
+          name: "show_schedule",
+          description: "Display the user's calendar schedule as an inline visual in the chat. Use this when the user asks to see, view, or show their schedule or calendar.",
+          parameters: {
+            type: "OBJECT",
+            properties: {
+              start_date: { type: "STRING", description: "Start date in YYYY-MM-DD format (defaults to today)" }
+            },
+            required: []
+          }
+        },
+        {
+          name: "show_create_form",
+          description: "Display a pre-filled event creation form inline in the chat. Use this instead of create_event when you are missing required information (title or start time). Pass any details you do have so the form is pre-populated for the user to complete.",
+          parameters: {
+            type: "OBJECT",
+            properties: {
+              title:            { type: "STRING",  description: "Event title if known" },
+              description:      { type: "STRING",  description: "Optional description" },
+              starts_at:        { type: "STRING",  description: "Start date/time in ISO 8601 format if known" },
+              ends_at:          { type: "STRING",  description: "End date/time in ISO 8601 format if known" },
+              duration_minutes: { type: "INTEGER", description: "Duration in minutes if known" },
+              location:         { type: "STRING",  description: "Location if known" },
+              color:            { type: "STRING",  description: "Hex color like #34D399 if known" }
+            },
+            required: []
+          }
+        },
+        {
+          name: "show_draft_picker",
+          description: "Display a draft selection card inline in the chat so the user can pick or create a draft.",
+          parameters: { type: "OBJECT", properties: {}, required: [] }
         }
       ]
     } ]
@@ -336,6 +375,12 @@ class AiChatController < ApplicationController
       edit_work_shift_from_ai(args)
     when "delete_work_shift"
       delete_work_shift_from_ai(args)
+    when "show_schedule"
+      show_schedule_from_ai(args)
+    when "show_create_form"
+      show_create_form_from_ai(args)
+    when "show_draft_picker"
+      show_draft_picker_from_ai
     else
       { error: "Unknown function: #{name}" }
     end
@@ -388,7 +433,8 @@ class AiChatController < ApplicationController
       ends_at: args["ends_at"].present? ? Time.zone.parse(args["ends_at"]) : nil,
       duration_minutes: args["duration_minutes"],
       location: args["location"],
-      color: args["color"]
+      color: args["color"],
+      project_id: nil
     )
 
     if event.save
@@ -429,6 +475,7 @@ class AiChatController < ApplicationController
 
       event = current_user.events.find_by(id: event_id)
       return { success: false, errors: [ "Event not found" ] } unless event
+      return { success: false, errors: [ "AI can't edit group events." ] } if event.project_id.present?
 
       updates = {}
       updates[:title] = args["title"] if args["title"].present?
@@ -448,6 +495,7 @@ class AiChatController < ApplicationController
 
     event = current_user.events.find_by(id: event_id)
     return { success: false, errors: [ "Event not found" ] } unless event
+    return { success: false, errors: [ "AI can't edit group events." ] } if event.project_id.present?
 
     updates = {}
     updates[:title] = args["title"] if args["title"].present?
@@ -479,6 +527,7 @@ class AiChatController < ApplicationController
 
       event = current_user.events.find_by(id: event_id)
       return { success: false, errors: [ "Event not found" ] } unless event
+      return { success: false, errors: [ "AI can't delete group events." ] } if event.project_id.present?
 
       current_user_draft.add_delete("event", event.id)
       return { success: true, event_id: event.id, title: event.title, refresh_draft_ui: true }
@@ -486,6 +535,7 @@ class AiChatController < ApplicationController
 
     event = current_user.events.find_by(id: event_id)
     return { success: false, errors: [ "Event not found" ] } unless event
+    return { success: false, errors: [ "AI can't delete group events." ] } if event.project_id.present?
 
     title = event.title
     event.destroy
@@ -637,6 +687,31 @@ class AiChatController < ApplicationController
     { success: true, shift_id: shift_id, title: title }
   end
 
+  def show_schedule_from_ai(args)
+    start_date  = args["start_date"].present? ? Date.parse(args["start_date"]) : Date.current
+    week_start  = start_date.beginning_of_week
+    range_end   = (week_start + 13.days).end_of_day
+    draft       = current_user_draft
+    occurrences = calendar_occurrences_for_range(week_start.beginning_of_day, range_end, draft: draft)
+    { success: true, partial: { name: "ai_chat/ai_schedule", locals: { occurrences: occurrences, start_date: start_date } } }
+  end
+
+  def show_create_form_from_ai(args)
+    attrs = { color: args["color"].presence || "#34D399" }
+    attrs[:title]            = args["title"]            if args["title"].present?
+    attrs[:description]      = args["description"]      if args["description"].present?
+    attrs[:location]         = args["location"]         if args["location"].present?
+    attrs[:duration_minutes] = args["duration_minutes"] if args["duration_minutes"].present?
+    attrs[:starts_at]        = Time.zone.parse(args["starts_at"]) rescue nil if args["starts_at"].present?
+    attrs[:ends_at]          = Time.zone.parse(args["ends_at"])   rescue nil if args["ends_at"].present?
+    event = current_user.events.new(attrs)
+    { success: true, partial: { name: "ai_chat/ai_create_form", locals: { event: event } } }
+  end
+
+  def show_draft_picker_from_ai
+    { success: true, partial: { name: "ai_chat/draft_select_form", locals: { drafts: current_user_drafts.to_a, start_date: Date.current.iso8601 } } }
+  end
+
   def build_system_instruction
     user = current_user
     name = user.email.split("@").first.gsub(/[._]/, " ").titleize
@@ -683,17 +758,53 @@ class AiChatController < ApplicationController
         line += " (#{c.term})" if c.term.present?
         line
       end
+      if current_user_draft.present?
+        current_user_draft.operations.select { |o| o["type"] == "create" && o["model"] == "course" }.each do |op|
+          d = op["data"]
+          line = "- [DRAFT] #{d["title"].presence || "(untitled)"}"
+          line += " (#{d["code"]})" if d["code"].present?
+          line += " #{d["meeting_days"]}" if d["meeting_days"].present?
+          line += " #{d["start_time"]}–#{d["end_time"]}" if d["start_time"].present?
+          course_lines << line
+        end
+      end
       parts << "\nThe user's courses:\n#{course_lines.join("\n")}"
     end
 
     if upcoming_events.any?
-      event_lines = upcoming_events.map do |e|
-        line = "- [ID:#{e.id}] #{e.title} on #{e.starts_at.strftime('%a %b %d at %l:%M%P')}"
-        line += " at #{e.location}" if e.location.present?
-        line += " — #{e.description}" if e.description.present?
-        line
+      personal, group = upcoming_events.partition { |e| e.project_id.blank? }
+
+      if personal.any?
+        event_lines = personal.map do |e|
+          line = "- [ID:#{e.id}] #{e.title} on #{e.starts_at.strftime('%a %b %d at %l:%M%P')}"
+          line += " at #{e.location}" if e.location.present?
+          line += " — #{e.description}" if e.description.present?
+          line
+        end
+
+        if current_user_draft.present?
+          current_user_draft.operations.select { |o| o["type"] == "create" && o["model"] == "event" }.each do |op|
+            d = op["data"]
+            starts_at = d["starts_at"].present? ? (Time.zone.parse(d["starts_at"]) rescue nil) : nil
+            next unless starts_at && starts_at >= Time.current && starts_at <= 14.days.from_now
+            line = "- [ID:#{op["temp_id"]}] [DRAFT] #{d["title"].presence || "(untitled)"} on #{starts_at.strftime('%a %b %d at %l:%M%P')}"
+            line += " at #{d["location"]}" if d["location"].present?
+            event_lines << line
+          end
+        end
+
+        parts << "\nUpcoming events (next 14 days):\n#{event_lines.join("\n")}"
       end
-      parts << "\nUpcoming events (next 14 days):\n#{event_lines.join("\n")}"
+
+      if group.any?
+        group_lines = group.map do |e|
+          line = "- [ID:#{e.id}] #{e.title} on #{e.starts_at.strftime('%a %b %d at %l:%M%P')} (GROUP)"
+          line += " at #{e.location}" if e.location.present?
+          line += " — #{e.description}" if e.description.present?
+          line
+        end
+        parts << "\nUpcoming group events (project_id present; read-only):\n#{group_lines.join("\n")}"
+      end
     end
 
     if upcoming_items.any?
@@ -714,7 +825,127 @@ class AiChatController < ApplicationController
         line += " at #{s.location}" if s.location.present?
         line
       end
+      if current_user_draft.present?
+        current_user_draft.operations.select { |o| o["type"] == "create" && o["model"] == "shift" }.each do |op|
+          d = op["data"]
+          line = "- [ID:#{op["temp_id"]}] [DRAFT] #{d["title"].presence || "(untitled)"}"
+          line += " #{d["start_time"]}–#{d["end_time"]}" if d["start_time"].present?
+          line += " starting #{d["start_date"]}" if d["start_date"].present?
+          line += " at #{d["location"]}" if d["location"].present?
+          shift_lines << line
+        end
+      end
       parts << "\nUser's work shifts:\n#{shift_lines.join("\n")}"
+    end
+
+    # Pre-compute blocked slots per day for the next 14 days
+    blocked = Hash.new { |h, k| h[k] = [] }
+    range = (Date.current..14.days.from_now.to_date)
+
+    upcoming_events.each do |e|
+      next unless e.starts_at && e.ends_at
+      blocked[e.starts_at.to_date] << "#{e.starts_at.strftime("%-I:%M%P")}–#{e.ends_at.strftime("%-I:%M%P")} (#{e.title})"
+    end
+
+    courses.each do |c|
+      next unless c.start_time && c.end_time
+      days = Array(c.repeat_days).map(&:to_i)
+      range.each do |d|
+        next unless days.include?(d.wday)
+        next if c.respond_to?(:start_date) && c.start_date.present? && d < c.start_date
+        next if c.respond_to?(:end_date)   && c.end_date.present?   && d > c.end_date
+        blocked[d] << "#{c.start_time.strftime("%-I:%M%P")}–#{c.end_time.strftime("%-I:%M%P")} (#{c.title} course)"
+      end
+    end
+
+    work_shifts.each do |s|
+      next unless s.start_time && s.end_time
+      range.each do |d|
+        if s.recurring?
+          next unless Array(s.repeat_days).map(&:to_i).include?(d.wday)
+          next if d < s.start_date
+          next if s.repeat_until.present? && d > s.repeat_until
+        else
+          next unless d == s.start_date
+        end
+        blocked[d] << "#{s.start_time.strftime("%-I:%M%P")}–#{s.end_time.strftime("%-I:%M%P")} (#{s.title} shift)"
+      end
+    end
+
+    if blocked.any?
+      blocked_lines = blocked.sort.map { |day, slots| "  #{day.strftime("%a %b %-d")}: #{slots.sort.join(", ")}" }
+      parts << "\nOccupied time slots — do NOT schedule anything overlapping these:\n#{blocked_lines.join("\n")}"
+    end
+
+    if current_user_draft.present?
+      draft_lines = []
+      current_user_draft.operations.each do |op|
+        data  = op["data"] || {}
+        model = op["model"]
+        case op["type"]
+        when "create"
+          case model
+          when "event"
+            starts_at = data["starts_at"].present? ? (Time.zone.parse(data["starts_at"]) rescue nil) : nil
+            line = "- ADD event [#{op["temp_id"]}]: \"#{data["title"].presence || "(untitled)"}\""
+            line += " on #{starts_at.strftime("%a %b %-d at %-I:%M%P")}" if starts_at
+            line += " for #{data["duration_minutes"]} min" if data["duration_minutes"].present?
+            line += " at #{data["location"]}" if data["location"].present?
+            line += " — #{data["description"]}" if data["description"].present?
+          when "shift"
+            line = "- ADD work shift [#{op["temp_id"]}]: \"#{data["title"].presence || "(untitled)"}\""
+            line += " on #{data["start_date"]}" if data["start_date"].present?
+            line += " #{data["start_time"]}–#{data["end_time"]}" if data["start_time"].present?
+            line += " at #{data["location"]}" if data["location"].present?
+          when "course"
+            line = "- ADD course [#{op["temp_id"]}]: \"#{data["title"].presence || "(untitled)"}\""
+          else
+            next
+          end
+          draft_lines << line
+        when "update"
+          case model
+          when "event"
+            record = user.events.find_by(id: op["id"])
+            label  = record ? "\"#{record.title}\" [ID:#{op["id"]}]" : "event ID #{op["id"]}"
+            changes = data.map do |k, v|
+              k == "starts_at" ? "#{k}: #{(Time.zone.parse(v.to_s) rescue v)&.strftime("%a %b %-d at %-I:%M%P")}" : "#{k}: #{v}"
+            end.join(", ")
+            draft_lines << "- EDIT event #{label} — #{changes}"
+          when "shift"
+            record = user.work_shifts.find_by(id: op["id"])
+            label  = record ? "\"#{record.title}\" [ID:#{op["id"]}]" : "shift ID #{op["id"]}"
+            draft_lines << "- EDIT work shift #{label} — #{data.map { |k, v| "#{k}: #{v}" }.join(", ")}"
+          when "course"
+            record = user.courses.find_by(id: op["id"])
+            label  = record ? "\"#{record.title}\" [ID:#{op["id"]}]" : "course ID #{op["id"]}"
+            draft_lines << "- EDIT course #{label} — #{data.map { |k, v| "#{k}: #{v}" }.join(", ")}"
+          end
+        when "delete"
+          case model
+          when "event"
+            record = user.events.find_by(id: op["id"])
+            draft_lines << "- REMOVE event: \"#{record&.title || "ID #{op["id"]}"}\" [ID:#{op["id"]}]"
+          when "shift"
+            record = user.work_shifts.find_by(id: op["id"])
+            draft_lines << "- REMOVE work shift: \"#{record&.title || "ID #{op["id"]}"}\" [ID:#{op["id"]}]"
+          when "course"
+            record = user.courses.find_by(id: op["id"])
+            draft_lines << "- REMOVE course: \"#{record&.title || "ID #{op["id"]}"}\" [ID:#{op["id"]}]"
+          end
+        end
+      end
+
+      if draft_lines.any?
+        parts << "\nThis draft (\"#{current_user_draft.name}\") has the following pending changes on top of the main calendar:\n#{draft_lines.join("\n")}"
+        parts << "Treat these draft changes as the user's current working schedule — additions are real commitments, " \
+                 "removals are gone, and edits reflect the new values. Give advice, flag conflicts, and answer " \
+                 "questions as if this is simply their calendar. Do NOT volunteer that something is a draft or mention " \
+                 "the draft/main distinction unless the user explicitly asks to compare the draft against the main " \
+                 "calendar or asks what will change when the draft is applied."
+      else
+        parts << "\nThis draft (\"#{current_user_draft.name}\") has no pending changes yet — it currently mirrors the main calendar."
+      end
     end
 
     parts << "\nUse this context to give personalized advice, reminders, and insights. " \
@@ -728,6 +959,16 @@ class AiChatController < ApplicationController
              "and an event\", \"reschedule these two\"), call the tools as many times as needed in the same turn — " \
              "you may emit multiple function calls. Do not stop after one tool call if more are needed to fulfill " \
              "the request. Only produce a final text reply after all required tool calls have been made."
+    parts << "\nCreating events — decision rule: " \
+             "If the user's request gives you BOTH a title AND a start time, call create_event directly. " \
+             "If either is missing or ambiguous, call show_create_form instead, passing every detail you DO have " \
+             "(title, starts_at, location, color, etc.) so the form is pre-filled for the user to complete. " \
+             "Never ask the user to provide more text before showing the form — show it immediately with whatever you have."
+    parts << "\nGroup events (project_id present) are read-only: NEVER create, edit, delete, or reschedule any event that has a project_id. " \
+             "If the user asks to change a group event, tell them you can only assist with personal calendar events."
+    parts << "\nOther inline UI tools: use show_schedule to display the user's calendar visually " \
+             "(prefer calling it after any calendar change so the user can see the result), " \
+             "and show_draft_picker to let the user interactively pick or create a draft."
     parts << "\nYou can also manage work shifts: create with create_work_shift, edit with edit_work_shift, " \
              "or delete with delete_work_shift. Each work shift listed above has an [ID:...] you can use. " \
              "For recurring shifts, repeat_days uses weekday numbers (0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat)."

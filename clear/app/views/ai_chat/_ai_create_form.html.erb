@@ -1,7 +1,8 @@
 <% event = local_assigns[:event] || current_user.events.new(color: "#34D399") %>
-<div class="flex items-start justify-start ai-chat-pop">
+<div class="flex items-start justify-start ai-chat-pop" data-controller="ai-form">
   <div class="w-full max-w-[95%] rounded-2xl px-4 py-3"
-       style="background-color: var(--studs-panel-bg-2); border: 1px solid var(--studs-border);">
+       style="background-color: var(--studs-panel-bg-2); border: 1px solid var(--studs-border);"
+       data-ai-form-card>
     <div class="mb-1.5 flex items-center justify-between">
       <span class="text-[10px] font-bold uppercase tracking-widest"
             style="color: color-mix(in srgb, var(--studs-accent) 55%, #9ca3af); letter-spacing: 0.16em;">
@@ -9,7 +10,7 @@
       </span>
     </div>
     <div style="zoom: 0.72;">
-      <%= render "events/form", event: event, turbo: false, cancel_drawer: true %>
+      <%= render "events/form", event: event, ai_chat: true %>
     </div>
   </div>
 </div>
