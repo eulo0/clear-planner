@@ -171,24 +171,24 @@ class CoursesController < ApplicationController
     weights = grade_weights_params
     total = weights.values.sum(&:to_f)
     if total > 100
-      redirect_to grades_course_path(@course), alert: "Grade weights total #{total.round(1)}% — must not exceed 100%."
+      redirect_to grades_course_path(@course)
       return
     end
     if @course.update(grade_weights: weights)
-      redirect_to grades_course_path(@course), notice: "Grade weights updated."
+      redirect_to grades_course_path(@course)
     else
-      redirect_to grades_course_path(@course), alert: "Failed to update grade weights."
+      redirect_to grades_course_path(@course)
     end
   end
 
   def update_grade_calculation
     mode = params[:grade_calculation].to_s
     unless Course::GRADE_CALCULATION_MODES.include?(mode)
-      redirect_to grades_course_path(@course), alert: "Invalid grade calculation mode."
+      redirect_to grades_course_path(@course)
       return
     end
     @course.update_columns(grade_calculation: mode)
-    redirect_to grades_course_path(@course), notice: "Grade calculation updated."
+    redirect_to grades_course_path(@course)
   end
 
   def destroy_all

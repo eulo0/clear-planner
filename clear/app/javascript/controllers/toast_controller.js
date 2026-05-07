@@ -10,12 +10,16 @@ export default class extends Controller {
       this.element.classList.add("translate-x-0", "opacity-100")
     })
 
-    // Start progress bar shrink
+    // Start progress bar shrink.
+    // Double rAF ensures the element is painted at width:100% before the
+    // transition to 0% fires — required for dynamically injected toasts.
     const bar = this.element.querySelector("[data-toast-progress]")
     if (bar) {
       requestAnimationFrame(() => {
         bar.style.transition = `width ${this.durationValue}ms linear`
-        bar.style.width = "0%"
+        requestAnimationFrame(() => {
+          bar.style.width = "0%"
+        })
       })
     }
 
