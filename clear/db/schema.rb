@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_06_065932) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_01_021949) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -84,7 +84,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_06_065932) do
     t.date "end_date"
     t.time "end_time"
     t.time "ends_at"
-    t.string "grade_calculation", default: "points", null: false
     t.jsonb "grade_weights", default: {}, null: false
     t.string "instructor"
     t.string "location"
