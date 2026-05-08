@@ -14,6 +14,13 @@ export default class extends Controller {
       "--studs-border-subtle", "--studs-divider", "--studs-body-bg", "--studs-text"
     ]
 
+    const overlay = document.querySelector("[data-modal-target='overlay']")
+    if (overlay) {
+      this.modalOverlay = overlay
+      this.snapshotOverlay = overlay.className
+      overlay.classList.remove("backdrop-blur-sm")
+    }
+
     vars.forEach(v => {
       this.snapshot[v] = style.getPropertyValue(v).trim()
     })
@@ -70,6 +77,10 @@ export default class extends Controller {
 
     const frame = document.getElementById("profile_modal")
     if (frame) frame.src = this.profilePathValue
+
+    if (this.modalOverlay) {
+      this.modalOverlay.className = this.snapshotOverlay
+    }
   }
 
   save() {
@@ -84,6 +95,10 @@ export default class extends Controller {
     // Restore topbar
     const topbar = document.querySelector(".studs-topbar")
     if (topbar) topbar.setAttribute("style", this.snapshotTopbar)
+
+    if (this.modalOverlay) {
+      this.modalOverlay.className = this.snapshotOverlay
+    }
   }
 
   validate(event) {
