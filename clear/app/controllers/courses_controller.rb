@@ -4,7 +4,7 @@ class CoursesController < ApplicationController
   layout "app_shell"
 
   before_action :authenticate_user!
-  before_action :set_course, only: %i[show edit update destroy update_grade_weights grades convert]
+  before_action :set_course, only: %i[show edit update destroy update_grade_weights update_grade_calculation grades convert]
 
   def index
     @q = params[:q].to_s.strip
@@ -161,15 +161,34 @@ class CoursesController < ApplicationController
   end
 
   def grades
-    @items_by_kind = @course.course_items.order(:due_at).group_by(&:kind)
+    @course.course_items.load
+    @items_by_kind = @course.course_items
+                            .sort_by { |i| i.due_at&.to_f || Float::INFINITY }
+                            .group_by(&:kind)
   end
 
   def update_grade_weights
-    if @course.update(grade_weights: grade_weights_params)
-      redirect_to grades_course_path(@course), notice: "Grade weights updated."
-    else
-      redirect_to grades_course_path(@course), alert: "Failed to update grade weights."
+    weights = grade_weights_params
+    total = weights.values.sum(&:to_f)
+    if total > 100
+      redirect_to grades_course_path(@course)
+      return
     end
+    if @course.update(grade_weights: weights)
+      redirect_to grades_course_path(@course)
+    else
+      redirect_to grades_course_path(@course)
+    end
+  end
+
+  def update_grade_calculation
+    mode = params[:grade_calculation].to_s
+    unless Course::GRADE_CALCULATION_MODES.include?(mode)
+      redirect_to grades_course_path(@course)
+      return
+    end
+    @course.update_columns(grade_calculation: mode)
+    redirect_to grades_course_path(@course)
   end
 
   def destroy_all
@@ -322,7 +341,7 @@ class CoursesController < ApplicationController
 
   def grade_weights_params
     allowed_kinds = CourseItem.kinds.keys
-    raw = params.require(:grade_weights).permit(*allowed_kinds).to_h
+    raw = (params[:grade_weights]&.permit(*allowed_kinds) || {}).to_h
     raw.transform_values { |v| v.to_s.strip.empty? ? nil : v.to_f.clamp(0, 100) }.compact
   end
 

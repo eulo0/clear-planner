@@ -18,6 +18,8 @@ class CourseItem < ApplicationRecord
 
   validates :title, presence: true
   validates :kind, presence: true
+  validates :points_possible, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
+  validates :points_earned, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
 
   after_create_commit :create_assignment_notification
 

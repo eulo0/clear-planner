@@ -40,6 +40,11 @@ class Course < ApplicationRecord
   # Courses are inherently recurring in our app
   validate :repeat_days_present
   validate :repeat_days_are_valid_weekdays
+  GRADE_CALCULATION_MODES = %w[points weighted].freeze
+  GRADING_SCALE = { "A" => 90, "B" => 80, "C" => 70, "D" => 60 }.freeze
+
+  validate :grade_weights_do_not_exceed_100
+  validates :grade_calculation, inclusion: { in: GRADE_CALCULATION_MODES }
 
   # Used by the dashboard calendar
   Occurrence = Struct.new(:event, :starts_at, :ends_at, :draft_status, keyword_init: true) do
@@ -86,38 +91,18 @@ class Course < ApplicationRecord
     out
   end
 
+  def grade_weights
+    super || {}
+  end
+
   def overall_grade
-    kinds_with_weight = grade_weights.select { |_, w| w.to_f > 0 }
-    return nil if kinds_with_weight.empty?
-
-    graded_items = course_items.select(&:graded?)
-    return nil if graded_items.empty?
-
-    weighted_sum = 0.0
-    total_weight = 0.0
-
-    kinds_with_weight.each do |kind, weight|
-      items = graded_items.select { |i| i.kind == kind }
-      next if items.empty?
-
-      avg = items.sum { |i| i.points_earned.to_f / i.points_possible.to_f } / items.size
-      weighted_sum += weight.to_f * avg
-      total_weight += weight.to_f
-    end
-
-    return nil if total_weight.zero?
-
-    (weighted_sum / total_weight * 100).round(1)
+    use_weighted = grade_calculation == "weighted" && grade_weights.values.sum(&:to_f) > 0
+    use_weighted ? weighted_grade : points_grade
   end
 
   def letter_grade(percentage)
-    case percentage
-    when 90..Float::INFINITY then "A"
-    when 80...90 then "B"
-    when 70...80 then "C"
-    when 60...70 then "D"
-    else "F"
-    end
+    GRADING_SCALE.each { |letter, threshold| return letter if percentage >= threshold }
+    "F"
   end
 
   # Text color for calendar readability
@@ -212,6 +197,46 @@ class Course < ApplicationRecord
 
     invalid = repeat_days.reject { |d| d.is_a?(Integer) && d.between?(0, 6) }
     errors.add(:repeat_days, "contains invalid weekday values") if invalid.any?
+  end
+
+  def points_grade
+    graded = course_items.select(&:graded?)
+    return nil if graded.empty?
+
+    total_earned   = graded.sum { |i| i.points_earned.to_f }
+    total_possible = graded.sum { |i| i.points_possible.to_f }
+    return nil if total_possible.zero?
+
+    (total_earned / total_possible * 100).round(1)
+  end
+
+  def weighted_grade
+    kinds_with_weight = grade_weights.select { |_, w| w.to_f > 0 }
+    return nil if kinds_with_weight.empty?
+
+    graded_items = course_items.select(&:graded?)
+    return nil if graded_items.empty?
+
+    weighted_sum = 0.0
+    total_weight = 0.0
+
+    kinds_with_weight.each do |kind, weight|
+      items = graded_items.select { |i| i.kind == kind }
+      next if items.empty?
+
+      avg = items.sum { |i| i.points_earned.to_f / i.points_possible.to_f } / items.size
+      weighted_sum += weight.to_f * avg
+      total_weight += weight.to_f
+    end
+
+    return nil if total_weight.zero?
+
+    (weighted_sum / total_weight * 100).round(1)
+  end
+
+  def grade_weights_do_not_exceed_100
+    total = grade_weights.values.sum(&:to_f)
+    errors.add(:grade_weights, "must not exceed 100% (currently #{total.round(1)}%)") if total > 100
   end
 
   def end_time_after_start_time

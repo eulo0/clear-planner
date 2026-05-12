@@ -32,7 +32,13 @@ class CourseItemsController < ApplicationController
 
       respond_to do |format|
         format.html { render :index, status: :unprocessable_entity }
-        format.turbo_stream { render :index, status: :unprocessable_entity }
+        format.turbo_stream do
+          render turbo_stream: turbo_stream.replace(
+            "new-course-item-form",
+            partial: "course_items/new_item_section",
+            locals: { course: @course, course_item: @course_item }
+          ), status: :unprocessable_entity
+        end
       end
     end
   end
