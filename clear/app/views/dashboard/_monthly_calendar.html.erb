@@ -22,7 +22,7 @@
    }
 %>
 <% record_for = ->(e) { e.respond_to?(:event) ? e.event : e } %>
-<div class="w-full flex h-full min-h-0 flex-col" data-calendar-view-target="monthlyContent">
+<div class="w-full flex flex-1 min-h-0 flex-col" data-calendar-view-target="monthlyContent">
   <!-- Toolbar -->
   <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
     <div>
@@ -154,7 +154,7 @@
     </nav>
   </div>
   <!-- Monthly grid -->
-  <div class="overflow-auto rounded-2xl"
+  <div class="overflow-hidden rounded-2xl"
        style="flex: 1 1 0%; min-height: 0; border: 1px solid var(--studs-border); background-color: var(--studs-panel-bg-2); box-shadow: 0 1px 3px rgba(0,0,0,0.3), 0 4px 20px rgba(0,0,0,0.15);">
     <table class="w-full border-collapse table-fixed" style="height: 100%;">
       <thead>
@@ -175,38 +175,39 @@
               <% in_month  = (day.month == month_start.month && day.year == month_start.year) %>
               <% is_weekend = day.saturday? || day.sunday? %>
               <% day_items = month_events_by_date[day] || [] %>
-              <td class="align-top px-2 py-1.5 relative"
-                  style="height: 110px; vertical-align: top;
-                         border-bottom: 1px solid var(--studs-border);
+              <td class="relative"
+                  style="border-bottom: 1px solid var(--studs-border);
                          <%= i < 6 ? 'border-right: 1px solid var(--studs-divider);' : '' %>
                          <%= is_today ? 'background-color: color-mix(in srgb, var(--studs-accent) 14%, transparent);' : '' %>
                          <%= is_weekend && !is_today ? 'background-color: rgba(0,0,0,0.12);' : '' %>
                          <%= !in_month ? 'opacity: 0.35;' : '' %>">
-                <div class="flex items-center justify-between mb-1">
-                  <% if is_today %>
-                    <span class="inline-flex h-6 w-6 items-center justify-center rounded-full text-[12px] font-bold studs-today-badge"
-                          style="box-shadow: 0 0 8px color-mix(in srgb, var(--studs-accent) 50%, transparent);">
-                      <%= day.day %>
-                    </span>
-                  <% else %>
-                    <span class="text-[13px] font-semibold <%= in_month ? (is_weekend ? 'text-zinc-400' : 'text-zinc-200') : 'text-zinc-600' %>">
-                      <%= day.day %>
-                    </span>
-                  <% end %>
-                  <% if day_items.size > 3 %>
-                    <span class="text-[10px] text-zinc-500 font-medium">+<%= day_items.size - 3 %></span>
-                  <% end %>
-                </div>
-                <div class="space-y-0.5">
-                  <% day_items.first(3).each do |e| %>
-                    <% record = record_for.(e) %>
-                    <% bg = record.respond_to?(:color) && record.color.present? ? record.color : "#60A5FA" %>
-                    <% text_color = record.respond_to?(:contrast_text_color) ? record.contrast_text_color : "#F9FAFB" %>
-                    <div class="truncate rounded px-1.5 py-0.5 text-[10px] font-semibold leading-tight cursor-pointer hover:brightness-110"
-                         style="background-color: <%= hex_to_rgba.(bg, 0.55) %>; color: <%= text_color %>; border-left: 2px solid <%= bg %>;">
-                      <%= record.respond_to?(:title) ? (record.title.presence || "(Untitled)") : record[:title].presence || "(Untitled)" %>
-                    </div>
-                  <% end %>
+                <div class="absolute inset-0 overflow-hidden px-2 py-1.5">
+                  <div class="flex items-center justify-between mb-1">
+                    <% if is_today %>
+                      <span class="inline-flex h-6 w-6 items-center justify-center rounded-full text-[12px] font-bold studs-today-badge"
+                            style="box-shadow: 0 0 8px color-mix(in srgb, var(--studs-accent) 50%, transparent);">
+                        <%= day.day %>
+                      </span>
+                    <% else %>
+                      <span class="text-[13px] font-semibold <%= in_month ? (is_weekend ? 'text-zinc-400' : 'text-zinc-200') : 'text-zinc-600' %>">
+                        <%= day.day %>
+                      </span>
+                    <% end %>
+                    <% if day_items.size > 3 %>
+                      <span class="text-[10px] text-zinc-500 font-medium">+<%= day_items.size - 3 %></span>
+                    <% end %>
+                  </div>
+                  <div class="space-y-0.5">
+                    <% day_items.first(3).each do |e| %>
+                      <% record = record_for.(e) %>
+                      <% bg = record.respond_to?(:color) && record.color.present? ? record.color : "#60A5FA" %>
+                      <% text_color = record.respond_to?(:contrast_text_color) ? record.contrast_text_color : "#F9FAFB" %>
+                      <div class="truncate rounded px-1.5 py-0.5 text-[10px] font-semibold leading-tight cursor-pointer hover:brightness-110"
+                           style="background-color: <%= hex_to_rgba.(bg, 0.55) %>; color: <%= text_color %>; border-left: 2px solid <%= bg %>;">
+                        <%= record.respond_to?(:title) ? (record.title.presence || "(Untitled)") : record[:title].presence || "(Untitled)" %>
+                      </div>
+                    <% end %>
+                  </div>
                 </div>
               </td>
             <% end %>
