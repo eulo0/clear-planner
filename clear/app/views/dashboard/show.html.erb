@@ -1,11 +1,12 @@
 <meta name="turbo-cache-control" content="no-cache">
 <div
-  class="-mx-6 -my-6 h-full min-h-0 relative"
+  class="-mx-6 -my-6 min-h-0 relative"
+  style="height: calc(100% + 3rem)"
   data-controller="agenda-drawer"
   data-agenda-drawer-url-value="<%= dashboard_agenda_path %>"
 >
   <div class="flex h-full min-h-0 min-w-0 p-4">
-    <section class="min-w-0 w-full flex-1 min-h-0">
+    <section class="min-w-0 w-full flex-1 min-h-0 h-full">
       <%= render "dashboard/calendar_frame",
         events: @occurrences,
         draft: @draft,

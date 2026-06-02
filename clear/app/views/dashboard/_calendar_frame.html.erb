@@ -12,7 +12,7 @@
            courses: local_assigns[:courses],
            course_filter_id: local_assigns[:course_filter_id] %>
     </div>
-    <div data-calendar-view-target="monthlyWrapper" class="hidden h-full min-h-0 w-full min-w-0 flex flex-col">
+    <div data-calendar-view-target="monthlyWrapper" class="hidden flex-1 min-h-0 w-full min-w-0 flex flex-col">
       <%= render "dashboard/monthly_calendar",
            month_events_by_date: local_assigns[:month_events_by_date] || @month_events_by_date || {},
            month_date: local_assigns[:month_date] || @month_date || Date.current,
