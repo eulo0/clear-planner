@@ -10,7 +10,8 @@
            start_date: start_date,
            draft: local_assigns[:draft],
            courses: local_assigns[:courses],
-           course_filter_id: local_assigns[:course_filter_id] %>
+           course_filter_id: local_assigns[:course_filter_id],
+           blocked_intervals: local_assigns[:blocked_intervals] || [] %>
     </div>
     <div data-calendar-view-target="monthlyWrapper" class="hidden flex-1 min-h-0 w-full min-w-0 flex flex-col">
       <%= render "dashboard/monthly_calendar",
