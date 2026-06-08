@@ -113,13 +113,20 @@ class EventsController < ApplicationController
           week_start  = start_date.beginning_of_week
           range_start = week_start.beginning_of_day
           range_end   = (week_start + 6.days).end_of_day
-          occurrences = calendar_occurrences_for_range(range_start, range_end)
+
+          if @event.project.present?
+            calendar_events     = @event.project.occurrences_for_week(start_date)
+            blocked_intervals   = group_blocked_intervals(@event.project, start_date)
+          else
+            calendar_events     = calendar_occurrences_for_range(range_start, range_end)
+            blocked_intervals   = []
+          end
 
           render turbo_stream: [
             turbo_stream.replace(
               "dashboard_calendar",
               partial: "dashboard/calendar_frame",
-              locals: { events: occurrences, start_date: start_date, draft: nil }
+              locals: { events: calendar_events, start_date: start_date, draft: nil, blocked_intervals: blocked_intervals }
             ),
             turbo_stream.replace("agenda_list", partial: "agenda/list"),
             turbo_stream.update("event_drawer", "")
@@ -211,7 +218,7 @@ class EventsController < ApplicationController
             turbo_stream.replace(
               "dashboard_calendar",
               partial: "dashboard/calendar_frame",
-              locals: { events: project.occurrences, start_date: start_date, draft: nil }
+              locals: { events: project.occurrences_for_week(start_date), start_date: start_date, draft: nil, blocked_intervals: group_blocked_intervals(project, start_date) }
             ),
             turbo_stream.replace("agenda_list", partial: "agenda/list"),
             turbo_stream.update("event_drawer", ""),
@@ -296,7 +303,7 @@ class EventsController < ApplicationController
             turbo_stream.replace(
               "dashboard_calendar",
               partial: "dashboard/calendar_frame",
-              locals: { events: project.occurrences_for_week(start_date), start_date: start_date, draft: nil }
+              locals: { events: project.occurrences_for_week(start_date), start_date: start_date, draft: nil, blocked_intervals: group_blocked_intervals(project, start_date) }
             ),
             turbo_stream.replace("agenda_list", partial: "agenda/list"),
             turbo_stream.update("event_drawer", ""),

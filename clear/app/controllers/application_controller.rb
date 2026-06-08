@@ -79,6 +79,15 @@ class ApplicationController < ActionController::Base
     draft&.operation_count&.positive? ? draft.build_preview_occurrences(result, range_start, range_end) : result
   end
 
+  def group_blocked_intervals(project, start_date)
+    week_start = start_date.beginning_of_week
+    Scheduling::GroupBlockedTimes.new(
+      project: project,
+      range_start: week_start.beginning_of_day,
+      range_end: (week_start + 6.days).end_of_day
+    ).intervals
+  end
+
   # Exposed as a view helper so calendar partials rendered from non-dashboard
   # controllers (e.g. events#update turbo-stream) can still populate the filter
   # dropdown without an explicit local.
