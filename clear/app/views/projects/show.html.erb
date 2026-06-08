@@ -7,7 +7,7 @@
 >
   <div class="flex h-full min-h-0 min-w-0 p-4">
     <section class="min-w-0 w-full flex-1 min-h-0">
-      <%= render "dashboard/calendar_frame", events: @occurrences, start_date: @start_date, month_events_by_date: @month_events_by_date, month_date: @month_date %>
+      <%= render "dashboard/calendar_frame", events: @occurrences, start_date: @start_date, month_events_by_date: @month_events_by_date, month_date: @month_date, blocked_intervals: @blocked_intervals %>
     </section>
   </div>
   <!-- Agenda overlay -->

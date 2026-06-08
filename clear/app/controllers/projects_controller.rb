@@ -24,6 +24,9 @@ class ProjectsController < ApplicationController
       end
 
     @occurrences = @project.occurrences_for_week(@start_date)
+
+    @blocked_intervals = group_blocked_intervals(@project, @start_date)
+
     month_occurrences = @project.occurrences_for_month(@start_date)
     @month_events_by_date = Hash.new { |h, k| h[k] = [] }
     month_occurrences.each { |occ| @month_events_by_date[occ.starts_at.in_time_zone.to_date] << occ }
