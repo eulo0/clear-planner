@@ -158,14 +158,14 @@
         <div
           data-ai-chat-drawer-target="overlay"
           data-action="click->ai-chat-drawer#close"
-          class="absolute inset-0 z-40 bg-black/60 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300">
+          class="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300">
         </div>
         <!-- AI Chat Panel -->
         <div
           data-ai-chat-drawer-target="panel"
           role="dialog"
           aria-modal="true"
-          class="absolute right-0 inset-y-0 z-50 w-[620px]
+          class="absolute right-0 inset-y-0 z-50 w-full
                  overflow-hidden shadow-2xl
                  translate-x-full transition-transform duration-300 ease-in-out"
           style="visibility: hidden; border-left: 1px solid var(--studs-border); background-color: var(--studs-sidebar-bg);">
