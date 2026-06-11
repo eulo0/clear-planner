@@ -147,3 +147,6 @@ application.register("typewriter", TypewriterController)
 
 import UsernameEditController from "./username_edit_controller"
 application.register("username-edit", UsernameEditController)
+
+import VoiceController from "./voice_controller"
+application.register("voice", VoiceController)
