@@ -63,6 +63,12 @@ export default class extends Controller {
     }
   }
 
+  autoResize(event) {
+    const el = event.target
+    el.style.height = "auto"
+    el.style.height = el.scrollHeight + "px"
+  }
+
   reset(event) {
     const thinking = document.getElementById("ai_chat_thinking")
     if (thinking) thinking.remove()
@@ -73,6 +79,7 @@ export default class extends Controller {
     const input = document.getElementById("ai_chat_input")
     if (input) {
       input.value = ""
+      input.style.height = "auto"
       input.focus()
     }
 

@@ -8,14 +8,6 @@
         <p class="text-xs text-zinc-400 mt-0.5">Ask questions, explore scenarios, and compare schedule what-ifs.</p>
       </div>
       <div class="flex items-center gap-2">
-        <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium"
-              style="border: 1px solid rgba(34, 197, 94, 0.3);
-                     background-color: rgba(34, 197, 94, 0.1);
-                     color: #86efac;">
-          <span class="h-1.5 w-1.5 rounded-full"
-                style="background-color: #22c55e; box-shadow: 0 0 8px rgba(34, 197, 94, 0.7);"></span>
-          Online
-        </span>
         <button type="button"
                 data-action="click->ai-chat-drawer#close"
                 class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-white/5 transition-colors"
@@ -37,10 +29,11 @@
     ></div>
     <!-- Composer -->
     <div class="shrink-0 px-4 py-3 backdrop-blur"
+         data-controller="voice"
+         data-voice-input-id-value="ai_chat_input"
          style="border-top: 1px solid var(--studs-border); background-color: var(--studs-panel-header);">
       <%= form_with url: ai_chat_index_path,
         method: :post,
-        class: "flex items-center gap-2",
         data: {
           turbo: true,
           controller: "chat",
@@ -50,22 +43,51 @@
           <%= hidden_field_tag :history, "[]" %>
         </div>
         <%= hidden_field_tag :start_date, "" %>
-        <%= text_area_tag :content, "",
-          id: "ai_chat_input",
-          rows: 3,
-          placeholder: "Ask a what-if… (Shift+Enter for new line)",
-          class: "flex-1 w-full resize-none rounded-2xl px-4 py-3 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none transition",
-          style: "background-color: color-mix(in srgb, var(--studs-panel-bg) 60%, #09090b);
-                  border: 1px solid var(--studs-border);",
-          data: { action: "keydown->chat#sendOnEnter" } %>
-        <button type="submit"
-                class="shrink-0 inline-flex items-center justify-center rounded-xl w-9 h-9 transition hover:brightness-110 focus:outline-none"
-                style="background-color: var(--studs-accent);
-                       box-shadow: 0 0 12px color-mix(in srgb, var(--studs-accent) 40%, transparent);">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 19V5m0 0l-7 7m7-7l7 7"/>
-          </svg>
-        </button>
+        <%= file_field_tag :attachment, id: "ai_chat_file_input", class: "hidden" %>
+        <div class="rounded-2xl overflow-hidden"
+             style="background-color: color-mix(in srgb, var(--studs-panel-bg) 60%, #09090b);
+                    border: 1px solid var(--studs-border);">
+          <%= text_area_tag :content, "",
+            id: "ai_chat_input",
+            rows: 1,
+            placeholder: "Ask a what-if… (Shift+Enter for new line)",
+            class: "w-full resize-none px-4 pt-3 pb-1 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none bg-transparent overflow-y-auto",
+            style: "max-height: 200px;",
+            data: { action: "keydown->chat#sendOnEnter input->chat#autoResize" } %>
+          <div class="flex items-center justify-between px-2 pb-2">
+            <!-- File attach (far left) -->
+            <button type="button"
+                    onclick="document.getElementById('ai_chat_file_input').click()"
+                    class="inline-flex items-center justify-center h-8 w-8 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-white/5 transition-colors"
+                    aria-label="Attach file">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14"/>
+              </svg>
+            </button>
+            <div class="flex items-center gap-1">
+              <!-- Voice input -->
+              <button type="button"
+                      data-action="click->voice#toggle"
+                      data-voice-target="micButton"
+                      class="inline-flex items-center justify-center h-8 w-8 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-white/5 transition-colors"
+                      aria-label="Voice input">
+                <svg data-voice-target="micIcon" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z"/>
+                </svg>
+                <svg data-voice-target="stopIcon" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-white hidden" fill="currentColor" viewBox="0 0 24 24">
+                  <rect x="6" y="6" width="12" height="12" rx="2"/>
+                </svg>
+              </button>
+              <button type="submit"
+                    class="shrink-0 inline-flex items-center justify-center rounded-xl w-8 h-8 transition hover:brightness-110 focus:outline-none"
+                    style="background-color: var(--studs-accent);
+                           box-shadow: 0 0 12px color-mix(in srgb, var(--studs-accent) 40%, transparent);">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 19V5m0 0l-7 7m7-7l7 7"/>
+              </svg>
+            </button>
+          </div>
+        </div>
       <% end %>
     </div>
   </div>
