@@ -94,6 +94,7 @@ gem "ollama", "~> 0.0.1"
 
 gem "ollama-ruby", "~> 1.18"
 
+gem "ruby_llm"
 gem "dotenv-rails", "~> 3.2"
 
 gem "omniauth-google-oauth2"

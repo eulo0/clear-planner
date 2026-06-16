@@ -1,6 +1,23 @@
 import { Controller } from "@hotwired/stimulus"
 
+const MAX_CHARS = 2_000
+
 export default class extends Controller {
+  static targets = ["counter"]
+
+  updateCounter(event) {
+    const len = event.target.value.length
+    if (!this.hasCounterTarget) return
+    if (len === 0) {
+      this.counterTarget.textContent = ""
+      return
+    }
+    this.counterTarget.textContent = `${len.toLocaleString()} / ${MAX_CHARS.toLocaleString()}`
+    this.counterTarget.classList.toggle("text-red-400",   len > MAX_CHARS)
+    this.counterTarget.classList.toggle("text-amber-400", len > MAX_CHARS * 0.9 && len <= MAX_CHARS)
+    this.counterTarget.classList.toggle("text-zinc-600",  len <= MAX_CHARS * 0.9)
+  }
+
   submit() {
     const startDateInput = this.element.querySelector('input[name="start_date"]')
     if (startDateInput) {
@@ -82,6 +99,7 @@ export default class extends Controller {
       input.style.height = "auto"
       input.focus()
     }
+    if (this.hasCounterTarget) this.counterTarget.textContent = ""
 
     const messages = document.getElementById("ai_chat_messages")
     if (messages) messages.scrollTop = messages.scrollHeight

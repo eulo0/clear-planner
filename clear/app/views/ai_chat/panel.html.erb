@@ -20,7 +20,7 @@
     </div>
     <!-- Usage -->
     <div class="shrink-0 px-4 pt-3">
-      <%= render "ai_chat/usage", rate: @rate || { rpm: 0, rpm_limit: 10, rpd: 0, rpd_limit: 250 } %>
+      <%= render "ai_chat/usage", rate: @rate || { rpm: 0, rpm_limit: Ai::RateLimiter::RPM_LIMIT, rpd: 0, rpd_limit: Ai::RateLimiter::RPD_LIMIT } %>
     </div>
     <!-- Messages -->
     <div
@@ -53,7 +53,7 @@
             placeholder: "Ask a what-if… (Shift+Enter for new line)",
             class: "w-full resize-none px-4 pt-3 pb-1 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none bg-transparent overflow-y-auto",
             style: "max-height: 200px;",
-            data: { action: "keydown->chat#sendOnEnter input->chat#autoResize" } %>
+            data: { action: "keydown->chat#sendOnEnter input->chat#autoResize input->chat#updateCounter" } %>
           <div class="flex items-center justify-between px-2 pb-2">
             <!-- File attach (far left) -->
             <button type="button"
@@ -64,6 +64,7 @@
                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14"/>
               </svg>
             </button>
+            <span data-chat-target="counter" class="text-[11px] tabular-nums text-zinc-600 select-none"></span>
             <div class="flex items-center gap-1">
               <!-- Voice input -->
               <button type="button"
