@@ -19,7 +19,7 @@ class ApplicationController < ActionController::Base
 
   private
 
-  def calendar_occurrences_for_range(range_start, range_end, draft: nil, filter: nil)
+  def calendar_occurrences_for_range(range_start, range_end, draft: nil, filter: nil, work_shifts_in_range: false)
     # filter values: nil/"" = all, "events" = events only, "work_shifts" = work shifts only,
     # "courses" = all courses only, numeric string = specific course ID
     course_id        = filter.presence && filter !~ /\A(events|work_shifts|courses)\z/ ? filter : nil
@@ -41,8 +41,12 @@ class ApplicationController < ActionController::Base
     end
 
     if show_work_shifts
-      base_work_shifts = current_user.work_shifts.active
-        .where("repeat_until IS NULL OR repeat_until >= ?", range_start.to_date)
+      base_work_shifts = current_user.work_shifts
+      # The default .active scope filters by Date.current, which hides shifts that
+      # have already ended. The year view opts into range-overlap instead so past
+      # (and earlier-this-year) shifts still appear; weekly/monthly keep .active.
+      base_work_shifts = base_work_shifts.active unless work_shifts_in_range
+      base_work_shifts = base_work_shifts.where("repeat_until IS NULL OR repeat_until >= ?", range_start.to_date)
 
       work_shift_occurrences =
         base_work_shifts.flat_map { |ws| ws.occurrences_between(range_start, range_end) }

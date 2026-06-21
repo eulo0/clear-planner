@@ -1,0 +1,323 @@
+<%# Year-view styles are co-located here: they are specific to this partial only.
+    The shared --studs-* design tokens these rules reference stay global in
+    app/assets/tailwind/application.css. %>
+<style>
+.yr-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+.yr-title-wrap { display: flex; align-items: baseline; gap: 14px; }
+.yr-year {
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: #fafafa;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.yr-year-sub { font-size: 13px; color: #a1a1aa; }
+.yr-nav { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.yr-chev { width: 14px; height: 14px; }
+.yr-divider { width: 1px; height: 20px; border-radius: 9999px; background: var(--studs-border); margin: 0 4px; }
+
+.yr-summary {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  flex-wrap: wrap;
+  padding: 16px 20px;
+  margin-bottom: 18px;
+  border-radius: 1rem;
+  border: 1px solid var(--studs-border);
+  background-color: var(--studs-panel-bg);
+}
+.yr-summary-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-right: 22px;
+  border-right: 1px solid var(--studs-border-subtle);
+}
+.yr-summary-num {
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #fafafa;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.yr-summary-label { font-size: 12px; color: #a1a1aa; }
+.yr-legend { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.yr-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 6px 12px 6px 10px;
+  border-radius: 9999px;
+  border: 1px solid var(--studs-border-subtle);
+  background: rgba(0, 0, 0, 0.18);
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+  text-decoration: none;
+}
+.yr-chip:hover { border-color: var(--studs-border); background: rgba(0, 0, 0, 0.28); transform: translateY(-1px); }
+.yr-chip:focus-visible { outline: 2px solid var(--studs-accent); outline-offset: 2px; }
+.yr-chip.is-dimmed { opacity: 0.34; filter: saturate(0.5); }
+.yr-chip.is-solo {
+  border-color: color-mix(in srgb, var(--studs-accent) 45%, transparent);
+  background: color-mix(in srgb, var(--studs-accent) 12%, rgba(0, 0, 0, 0.2));
+}
+.yr-chip-dot { height: 9px; width: 9px; border-radius: 9999px; flex-shrink: 0; box-shadow: 0 0 7px 0 currentColor; }
+.yr-chip-count { font-size: 13px; font-weight: 700; color: #fafafa; font-variant-numeric: tabular-nums; }
+.yr-chip-name { font-size: 12px; color: #a1a1aa; }
+
+.yr-months { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px 18px; padding-right: 14px; }
+@media (max-width: 1240px) { .yr-months { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 900px) { .yr-months { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 600px) { .yr-months { grid-template-columns: 1fr; } }
+
+.yr-month { position: relative; }
+.yr-cal { border: 1px solid var(--studs-border); border-radius: 9px; overflow: hidden; }
+.yr-month--current .yr-cal {
+  border-color: color-mix(in srgb, var(--studs-accent) 55%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--studs-accent) 25%, transparent), 0 0 18px color-mix(in srgb, var(--studs-accent) 12%, transparent);
+}
+.yr-month-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 9px; }
+.yr-month-name { font-size: 13.5px; font-weight: 700; letter-spacing: -0.01em; color: #e4e4e7; }
+.yr-month--current .yr-month-name { color: var(--studs-accent); }
+.yr-month-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 22px;
+  height: 18px;
+  padding: 0 7px;
+  border-radius: 9999px;
+  font-size: 10.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #a1a1aa;
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid var(--studs-border-subtle);
+}
+.yr-month--current .yr-month-count {
+  color: var(--studs-accent);
+  border-color: color-mix(in srgb, var(--studs-accent) 35%, transparent);
+  background: color-mix(in srgb, var(--studs-accent) 12%, rgba(0, 0, 0, 0.2));
+}
+
+.yr-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  background: var(--studs-panel-header);
+  border-bottom: 1px solid var(--studs-border-subtle);
+}
+.yr-weekday {
+  text-align: center;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #a1a1aa;
+  padding: 4px 0;
+}
+.yr-weekday.is-weekend { color: #71717a; }
+
+.yr-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background: var(--studs-border-subtle); }
+.yr-day {
+  position: relative;
+  height: 36px;
+  background: var(--studs-panel-bg-2);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  padding: 3px 5px 4px;
+  transition: background-color 0.15s, box-shadow 0.15s;
+}
+/* Weekends render identically to weekdays (no weekend background/number override). */
+.yr-day.is-out { background: rgba(0, 0, 0, 0.30); }
+.yr-daynum { font-size: 10.5px; font-weight: 500; color: #e4e4e7; line-height: 16px; height: 16px; font-variant-numeric: tabular-nums; }
+.yr-day.is-out .yr-daynum { color: #71717a; opacity: 0.7; }
+.yr-day.has-ev { cursor: pointer; background: color-mix(in srgb, var(--studs-accent) calc(var(--n, 1) * 2%), var(--studs-panel-bg-2)); }
+.yr-day.has-ev .yr-daynum { color: #fafafa; }
+.yr-day.yr-today,
+.yr-day.yr-today.has-ev { background: color-mix(in srgb, var(--studs-accent) 16%, var(--studs-panel-bg-2)); }
+.yr-day.has-ev:hover { background: var(--studs-panel-hover); box-shadow: inset 0 0 0 1px var(--studs-border); }
+.yr-day.has-ev:focus-visible { outline: 2px solid var(--studs-accent); outline-offset: -2px; }
+.yr-day.has-ev:hover .yr-dot { box-shadow: 0 0 6px 0 currentColor; }
+.yr-today .yr-daynum {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: flex-start;
+  color: #fff;
+  font-weight: 700;
+  height: 17px;
+  min-width: 17px;
+  padding: 0 3px;
+  line-height: 17px;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, var(--studs-accent), var(--studs-accent-secondary));
+  box-shadow: 0 0 8px color-mix(in srgb, var(--studs-accent) 55%, transparent);
+}
+.yr-dots { display: flex; align-items: center; gap: 3px; height: 6px; margin-top: auto; padding-left: 1px; }
+.yr-dot {
+  height: 5px;
+  width: 5px;
+  border-radius: 9999px;
+  flex-shrink: 0;
+  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.25);
+  transition: box-shadow 0.15s;
+}
+
+.yr-tip {
+  position: fixed;
+  z-index: 80;
+  max-width: 240px;
+  pointer-events: none;
+  background: #18181b;
+  /* Match the calendar event popover's outline (zinc-700 border + white inset ring). */
+  border: 1px solid #3f3f46;
+  border-radius: 0.75rem;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.06);
+  padding: 10px 12px;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.12s ease, transform 0.12s ease;
+}
+.yr-tip.is-shown { opacity: 1; transform: translateY(0); }
+.yr-tip-date { font-size: 11px; font-weight: 700; color: #fafafa; margin-bottom: 7px; letter-spacing: -0.01em; }
+.yr-tip-row { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #e4e4e7; padding: 2px 0; }
+.yr-tip-dot { height: 7px; width: 7px; border-radius: 9999px; flex-shrink: 0; }
+.yr-tip-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.yr-tip-kind {
+  margin-left: auto;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #71717a;
+  flex-shrink: 0;
+}
+</style>
+<%# Year view: 12 mini-month grids + click-to-filter source chips. %>
+<%# Rendered lazily inside the dashboard_calendar frame when params[:view] == "yearly". %>
+<% yc = year_calendar %>
+<% year = yc.year %>
+<% today = Date.current %>
+<% current_filter = params[:filter].presence %>
+<% weekday_letters = %w[M T W T F S S] %>
+
+<div class="w-full flex flex-1 min-h-0 flex-col" data-calendar-view-target="yearlyContent">
+  <!-- Toolbar -->
+  <div class="yr-toolbar">
+    <div class="yr-title-wrap">
+      <div class="yr-year"><%= year %></div>
+      <div class="yr-year-sub">Jan – Dec</div>
+    </div>
+    <nav class="yr-nav">
+      <div data-action="dropdown:select->calendar-view#toggle">
+        <%= render Studs::DropdownComponent.new(
+          label: "Yearly",
+          variant: :dashboard_view,
+          name: "calendar_dashboard",
+          selected_value: "yearly",
+          items: [
+            { label: "Weekly", value: "weekly" },
+            { label: "Monthly", value: "monthly" },
+            { label: "Yearly", value: "yearly" }
+          ]
+        ) %>
+      </div>
+      <div class="yr-divider"></div>
+      <%= link_to dashboard_path(view: "yearly", start_date: Date.new(year - 1, 1, 1), filter: current_filter),
+            class: "studs-nav-btn", data: { turbo_frame: "dashboard_calendar" } do %>
+        <svg class="yr-chev" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg> Prev
+      <% end %>
+      <%= link_to "Today", dashboard_path(view: "yearly", start_date: today, filter: current_filter),
+            class: "studs-nav-btn", data: { turbo_frame: "dashboard_calendar" } %>
+      <%= link_to dashboard_path(view: "yearly", start_date: Date.new(year + 1, 1, 1), filter: current_filter),
+            class: "studs-nav-btn", data: { turbo_frame: "dashboard_calendar" } do %>
+        Next <svg class="yr-chev" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+      <% end %>
+    </nav>
+  </div>
+
+  <!-- Summary / legend (chips are the filter UI) -->
+  <div class="yr-summary">
+    <div class="yr-summary-hero">
+      <div class="yr-summary-num"><%= yc.hero_count %></div>
+      <div class="yr-summary-label"><%= yc.hero_label %></div>
+    </div>
+    <div class="yr-legend">
+      <% yc.chips.each do |chip| %>
+        <%= link_to dashboard_path(view: "yearly", start_date: Date.new(year, 1, 1), filter: (chip.selected ? nil : chip.filter_value)),
+              class: class_names("yr-chip", "is-solo" => chip.selected, "is-dimmed" => current_filter && !chip.selected),
+              data: { turbo_frame: "dashboard_calendar" },
+              aria: { current: (chip.selected ? "true" : nil) } do %>
+          <span class="yr-chip-dot" style="background: <%= chip.color %>; color: <%= chip.color %>;"></span>
+          <span class="yr-chip-count"><%= chip.count %></span>
+          <span class="yr-chip-name"><%= chip.label %></span>
+        <% end %>
+      <% end %>
+    </div>
+  </div>
+
+  <!-- 12 months -->
+  <div class="flex-1 min-h-0 overflow-y-auto scrollbars" data-controller="year-calendar">
+    <div class="yr-months"
+         data-action="mouseover->year-calendar#show mouseout->year-calendar#hide focusin->year-calendar#show focusout->year-calendar#hide">
+      <% (0..11).each do |m| %>
+        <% month_start = Date.new(year, m + 1, 1) %>
+        <% grid_start = month_start.beginning_of_week %>
+        <% is_current = (year == today.year && m == today.month - 1) %>
+        <div class="yr-month <%= "yr-month--current" if is_current %>">
+          <div class="yr-month-head">
+            <div class="yr-month-name"><%= Date::MONTHNAMES[m + 1] %></div>
+            <div class="yr-month-count"><%= yc.month_count(m) %></div>
+          </div>
+          <div class="yr-cal">
+            <div class="yr-weekdays">
+              <% weekday_letters.each_with_index do |letter, i| %>
+                <div class="yr-weekday <%= "is-weekend" if i >= 5 %>"><%= letter %></div>
+              <% end %>
+            </div>
+            <div class="yr-days">
+              <% 42.times do |i| %>
+                <% date = grid_start + i %>
+                <% in_month = (date.month == m + 1) %>
+                <% weekend = date.saturday? || date.sunday? %>
+                <% is_today = (date == today) %>
+                <% day = in_month ? yc.day(date) : nil %>
+                <% has_ev = day && day.count.positive? %>
+                <div class="<%= class_names("yr-day", "is-out" => !in_month, "is-weekend" => weekend, "yr-today" => is_today, "has-ev" => has_ev) %>"
+                  <% if has_ev %>
+                    style="--n: <%= [ day.count, 5 ].min %>;"
+                    tabindex="0"
+                    aria-label="<%= "#{date.strftime("%B %-d")}: #{day.count} #{"item".pluralize(day.count)}" %>"
+                    data-yc-date="<%= date.strftime("%a, %B %-d") %>"
+                    data-yc-items="<%= day.items.to_json %>"
+                  <% end %>>
+                  <span class="yr-daynum"><%= date.day %></span>
+                  <% if has_ev %>
+                    <span class="yr-dots">
+                      <% day.dot_colors.each do |color| %>
+                        <span class="yr-dot" style="background: <%= color %>; color: <%= color %>;"></span>
+                      <% end %>
+                    </span>
+                  <% end %>
+                </div>
+              <% end %>
+            </div>
+          </div>
+        </div>
+      <% end %>
+    </div>
+    <div class="yr-tip" data-year-calendar-target="tip" role="status" aria-live="polite"></div>
+  </div>
+</div>

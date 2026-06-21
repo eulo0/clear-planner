@@ -1,4 +1,10 @@
-<meta name="turbo-cache-control" content="no-cache">
+<%# Must live in the page head (content_for :head) — Turbo Drive only reads the
+    turbo-cache-control meta from the head. Without it, Turbo caches /dashboard and previews a
+    stale (e.g. weekly) snapshot when you navigate back, flashing the wrong view before the
+    fresh server render paints. %>
+<% content_for :head do %>
+  <meta name="turbo-cache-control" content="no-cache">
+<% end %>
 <div
   class="-mx-6 -my-6 min-h-0 relative"
   style="height: calc(100% + 3rem)"
@@ -8,6 +14,8 @@
   <div class="flex h-full min-h-0 min-w-0 p-4">
     <section class="min-w-0 w-full flex-1 min-h-0 h-full">
       <%= render "dashboard/calendar_frame",
+        view: @view,
+        year_calendar: @year_calendar,
         events: @occurrences,
         draft: @draft,
         start_date: @start_date,

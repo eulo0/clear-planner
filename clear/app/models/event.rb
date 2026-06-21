@@ -37,6 +37,7 @@ class Event < ApplicationRecord
 
   def occurrences_between(range_start, range_end)
     unless recurring?
+      return [] if starts_at.nil? || starts_at < range_start || starts_at > range_end
       return [ Occurrence.new(event: self, starts_at: starts_at, ends_at: ends_at) ]
     end
 
