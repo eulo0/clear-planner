@@ -1,25 +1,39 @@
+<% base_url = @project ? project_path(@project) : dashboard_path %>
 <%= turbo_frame_tag "dashboard_calendar", class: "block h-full min-h-0 w-full" do %>
-  <div data-controller="calendar-view" class="h-full min-h-0 w-full flex flex-col">
-    <%= render "dashboard/week_load_bar",
-         events: events,
-         draft: local_assigns[:draft],
-         start_date: start_date %>
-    <div data-calendar-view-target="weeklyWrapper" class="w-full min-w-0">
-      <%= render "dashboard/calendar",
+  <% if local_assigns[:view] == "yearly" %>
+    <div data-controller="calendar-view"
+         data-calendar-view-base-url-value="<%= base_url %>"
+         class="h-full min-h-0 w-full flex flex-col">
+      <%# Marker so the toggle controller knows the year frame is already loaded (loop guard). %>
+      <span data-calendar-view-target="yearMarker" hidden></span>
+      <%= render "dashboard/year_calendar",
+           year_calendar: local_assigns[:year_calendar] || @year_calendar %>
+    </div>
+  <% else %>
+    <div data-controller="calendar-view"
+         data-calendar-view-base-url-value="<%= base_url %>"
+         class="h-full min-h-0 w-full flex flex-col">
+      <%= render "dashboard/week_load_bar",
            events: events,
-           start_date: start_date,
            draft: local_assigns[:draft],
-           courses: local_assigns[:courses],
-           course_filter_id: local_assigns[:course_filter_id],
-           blocked_intervals: local_assigns[:blocked_intervals] || [] %>
+           start_date: start_date %>
+      <div data-calendar-view-target="weeklyWrapper" class="w-full min-w-0">
+        <%= render "dashboard/calendar",
+             events: events,
+             start_date: start_date,
+             draft: local_assigns[:draft],
+             courses: local_assigns[:courses],
+             course_filter_id: local_assigns[:course_filter_id],
+             blocked_intervals: local_assigns[:blocked_intervals] || [] %>
+      </div>
+      <div data-calendar-view-target="monthlyWrapper" class="hidden flex-1 min-h-0 w-full min-w-0 flex flex-col">
+        <%= render "dashboard/monthly_calendar",
+             month_events_by_date: local_assigns[:month_events_by_date] || @month_events_by_date || {},
+             month_date: local_assigns[:month_date] || @month_date || Date.current,
+             start_date: start_date,
+             courses: local_assigns[:courses],
+             course_filter_id: local_assigns[:course_filter_id] %>
+      </div>
     </div>
-    <div data-calendar-view-target="monthlyWrapper" class="hidden flex-1 min-h-0 w-full min-w-0 flex flex-col">
-      <%= render "dashboard/monthly_calendar",
-           month_events_by_date: local_assigns[:month_events_by_date] || @month_events_by_date || {},
-           month_date: local_assigns[:month_date] || @month_date || Date.current,
-           start_date: start_date,
-           courses: local_assigns[:courses],
-           course_filter_id: local_assigns[:course_filter_id] %>
-    </div>
-  </div>
+  <% end %>
 <% end %>

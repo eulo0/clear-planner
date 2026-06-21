@@ -160,7 +160,7 @@
           items: [
             { label: "Weekly", value: "weekly" },
             { label: "Monthly", value: "monthly" },
-          ]
+          ] + (@project ? [] : [ { label: "Yearly", value: "yearly" } ])
         ) %>
       </div>
       <div class="mx-1 h-5 w-px rounded-full" style="background-color: var(--studs-border);"></div>

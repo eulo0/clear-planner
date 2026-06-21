@@ -150,3 +150,6 @@ application.register("username-edit", UsernameEditController)
 
 import VoiceController from "./voice_controller"
 application.register("voice", VoiceController)
+
+import YearCalendarController from "./year_calendar_controller"
+application.register("year-calendar", YearCalendarController)

@@ -138,4 +138,40 @@ class EventTest < ActiveSupport::TestCase
     event.valid?
     assert_equal event.starts_at + 480.minutes, event.ends_at
   end
+
+  # occurrences_between: a non-recurring event must only appear inside the
+  # requested range, otherwise a one-off June 2026 event leaks into e.g. a 2041
+  # year view (https://github.com/eulo0/clear — year-view month_count is
+  # year-agnostic, which surfaces this leak).
+
+  test "non-recurring event returns its occurrence when inside the range" do
+    event = Event.create!(
+      title: "One-off",
+      starts_at: Time.zone.parse("2026-06-01 09:00:00"),
+      ends_at: Time.zone.parse("2026-06-01 10:00:00"),
+      user: @user
+    )
+
+    occs = event.occurrences_between(
+      Time.zone.parse("2026-01-01 00:00:00"), Time.zone.parse("2026-12-31 23:59:59")
+    )
+
+    assert_equal 1, occs.size
+    assert_equal event.starts_at, occs.first.starts_at
+  end
+
+  test "non-recurring event returns no occurrence for a range it falls outside" do
+    event = Event.create!(
+      title: "One-off",
+      starts_at: Time.zone.parse("2026-06-01 09:00:00"),
+      ends_at: Time.zone.parse("2026-06-01 10:00:00"),
+      user: @user
+    )
+
+    occs = event.occurrences_between(
+      Time.zone.parse("2041-01-01 00:00:00"), Time.zone.parse("2041-12-31 23:59:59")
+    )
+
+    assert_empty occs
+  end
 end

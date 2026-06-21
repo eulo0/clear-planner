@@ -1,24 +1,84 @@
 import { Controller } from "@hotwired/stimulus"
 
 const DASHBOARD_VIEW_TOGGLE_NAME = "calendar_dashboard"
+const VIEWS = ["weekly", "monthly", "yearly"]
 
 export default class extends Controller {
-  static targets = ["weeklyWrapper", "monthlyWrapper"]
+  static targets = ["weeklyWrapper", "monthlyWrapper", "yearMarker"]
+  static values = { baseUrl: String }
 
   connect() {
-    const saved = localStorage.getItem("calendar:view")
-    this.currentView = (saved === "monthly") ? "monthly" : "weekly"
+    // The year frame is rendered server-side when the saved view is yearly (the server
+    // reads the same cookie), so the marker is authoritative here — no fetch, no flash.
+    if (this.hasYearMarkerTarget) {
+      this.currentView = "yearly"
+      this.syncToggleDropdowns()
+      return
+    }
+
+    // Otherwise the server rendered the weekly/monthly frame (both in the DOM). The cookie
+    // only ever distinguishes weekly vs monthly here — yearly was already handled server-side
+    // — so pick the wrapper to show instantly. Anything but "monthly" coerces to weekly.
+    this.currentView = this.savedView() === "monthly" ? "monthly" : "weekly"
     this.syncView()
   }
 
   toggle(event) {
     const nextView = event?.detail?.value || event?.target?.value
-    if (!["weekly", "monthly"].includes(nextView)) return
+    if (!VIEWS.includes(nextView)) return
 
     this.currentView = nextView
-    localStorage.setItem("calendar:view", this.currentView)
-    this.syncView()
-    if (event?.detail) this.focusActiveViewToggle()
+    // Persist every view (incl. yearly) in a cookie the server reads, so the next bare
+    // /dashboard renders the last view directly — see DashboardController#saved_calendar_view.
+    this.persistView(nextView)
+
+    if (nextView === "yearly") {
+      this.navigateToView("yearly")        // weekly/monthly aren't in the DOM yet — fetch
+    } else if (this.hasYearMarkerTarget) {
+      this.navigateToView(null)            // leaving the year frame — fetch weekly/monthly back
+    } else {
+      this.syncView()                      // weekly <-> monthly are both present — instant
+      if (event?.detail) this.focusActiveViewToggle()
+    }
+  }
+
+  // View preference persistence. A cookie (not localStorage) so the server can read it on a
+  // bare /dashboard and render the saved view directly. Lax + 1yr, mirrors the old stickiness.
+  persistView(view) {
+    document.cookie = `calendar_view=${view}; path=/; max-age=${60 * 60 * 24 * 365}; samesite=lax`
+  }
+
+  savedView() {
+    const match = document.cookie.match(/(?:^|;\s*)calendar_view=([^;]+)/)
+    return match ? decodeURIComponent(match[1]) : null
+  }
+
+  // Navigate the dashboard_calendar frame, preserving start_date/filter. Reuses the
+  // detached-anchor pattern (see course_filter_controller) so controllers outside the
+  // frame are untouched; advance pushes history so the view survives reload.
+  navigateToView(view) {
+    const base = (this.hasBaseUrlValue && this.baseUrlValue) || window.location.pathname
+    const url  = new URL(base, window.location.origin)
+    const here = new URL(window.location.href)
+
+    if (view) {
+      url.searchParams.set("view", view)
+    } else {
+      url.searchParams.delete("view")
+    }
+
+    const startDate = here.searchParams.get("start_date")
+    const filter    = here.searchParams.get("filter")
+    if (startDate) url.searchParams.set("start_date", startDate)
+    if (filter) url.searchParams.set("filter", filter)
+
+    const a = document.createElement("a")
+    a.href = url.toString()
+    a.dataset.turboFrame  = "dashboard_calendar"
+    a.dataset.turboAction = "advance"
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
   }
 
   syncView() {
