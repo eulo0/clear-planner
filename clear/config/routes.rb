@@ -93,6 +93,16 @@ Rails.application.routes.draw do
     end
   end
 
+  # First-login syllabus onboarding (full-screen flow). All actions are scoped
+  # to current_user; no record IDs appear in these paths.
+  get  "onboarding",         to: "onboarding#show",    as: :onboarding
+  post "onboarding/files",   to: "onboarding#create",  as: :onboarding_files
+  get  "onboarding/status",  to: "onboarding#status",  as: :onboarding_status
+  get  "onboarding/review",  to: "onboarding#review",  as: :onboarding_review
+  post "onboarding/confirm", to: "onboarding#confirm", as: :onboarding_confirm
+  get  "onboarding/done",    to: "onboarding#done",    as: :onboarding_done
+  post "onboarding/skip",    to: "onboarding#skip",    as: :onboarding_skip
+
   resources :ai_chat, only: [ :create ] do
     collection do
       get :usage

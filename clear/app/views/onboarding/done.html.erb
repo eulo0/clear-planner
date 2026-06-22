@@ -1,0 +1,29 @@
+<% content_for :title, "You're all set" %>
+
+<section class="step">
+  <%= render "head", step: 4 %>
+
+  <div class="done-wrap">
+    <div class="check">
+      <span class="ripple"></span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5 11-11"/></svg>
+    </div>
+
+    <div class="eyebrow">You're all set</div>
+    <h1 class="title" style="margin-top:8px">Your quarter is on the calendar.</h1>
+    <p class="sub center">
+      <%= @courses_added == 1 ? "Your course is" : "Your #{@courses_added} courses are" %> now in your schedule.
+      Add more anytime — or just let Clear keep your week in order.
+    </p>
+
+    <div class="done-actions">
+      <%= link_to authenticated_root_path, class: "btn btn-primary" do %>
+        Take me to my calendar
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      <% end %>
+      <div class="done-add">
+        Added <b><%= pluralize(@courses_added, "course") %></b> · <b><%= pluralize(@sessions_added, "weekly session") %></b>
+      </div>
+    </div>
+  </div>
+</section>

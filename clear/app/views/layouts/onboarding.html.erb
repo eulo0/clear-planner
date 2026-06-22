@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html class="h-full">
+  <head>
+    <title><%= content_for(:title) || "Welcome to Clear" %></title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="Clear">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+    <%= yield :head %>
+    <%= favicon_link_tag "logo-favicon.png", rel: "icon", type: "image/png" %>
+    <%= stylesheet_link_tag "onboarding", "data-turbo-track": "reload" %>
+    <%= javascript_include_tag "application", "data-turbo-track": "reload", type: "module" %>
+  </head>
+  <body>
+    <%# Real dashboard behind the modal — blurred and dimmed, un-blurs as panel exits %>
+    <iframe src="<%= authenticated_root_path %>" class="app-frame" tabindex="-1" aria-hidden="true" title=""></iframe>
+
+    <div class="scrim"></div>
+    <div class="stage">
+      <div class="panel" role="dialog" aria-modal="true" aria-labelledby="stepTitle">
+        <div class="panel-aura"></div>
+        <%= yield %>
+      </div>
+    </div>
+  </body>
+</html>

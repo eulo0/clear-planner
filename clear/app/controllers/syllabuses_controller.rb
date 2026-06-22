@@ -8,10 +8,6 @@ class SyllabusesController < ApplicationController
     course_items_preview confirm_course_items
   ]
 
-  PREVIEW_FIELDS = %i[
-    title code term professor meeting_days location office office_hours start_time end_time start_date end_date
-  ].freeze
-
   def index
     redirect_to courses_path
   end
@@ -60,21 +56,21 @@ class SyllabusesController < ApplicationController
   end
 
   def course_preview
-    @draft  = normalized_draft_for_form(@syllabus.course_draft || {})
-    @course = current_user.courses.new(remap_preview_attrs(@draft))
-    @missing_fields = missing_preview_fields(@course)
+    @draft  = mapper.normalized_draft_for_form(@syllabus.course_draft || {})
+    @course = current_user.courses.new(mapper.remap_preview_attrs(@draft))
+    @missing_fields = mapper.missing_preview_fields(@course)
   end
 
   def course_preview_frame
-    @draft  = normalized_draft_for_form(@syllabus.course_draft || {})
-    @course = current_user.courses.new(remap_preview_attrs(@draft))
-    @missing_fields = missing_preview_fields(@course)
+    @draft  = mapper.normalized_draft_for_form(@syllabus.course_draft || {})
+    @course = current_user.courses.new(mapper.remap_preview_attrs(@draft))
+    @missing_fields = mapper.missing_preview_fields(@course)
 
     render :course_preview_frame, layout: false
   end
 
   def confirm_course
-    attrs = remap_form_attrs(course_params.to_h)
+    attrs = mapper.remap_form_attrs(course_params.to_h)
     @course = current_user.courses.new(attrs)
 
     if @course.save
@@ -82,8 +78,8 @@ class SyllabusesController < ApplicationController
       redirect_to course_items_preview_syllabus_path(@syllabus),
                   notice: "Course created — review the items we found in your syllabus."
     else
-      @draft = normalized_draft_for_form(@syllabus.course_draft || {})
-      @missing_fields = missing_preview_fields(@course)
+      @draft = mapper.normalized_draft_for_form(@syllabus.course_draft || {})
+      @missing_fields = mapper.missing_preview_fields(@course)
       render :course_preview, status: :unprocessable_entity
     end
   end
@@ -122,7 +118,7 @@ class SyllabusesController < ApplicationController
       record = @course.course_items.new(
         title: item[:title],
         kind: kind,
-        due_at: parse_draft_due_at(item[:due_at]),
+        due_at: mapper.parse_draft_due_at(item[:due_at]),
         details: item[:details].presence
       )
       created += 1 if record.save
@@ -147,11 +143,8 @@ class SyllabusesController < ApplicationController
     @syllabus = current_user.syllabuses.find(params[:id])
   end
 
-  def parse_draft_due_at(raw)
-    return nil if raw.blank?
-    Time.zone.parse(raw.to_s)
-  rescue ArgumentError
-    nil
+  def mapper
+    Syllabuses::CourseDraftMapper
   end
 
   def syllabus_params
@@ -170,60 +163,5 @@ class SyllabusesController < ApplicationController
       :description,
       :color, :recurring, :repeat_until, repeat_days: []
     )
-  end
-
-  def missing_preview_fields(course)
-    PREVIEW_FIELDS.select { |attr| course.public_send(attr).blank? }
-  end
-
-  def normalized_draft_for_form(draft)
-    d = draft.deep_dup
-    d["start_time"] = normalize_time_for_input(d["start_time"])
-    d["end_time"]   = normalize_time_for_input(d["end_time"])
-    d["starts_at"]  = normalize_time_for_input(d["starts_at"])
-    d["ends_at"]    = normalize_time_for_input(d["ends_at"])
-    d
-  end
-
-  def normalize_time_for_input(v)
-    return nil if v.blank?
-    v.to_s.split(":").first(2).join(":")
-  end
-
-  def remap_preview_attrs(draft)
-    cols = Course.column_names
-    out = draft.deep_dup
-    out.delete("course_items")
-    out.delete(:course_items)
-
-    if cols.include?("start_time") && out["start_time"].blank? && out["starts_at"].present?
-      out["start_time"] = out["starts_at"]
-    end
-    if cols.include?("end_time") && out["end_time"].blank? && out["ends_at"].present?
-      out["end_time"] = out["ends_at"]
-    end
-
-    if cols.include?("instructor") && out["instructor"].blank? && out["professor"].present?
-      out["instructor"] = out["professor"]
-    end
-    if cols.include?("professor") && out["professor"].blank? && out["instructor"].present?
-      out["professor"] = out["instructor"]
-    end
-
-    out
-  end
-
-  def remap_form_attrs(attrs)
-    cols = Course.column_names
-    out = attrs.deep_dup
-
-    if cols.include?("start_time") && out["start_time"].blank? && out["starts_at"].present?
-      out["start_time"] = out.delete("starts_at")
-    end
-    if cols.include?("end_time") && out["end_time"].blank? && out["ends_at"].present?
-      out["end_time"] = out.delete("ends_at")
-    end
-
-    out
   end
 end

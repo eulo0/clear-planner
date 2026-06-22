@@ -1,0 +1,465 @@
+/* ============================================================
+   CLEAR — First-login onboarding
+   Ported verbatim from the Clear Onboarding.html prototype
+   (base layer + app-aligned "redesign" overrides), minus the
+   faux dashboard backdrop. Loaded only by the onboarding layout.
+   ============================================================ */
+
+:root {
+  /* accent */
+  --studs-accent: #10b981;
+  --studs-accent-strong: #059669;
+  --studs-accent-soft: #5ee9b5;
+  --studs-accent-200: #a4f4cf;
+  --studs-accent-rgb: 16, 185, 129;
+
+  /* surfaces */
+  --bg: #09090b;
+  --panel: rgba(3, 98, 76, 0.18);
+  --panel-2: rgba(3, 98, 76, 0.10);
+  --panel-hdr: rgba(3, 98, 76, 0.45);
+  --studs-panel-bg: rgba(3, 98, 76, 0.18);
+  --studs-panel-hover: rgba(3, 98, 76, 0.22);
+  --studs-panel-header: rgba(3, 98, 76, 0.45);
+  --border: rgba(47, 169, 140, 0.22);
+  --border-sub: rgba(47, 169, 140, 0.12);
+  --divider: rgba(47, 169, 140, 0.16);
+  --studs-border: rgba(47, 169, 140, 0.22);
+  --studs-border-sub: rgba(47, 169, 140, 0.12);
+  --studs-sidebar-bg: #15261d;
+
+  /* custom scrollbar — mirrors the rest of the app (.scrollbars in application.css) */
+  --sb-track: color-mix(in srgb, var(--panel-2) 75%, #09090b 25%);
+  --sb-thumb: color-mix(in srgb, var(--studs-accent) 35%, #71717a 65%);
+  --sb-thumb-hover: color-mix(in srgb, var(--studs-accent) 50%, #71717a 50%);
+  --sb-radius: 8px;
+
+  /* modal glass — app-aligned (redesign) values */
+  --modal-bg-top: #192e22;
+  --modal-bg-bot: #15261d;
+  --modal-border: rgba(47, 169, 140, 0.22);
+
+  /* text */
+  --fg-1: #fafafa;
+  --fg-2: #e4e4e7;
+  --fg-3: #a1a1aa;
+  --fg-4: #71717a;
+  --fg-5: #52525b;
+
+  /* event palette */
+  --course: #60a5fa;
+  --event: #34d399;
+  --due: #f59e0b;
+  --shift: #a8a29e;
+  --exam: #f43f5e;
+
+  --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --ease: cubic-bezier(.4, 0, .2, 1);
+  --ease-out: cubic-bezier(.16, 1, .3, 1);
+  --r-lg: .625rem;
+  --r-xl: .75rem;
+  --r-2xl: 1rem;
+  --r-3xl: 1.5rem;
+  --r-full: 9999px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--fg-2);
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+button { font-family: inherit; cursor: pointer; color: inherit; }
+
+/* ── backdrop + stage ───────────────────────────────────── */
+.scrim {
+  position: fixed; inset: 0; z-index: 10;
+  background: rgba(3, 7, 5, .66);
+  backdrop-filter: blur(3px);
+}
+.stage {
+  position: fixed; inset: 0; z-index: 20;
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px;
+}
+
+/* ── panel ──────────────────────────────────────────────── */
+.panel {
+  position: relative;
+  width: min(544px, 100%);
+  border-radius: 18px;
+  background: linear-gradient(170deg, var(--modal-bg-top) 0%, var(--modal-bg-bot) 100%);
+  border: 1px solid var(--modal-border);
+  box-shadow:
+    0 40px 80px -24px rgba(0, 0, 0, .85),
+    0 0 0 1px rgba(0, 0, 0, .3),
+    inset 0 1px 0 rgba(47, 169, 140, 0.10);
+  overflow: hidden;
+}
+.panel::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(110% 50% at 50% -10%, rgba(3, 98, 76, 0.28), transparent 60%);
+}
+.panel-aura {
+  position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  pointer-events: none; z-index: 3; opacity: 1;
+  background: linear-gradient(90deg,
+      transparent 5%,
+      rgba(47, 169, 140, 0.30) 25%,
+      rgba(16, 185, 129, 0.55) 50%,
+      rgba(47, 169, 140, 0.30) 75%,
+      transparent 95%);
+}
+
+.steps { position: relative; transition: height .45s var(--ease-out); }
+
+.step {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  padding: 38px 38px 34px;
+  opacity: 0; pointer-events: none;
+  transform: translateY(16px);
+  transition: opacity .4s var(--ease), transform .55s var(--ease-out);
+}
+.step.active {
+  position: relative; opacity: 1; pointer-events: auto; transform: none;
+}
+.step.leaving {
+  opacity: 0; transform: translateY(-14px) scale(.985);
+  transition: opacity .26s var(--ease), transform .26s var(--ease);
+}
+
+.step.active .stagger { animation: rise .6s var(--ease-out) both; }
+.step.active .stagger.d1 { animation-delay: .04s; }
+.step.active .stagger.d2 { animation-delay: .10s; }
+.step.active .stagger.d3 { animation-delay: .18s; }
+.step.active .stagger.d4 { animation-delay: .26s; }
+.step.active .stagger.d5 { animation-delay: .34s; }
+@keyframes rise { from { transform: translateY(14px); } to { transform: translateY(0); } }
+
+/* ── header (brand + progress) ──────────────────────────── */
+.head {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 14px; gap: 16px;
+}
+.brand { display: flex; align-items: center; gap: 7px; }
+.brand .gem {
+  width: 16px; height: 16px; color: var(--studs-accent); opacity: .4; flex-shrink: 0;
+  margin-left: -5px; /* gem sits centered in a wider box; pull left so its visible edge meets the STEP/title text column */
+}
+.brand.lg .gem {
+  width: 44px; height: 44px; opacity: 1;
+  margin-left: -16px;  /* center the gem over the "W" of WELCOME (gem sits centered in a wide box) */
+  margin-right: -14px; /* pull "Clear" back in: the gem's box is wider than the visible gem, so trim the transparent right padding */
+  filter: drop-shadow(0 0 10px rgba(16, 185, 129, .30)); /* symmetric glow: no downward bias so the gem reads optically centered with the text */
+}
+.brand .gem svg { width: 100%; height: 100%; display: block; }
+.brand .binfo { display: flex; flex-direction: column; justify-content: center; gap: 0; }
+.brand .bword {
+  font-size: 9.5px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--fg-3); line-height: 1;
+}
+.brand .btag { display: none; }
+.brand.lg .binfo { gap: 5px; transform: translateY(-1px); } /* land the "C" cap-center on the gem's vertical middle */
+.brand.lg .bword {
+  font-size: 17px; font-weight: 700; letter-spacing: -.02em; text-transform: none; color: var(--fg-1);
+}
+.brand.lg .btag { display: block; font-size: 10px; letter-spacing: .04em; color: var(--fg-4); line-height: 1; }
+
+.progress { display: flex; gap: 4px; align-items: center; }
+.progress i {
+  height: 2px; width: 14px; border-radius: 2px;
+  background: var(--studs-border-sub); transition: all .4s ease;
+}
+.progress i.done { background: rgba(47, 169, 140, 0.36); }
+.progress i.now { width: 24px; background: var(--studs-accent); box-shadow: 0 0 6px rgba(16, 185, 129, .4); }
+
+/* ── typography ─────────────────────────────────────────── */
+.eyebrow {
+  font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--studs-accent-soft);
+}
+.title {
+  font-size: 27px; font-weight: 700; letter-spacing: -.02em; line-height: 1.12;
+  color: var(--fg-1); margin-top: 8px;
+}
+.title.big { font-size: 30px; }
+.title em { font-style: normal; color: var(--studs-accent); }
+.sub { font-size: 14px; line-height: 1.62; color: var(--fg-2); margin-top: 10px; max-width: 42ch; }
+.sub.center { margin-left: auto; margin-right: auto; }
+
+/* ── buttons ────────────────────────────────────────────── */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  border: none; font-family: var(--font); font-size: .8rem; font-weight: 600; letter-spacing: .02em;
+  border-radius: 9999px; padding: .4rem 1.1rem; text-decoration: none;
+  transition: transform .14s var(--ease), filter .2s var(--ease), box-shadow .2s var(--ease);
+}
+.btn:active { transform: scale(.97); }
+.btn-primary {
+  position: relative; overflow: hidden; color: #fff;
+  background: linear-gradient(135deg, var(--studs-accent), var(--studs-accent));
+  border: 1px solid var(--studs-accent);
+  box-shadow:
+    0 0 12px color-mix(in srgb, var(--studs-accent) 45%, transparent),
+    0 1px 3px rgba(0, 0, 0, .25),
+    inset 0 1px 0 rgba(255, 255, 255, .18);
+  backdrop-filter: blur(12px);
+}
+.btn-primary::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(135deg, rgba(255, 255, 255, .18) 0%, transparent 55%);
+}
+.btn-primary:hover {
+  transform: translateY(-1px); filter: brightness(1.12); color: #fff;
+  box-shadow:
+    0 0 22px color-mix(in srgb, var(--studs-accent) 70%, transparent),
+    0 0 0 1.5px var(--studs-accent), 0 4px 14px rgba(0, 0, 0, .35),
+    inset 0 1px 0 rgba(255, 255, 255, .22);
+}
+.btn-ghost {
+  background: var(--studs-panel-bg); border: 1px solid var(--studs-border);
+  color: var(--fg-2); font-weight: 500; backdrop-filter: blur(12px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .25), inset 0 1px 0 rgba(255, 255, 255, .07);
+}
+.btn-ghost:hover {
+  background: var(--studs-panel-hover); border-color: var(--studs-accent); color: #fff;
+  transform: translateY(-1px);
+}
+.link-skip {
+  background: none; border: none; font-size: 12.5px; font-weight: 400; color: var(--fg-2);
+  padding: 10px 4px; transition: color .18s var(--ease);
+}
+.link-skip:hover { color: var(--fg-1); }
+.link-skip:focus-visible, .btn:focus-visible {
+  box-shadow: 0 0 0 3px rgba(var(--studs-accent-rgb), .55); border-radius: var(--r-full); outline: none;
+}
+/* Keep the primary CTA's glow on focus (matches the landing "Get Started" button) instead of
+   replacing it with a flat ring — the autofocused button no longer shows a hard outline. */
+.btn-primary:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 3px rgba(var(--studs-accent-rgb), .30),
+    0 0 12px color-mix(in srgb, var(--studs-accent) 45%, transparent),
+    0 1px 3px rgba(0, 0, 0, .25),
+    inset 0 1px 0 rgba(255, 255, 255, .18);
+}
+.foot { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-top: 30px; }
+.foot .note { font-size: 12px; color: var(--fg-3); }
+
+/* ── upload (drop) ──────────────────────────────────────── */
+.drop {
+  position: relative; margin-top: 22px; border-radius: 14px; padding: 26px 20px; text-align: center;
+  cursor: pointer; border: 1px solid rgba(47, 169, 140, 0.28); background: rgba(var(--studs-accent-rgb), .06);
+  transition: border-color .2s var(--ease), background .2s var(--ease), box-shadow .2s var(--ease), transform .2s var(--ease-out);
+}
+.drop:hover {
+  border-color: var(--studs-accent); background: rgba(var(--studs-accent-rgb), .10); transform: translateY(-1px);
+  box-shadow: 0 0 18px rgba(var(--studs-accent-rgb), .22), 0 0 0 1px rgba(var(--studs-accent-rgb), .18);
+}
+.drop:focus-visible { box-shadow: 0 0 0 3px rgba(var(--studs-accent-rgb), .5); border-color: var(--studs-accent); outline: none; }
+.drop.dragover {
+  border-color: var(--studs-accent); border-style: solid; background: rgba(var(--studs-accent-rgb), .13);
+  box-shadow: 0 0 28px rgba(var(--studs-accent-rgb), .35), 0 0 0 1px var(--studs-accent);
+}
+.drop .dico {
+  width: 48px; height: 48px; margin: 0 auto 12px; border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--studs-accent-soft); background: rgba(var(--studs-accent-rgb), .14); border: none;
+  transition: transform .25s var(--ease-out);
+}
+.drop:hover .dico, .drop.dragover .dico { transform: translateY(-3px); }
+.drop .dico svg { width: 24px; height: 24px; }
+.drop .dt { font-size: 14px; font-weight: 500; color: var(--fg-2); }
+.drop .dt em { font-style: normal; color: var(--studs-accent-soft); font-weight: 600; }
+.drop .dm { font-size: 12px; color: var(--fg-3); margin-top: 5px; letter-spacing: .02em; }
+.drop .ring {
+  position: absolute; inset: 0; border-radius: 14px; pointer-events: none; opacity: 0;
+  box-shadow: 0 0 0 0 rgba(var(--studs-accent-rgb), .4);
+}
+.drop.dragover .ring { animation: ringPulse 1.1s var(--ease) infinite; opacity: 1; }
+@keyframes ringPulse {
+  0% { box-shadow: 0 0 0 0 rgba(var(--studs-accent-rgb), .35); }
+  100% { box-shadow: 0 0 0 16px rgba(var(--studs-accent-rgb), 0); }
+}
+
+/* selected-file pills */
+.filelist { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; pointer-events: none; }
+.filelist:not(:empty) { pointer-events: auto; }
+.filepill {
+  display: inline-flex; align-items: center; gap: 10px; padding: 9px 14px; border-radius: var(--r-xl);
+  background: rgba(var(--studs-accent-rgb), .12); border: 1px solid rgba(var(--studs-accent-rgb), .28);
+}
+.filepill .fic {
+  width: 26px; height: 30px; border-radius: 5px; flex-shrink: 0; position: relative;
+  background: linear-gradient(160deg, #1c3a2d, #12251c); border: 1px solid rgba(var(--studs-accent-rgb), .35);
+}
+.filepill .fic::after {
+  content: "DOC"; position: absolute; bottom: 2px; left: 0; right: 0; text-align: center;
+  font-size: 6.5px; font-weight: 800; color: var(--studs-accent-soft); letter-spacing: .04em;
+}
+.filepill .fname { font-size: 13px; font-weight: 600; color: var(--fg-1); }
+.filepill .fmeta { font-size: 11px; color: var(--fg-4); }
+.filepill .fx {
+  margin-left: auto; border: none; background: none; color: var(--fg-4); font-size: 16px; line-height: 1; padding: 2px 6px;
+}
+.filepill .fx:hover { color: var(--fg-1); }
+
+/* ── parsing scan ───────────────────────────────────────── */
+.scan-wrap { display: flex; flex-direction: column; align-items: center; text-align: center; padding-top: 6px; }
+.scan-doc {
+  position: relative; width: 172px; height: 212px; border-radius: 14px; overflow: hidden; margin-bottom: 26px;
+  background: linear-gradient(160deg, #0e2018, #0a1812); border: 1px solid var(--studs-border);
+  box-shadow: 0 18px 40px -16px rgba(0, 0, 0, .7), inset 0 1px 0 rgba(255, 255, 255, .04);
+}
+.scan-doc .corner {
+  position: absolute; top: 0; right: 0; width: 34px; height: 34px;
+  background: linear-gradient(225deg, #13261d 50%, transparent 50%);
+  border-left: 1px solid var(--border); border-bottom: 1px solid var(--border);
+}
+.scan-doc .lines { position: absolute; inset: 20px 18px; display: flex; flex-direction: column; gap: 9px; }
+.scan-doc .ln { height: 7px; border-radius: 4px; background: rgba(var(--studs-accent-rgb), .13); }
+.scan-doc .ln.s { width: 62%; }
+.scan-doc .ln.m { width: 88%; }
+.scan-doc .ln.l { width: 100%; }
+.scan-doc .ln.title { height: 11px; width: 70%; background: rgba(var(--studs-accent-rgb), .28); margin-bottom: 4px; }
+.scan-beam {
+  position: absolute; left: -10%; right: -10%; height: 38px; pointer-events: none; top: -40px;
+  background: linear-gradient(180deg, transparent, rgba(var(--studs-accent-rgb), .28) 45%, rgba(var(--studs-accent-rgb), .55) 50%, rgba(var(--studs-accent-rgb), .28) 55%, transparent);
+  box-shadow: 0 0 22px rgba(var(--studs-accent-rgb), .45);
+  animation: beam 1.5s var(--ease) infinite;
+}
+.scan-doc .edge {
+  position: absolute; left: 0; right: 0; height: 2px; top: -4px;
+  background: var(--studs-accent-soft); box-shadow: 0 0 14px var(--studs-accent);
+  animation: beam 1.5s var(--ease) infinite;
+}
+@keyframes beam { 0% { top: -30px; } 100% { top: 208px; } }
+.scan-status { font-size: 12px; color: var(--fg-4); margin-top: 18px; min-height: 1.4em; font-variant-numeric: tabular-nums; }
+.scan-bar { width: 240px; max-width: 80%; height: 3px; border-radius: var(--r-full); background: var(--studs-border-sub); overflow: hidden; margin: 14px auto 0; }
+.scan-bar i {
+  display: block; height: 100%; border-radius: var(--r-full);
+  background: linear-gradient(90deg, var(--studs-accent-strong), var(--studs-accent));
+  transition: width .5s var(--ease);
+}
+
+/* ── custom scrollbar (matches the rest of the app) ─────── */
+.scrollbars { scrollbar-width: thin; scrollbar-color: var(--sb-thumb) var(--sb-track); }
+.scrollbars::-webkit-scrollbar { width: 12px; height: 12px; }
+.scrollbars::-webkit-scrollbar-track {
+  background: linear-gradient(180deg, var(--sb-track), color-mix(in srgb, var(--sb-track) 70%, #09090b 30%));
+}
+.scrollbars::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--sb-thumb), color-mix(in srgb, var(--sb-thumb) 80%, #18181b 20%));
+  border: 2px solid var(--sb-track); border-radius: var(--sb-radius);
+}
+.scrollbars::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, var(--sb-thumb-hover), var(--sb-thumb));
+}
+
+/* ── reveal: course cards (editable) ────────────────────── */
+.course-card {
+  margin-top: 14px; border-radius: 14px; overflow: hidden;
+  border: 1px solid var(--studs-border); background: var(--studs-panel-bg);
+}
+.course-card + .course-card { margin-top: 12px; }
+.cc-top {
+  display: flex; align-items: center; gap: 12px; padding: 13px 16px;
+  background: var(--studs-panel-header); border-bottom: 1px solid var(--studs-border);
+}
+.cc-swatch { width: 11px; height: 34px; border-radius: var(--r-full); background: var(--course); box-shadow: 0 0 12px rgba(96, 165, 250, .45); flex-shrink: 0; }
+.cc-head-fields { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.cc-code-input {
+  font-size: 9px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: #60a5fa;
+  background: none; border: none; padding: 0; width: 100%;
+}
+.cc-name-input {
+  font-size: 17px; font-weight: 700; letter-spacing: -.015em; color: var(--fg-1); margin-top: 2px;
+  background: none; border: none; padding: 0; width: 100%;
+}
+.cc-code-input:focus, .cc-name-input:focus { outline: none; color: var(--studs-accent-soft); }
+.cc-tag {
+  margin-left: auto; font-size: 9px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+  color: #60a5fa; background: rgba(96, 165, 250, .14); border: 1px solid rgba(96, 165, 250, .30);
+  padding: 4px 9px; border-radius: var(--r-full); flex-shrink: 0;
+}
+.cc-rows { display: flex; flex-direction: column; }
+.cc-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; font-size: 13px; gap: 12px; }
+.cc-row + .cc-row { border-top: 1px solid var(--studs-border-sub); }
+.cc-row .k { color: var(--fg-3); font-size: 11px; font-weight: 400; display: flex; align-items: center; gap: 9px; flex-shrink: 0; }
+.cc-row .k svg { width: 15px; height: 15px; color: var(--fg-3); opacity: .8; }
+.cc-input {
+  color: var(--fg-2); font-weight: 500; font-size: 13px; text-align: right; font-family: var(--font);
+  background: transparent; border: 1px solid transparent; border-radius: 8px; padding: 5px 8px; min-width: 0; flex: 1;
+  transition: border-color .15s var(--ease), background .15s var(--ease);
+}
+.cc-input:hover { border-color: var(--studs-border); }
+.cc-input:focus { outline: none; border-color: var(--studs-accent); background: rgba(var(--studs-accent-rgb), .06); color: var(--fg-1); }
+.cc-input.miss {
+  background: rgba(245, 158, 11, .14); border-color: rgba(245, 158, 11, .55); color: #fcd34d;
+}
+.cc-input.miss::placeholder { color: rgba(252, 211, 77, .7); }
+/* white calendar icon — same approach as the rest of the app (application.css) */
+.cc-input::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  cursor: pointer;
+}
+.cc-error {
+  margin: 0 16px 12px; padding: 9px 12px; border-radius: 10px; font-size: 11.5px; color: #fecaca;
+  border: 1px solid rgba(239, 68, 68, .3); background: rgba(127, 29, 29, .22);
+}
+.readonly-note { display: flex; align-items: center; gap: 7px; margin-top: 12px; font-size: 11.5px; color: var(--fg-3); }
+.readonly-note svg { width: 13px; height: 13px; }
+.skip-banner {
+  margin-top: 14px; padding: 10px 14px; border-radius: 10px; font-size: 12px; color: #fcd34d;
+  border: 1px solid rgba(245, 158, 11, .3); background: rgba(120, 53, 15, .2);
+}
+
+/* ── done ───────────────────────────────────────────────── */
+.done-wrap { text-align: center; padding: 8px 0 4px; }
+.check {
+  width: 74px; height: 74px; border-radius: var(--r-full); margin: 0 auto 22px; position: relative;
+  display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(circle at 50% 35%, rgba(var(--studs-accent-rgb), .28), rgba(var(--studs-accent-rgb), .10));
+  border: 1px solid rgba(var(--studs-accent-rgb), .40);
+}
+.step.active .check { animation: checkPop .6s var(--ease-out) both; }
+.check svg { width: 36px; height: 36px; color: var(--studs-accent-soft); }
+.check .ripple { position: absolute; inset: 0; border-radius: var(--r-full); border: 2px solid var(--studs-accent); }
+.step.active .check .ripple { animation: ripple 1.4s var(--ease-out) .15s 2; }
+@keyframes ripple { 0% { transform: scale(1); opacity: .7; } 100% { transform: scale(1.7); opacity: 0; } }
+@keyframes checkPop { from { transform: scale(.6); } 55% { transform: scale(1.08); } to { transform: scale(1); } }
+.done-actions { display: flex; flex-direction: column; align-items: center; gap: 14px; margin-top: 26px; }
+.done-actions .btn-primary { padding: 14px 28px; font-size: 15px; }
+.done-add { font-size: 12px; color: var(--fg-3); }
+.done-add b { color: var(--studs-accent); font-weight: 600; }
+
+@media (max-width: 544px) {
+  .step { padding: 26px 20px 24px; }
+  .title { font-size: 22px; }
+  .title.big { font-size: 24px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scan-beam, .scan-doc .edge, .step.active .check, .step.active .check .ripple, .step.active .stagger, .panel-aura { animation: none !important; }
+}
+
+/* ============================================================
+   REAL APP BEHIND — iframe of the actual dashboard, blurred
+   and dimmed. Un-blurs as the panel exits on finish.
+   ============================================================ */
+.scrim { transition: opacity .5s var(--ease); }
+.stage { transition: opacity .45s var(--ease); }
+body.dismissed .panel { transform: scale(.94) translateY(8px); opacity: 0; transition: transform .5s var(--ease-out), opacity .45s var(--ease); }
+
+.app-frame {
+  position: fixed; inset: 0; z-index: 0; width: 100%; height: 100%; border: none;
+  filter: blur(7px) brightness(.62) saturate(.9);
+  transition: filter .8s var(--ease);
+  pointer-events: none;
+}
+body.dismissed .app-frame { filter: blur(0) brightness(1) saturate(1); }

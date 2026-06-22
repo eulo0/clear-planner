@@ -9,6 +9,9 @@ class ApplicationController < ActionController::Base
 
   def after_sign_in_path_for(resource)
     clear_draft_session!
+    # First-login takeover: users who haven't onboarded go straight to the
+    # syllabus onboarding flow, ahead of any stored deep link.
+    return onboarding_path if resource.is_a?(User) && resource.onboard_status?
     stored_location_for(resource) || authenticated_root_path
   end
 
