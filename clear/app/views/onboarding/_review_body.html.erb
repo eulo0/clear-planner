@@ -1,0 +1,37 @@
+<%= render "head", step: 3 %>
+
+<div class="eyebrow stagger d1">Here's what we found</div>
+<h1 class="title stagger d2" style="font-size:26px">
+  <%= pluralize(@previews.size, "course") %>, ready to add.
+</h1>
+
+<% if @failed.present? || @rejected.present? %>
+  <% skipped = @failed.map { |s| s.file.attached? ? s.file.filename.to_s : s.title } + @rejected %>
+  <div class="skip-banner" style="margin-top:14px">
+    We couldn't read <%= pluralize(skipped.size, "file") %> and skipped <%= skipped.size == 1 ? "it" : "them" %>:
+    <%= skipped.join(", ") %>. The rest are ready below.
+  </div>
+<% end %>
+
+<%= form_with url: onboarding_confirm_path, method: :post, data: { turbo: false, action: "submit->onboarding#addToCalendar" } do %>
+  <div class="stagger d3 scrollbars" style="margin-top:16px; max-height:44vh; overflow-y:auto; padding-right:6px; margin-right:-6px;">
+    <% @previews.each do |preview| %>
+      <%= fields_for "courses[#{preview[:syllabus].id}]", preview[:course] do |cf| %>
+        <%= render "course_card", cf: cf, course: preview[:course], missing: preview[:missing], syllabus: preview[:syllabus] %>
+      <% end %>
+    <% end %>
+  </div>
+
+  <div class="readonly-note stagger d4">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+    Edit anything now — and every detail stays editable once it's on your calendar.
+  </div>
+
+  <div class="foot stagger d5">
+    <%= link_to "Discard", onboarding_skip_path, class: "link-skip", data: { turbo_method: :post, action: "onboarding#skip" } %>
+    <button type="submit" class="btn btn-primary">
+      Add to my calendar
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+    </button>
+  </div>
+<% end %>

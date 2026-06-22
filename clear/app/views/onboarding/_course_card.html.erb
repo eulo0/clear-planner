@@ -1,0 +1,78 @@
+<%# locals: cf (fields builder), course, missing, syllabus %>
+<% missing ||= [] %>
+<% miss = ->(f) { "cc-input #{'miss' if missing.include?(f)}" } %>
+
+<div class="course-card">
+  <% if course.errors.any? %>
+    <div class="cc-error"><%= course.errors.full_messages.to_sentence %></div>
+  <% end %>
+
+  <div class="cc-top">
+    <span class="cc-swatch" style="background: <%= course.color.presence || "#60a5fa" %>; box-shadow: 0 0 12px <%= course.color.presence || "#60a5fa" %>66;"></span>
+    <div class="cc-head-fields">
+      <%= cf.text_field :code, class: "cc-code-input", placeholder: "COURSE CODE" %>
+      <%= cf.text_field :title, class: "cc-name-input", placeholder: "Course name" %>
+    </div>
+    <span class="cc-tag">Course</span>
+  </div>
+
+  <div class="cc-rows">
+    <div class="cc-row">
+      <span class="k">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-3.3 3.6-6 8-6s8 2.7 8 6"/></svg>
+        Instructor
+      </span>
+      <%= cf.text_field :professor, class: "cc-input", placeholder: "—" %>
+    </div>
+
+    <div class="cc-row">
+      <span class="k">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
+        Meets *
+      </span>
+      <%= cf.text_field :meeting_days, class: miss.call(:meeting_days), placeholder: "e.g. MWF" %>
+    </div>
+
+    <div class="cc-row">
+      <span class="k">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+        Time *
+      </span>
+      <span style="display:flex; gap:6px; align-items:center; flex:1; justify-content:flex-end;">
+        <%= cf.text_field :start_time, class: miss.call(:start_time), placeholder: "09:00", style: "max-width:92px" %>
+        <span style="color:var(--fg-4)">–</span>
+        <%= cf.text_field :end_time, class: "cc-input", placeholder: "09:50", style: "max-width:92px" %>
+      </span>
+    </div>
+
+    <div class="cc-row">
+      <span class="k">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
+        Dates *
+      </span>
+      <span style="display:flex; gap:6px; align-items:center; flex:1; justify-content:flex-end;">
+        <%= cf.date_field :start_date, class: miss.call(:start_date), style: "max-width:140px" %>
+        <span style="color:var(--fg-4)">–</span>
+        <%= cf.date_field :end_date, class: miss.call(:end_date), style: "max-width:140px" %>
+      </span>
+    </div>
+
+    <div class="cc-row">
+      <span class="k">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21V8l9-5 9 5v13"/><path d="M9 21v-6h6v6"/></svg>
+        Term
+      </span>
+      <%= cf.text_field :term, class: "cc-input", placeholder: "—" %>
+    </div>
+
+    <div class="cc-row">
+      <span class="k">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-5.5-7-11a7 7 0 0 1 14 0c0 5.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>
+        Location
+      </span>
+      <%= cf.text_field :location, class: "cc-input", placeholder: "—" %>
+    </div>
+  </div>
+
+  <%= cf.hidden_field :color, value: course.color.presence || "#34D399" %>
+</div>

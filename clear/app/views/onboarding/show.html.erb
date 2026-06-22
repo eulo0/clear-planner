@@ -1,0 +1,114 @@
+<% content_for :title, "Welcome to Clear" %>
+
+<div class="steps"
+     data-controller="onboarding"
+     data-onboarding-max-value="<%= OnboardingController::MAX_FILES %>"
+     data-onboarding-files-url-value="<%= onboarding_files_path %>"
+     data-onboarding-status-url-value="<%= onboarding_status_path %>"
+     data-onboarding-review-url-value="<%= onboarding_review_path %>"
+     data-onboarding-confirm-url-value="<%= onboarding_confirm_path %>"
+     data-onboarding-skip-url-value="<%= onboarding_skip_path %>"
+     data-onboarding-dashboard-url-value="<%= authenticated_root_path %>">
+
+  <%# ── Step 1 · Welcome ───────────────────────────────────── %>
+  <section class="step" data-step="0" data-onboarding-target="step">
+    <%= render "head", step: 0, big: true %>
+    <div class="eyebrow stagger d1">Welcome to Clear</div>
+    <h1 class="title big stagger d2" id="stepTitle">Let's build <em>your</em> quarter.</h1>
+    <p class="sub stagger d3">
+      In about thirty seconds we'll turn your course syllabi into a calendar you can actually
+      plan around. No manual entry and no copying dates by hand.
+    </p>
+    <div class="foot stagger d4">
+      <%= link_to "Skip for now", onboarding_skip_path, class: "link-skip", data: { turbo_method: :post, action: "onboarding#skip" } %>
+      <button type="button" class="btn btn-primary" data-action="onboarding#toUpload" data-autofocus>
+        Get started
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </button>
+    </div>
+  </section>
+
+  <%# ── Step 2 · Upload ────────────────────────────────────── %>
+  <section class="step" data-step="1" data-onboarding-target="step">
+    <%= render "head", step: 1 %>
+    <div class="eyebrow">Step 1 · Your syllabus</div>
+    <h1 class="title">Have a syllabus?</h1>
+    <p class="sub">Drop in one or more PDFs or Word docs. Clear reads the course, instructor, and meeting times for you.</p>
+
+    <%= form_with url: onboarding_files_path, method: :post, html: { multipart: true }, data: { turbo: false, action: "submit->onboarding#submitFiles" } do %>
+      <div class="drop" role="button" tabindex="0"
+           data-onboarding-target="drop" data-autofocus
+           data-action="click->onboarding#browse keydown->onboarding#keyBrowse dragenter->onboarding#dragover dragover->onboarding#dragover dragleave->onboarding#dragleave drop->onboarding#drop">
+        <span class="ring"></span>
+        <div class="dico">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M5 16v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2"/></svg>
+        </div>
+        <div class="dt">Drag &amp; drop, or <em>click to browse</em></div>
+        <div class="dm">PDF, DOC or DOCX · up to <%= OnboardingController::MAX_FILES %> files</div>
+        <div class="filelist" data-onboarding-target="filelist" data-action="click->onboarding#stopPropagation"></div>
+      </div>
+
+      <%= file_field_tag "files[]", multiple: true, accept: ".pdf,.doc,.docx",
+            style: "display:none",
+            data: { onboarding_target: "input", action: "change->onboarding#filesChosen" } %>
+
+      <div class="foot">
+        <%= link_to "I don't have one — skip", onboarding_skip_path, class: "link-skip", data: { turbo_method: :post, action: "onboarding#skip" } %>
+        <button type="submit" class="btn btn-primary" data-onboarding-target="submit" style="display:none">
+          <span>Read my <span data-onboarding-target="submitNoun">syllabus</span></span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </button>
+      </div>
+    <% end %>
+  </section>
+
+  <%# ── Step 3 · Parsing (live scan) ───────────────────────── %>
+  <section class="step" data-step="2" data-onboarding-target="step">
+    <%= render "head", step: 2 %>
+    <div class="scan-wrap">
+      <div class="scan-doc" aria-hidden="true">
+        <div class="corner"></div>
+        <div class="lines">
+          <div class="ln title"></div>
+          <div class="ln l"></div><div class="ln m"></div><div class="ln s"></div>
+          <div class="ln l"></div><div class="ln m"></div><div class="ln s"></div>
+          <div class="ln l"></div><div class="ln m"></div>
+        </div>
+        <div class="scan-beam"></div>
+        <div class="edge"></div>
+      </div>
+      <div class="eyebrow" style="margin-bottom:8px">Step 2 · Reading your syllabus</div>
+      <h1 class="title" style="font-size:24px" data-onboarding-target="scanTitle" aria-live="polite">Reading your syllabus…</h1>
+      <div class="scan-status" data-onboarding-target="scanStatus" role="status" aria-live="polite">Scanning document structure…</div>
+      <div class="scan-bar"><i data-onboarding-target="scanBar"></i></div>
+    </div>
+  </section>
+
+  <%# ── Step 4 · Reveal (filled from /onboarding/review) ────── %>
+  <section class="step" data-step="3" data-onboarding-target="step">
+    <div data-onboarding-target="reveal"></div>
+  </section>
+
+  <%# ── Step 5 · Done ──────────────────────────────────────── %>
+  <section class="step" data-step="4" data-onboarding-target="step">
+    <%= render "head", step: 4 %>
+    <div class="done-wrap">
+      <div class="check">
+        <span class="ripple"></span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5 11-11"/></svg>
+      </div>
+      <div class="eyebrow">You're all set</div>
+      <h1 class="title" style="margin-top:8px">Your quarter is on the calendar.</h1>
+      <p class="sub center">Your courses are now in your schedule. Add more anytime — or just let Clear keep your week in order.</p>
+      <div class="done-actions">
+        <%= link_to authenticated_root_path, class: "btn btn-primary", data: { action: "onboarding#finish" } do %>
+          Take me to my calendar
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        <% end %>
+        <div class="done-add">
+          Added <b data-onboarding-target="doneCourses">your courses</b> · <b data-onboarding-target="doneSessions">weekly sessions</b>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>

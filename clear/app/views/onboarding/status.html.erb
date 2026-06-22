@@ -1,0 +1,32 @@
+<% content_for :title, "Reading your syllabus" %>
+<% content_for :head do %>
+  <meta http-equiv="refresh" content="2">
+<% end %>
+<% pct = @total_count.positive? ? (100.0 * @done_count / @total_count).round : 0 %>
+
+<section class="step">
+  <%= render "head", step: 2 %>
+
+  <div class="scan-wrap">
+    <div class="scan-doc" aria-hidden="true">
+      <div class="corner"></div>
+      <div class="lines">
+        <div class="ln title"></div>
+        <div class="ln l"></div><div class="ln m"></div><div class="ln s"></div>
+        <div class="ln l"></div><div class="ln m"></div><div class="ln s"></div>
+        <div class="ln l"></div><div class="ln m"></div>
+      </div>
+      <div class="scan-beam"></div>
+      <div class="edge"></div>
+    </div>
+
+    <div class="eyebrow" style="margin-bottom:8px">Step 2 · Reading your syllabus</div>
+    <h1 class="title" style="font-size:24px" aria-live="polite">
+      <%= @total_count > 1 ? "Reading your #{@total_count} syllabi…" : "Reading your syllabus…" %>
+    </h1>
+    <div class="scan-status" role="status" aria-live="polite">
+      Pulling out your courses, class times, and key dates · <%= @done_count %> of <%= @total_count %> done
+    </div>
+    <div class="scan-bar"><i style="width: <%= pct %>%"></i></div>
+  </div>
+</section>

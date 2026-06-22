@@ -115,6 +115,9 @@ application.register("modal", ModalController)
 import NotificationsDropdownController from "./notifications_dropdown_controller"
 application.register("notifications-dropdown", NotificationsDropdownController)
 
+import OnboardingController from "./onboarding_controller"
+application.register("onboarding", OnboardingController)
+
 import PdfPreviewController from "./pdf_preview_controller"
 application.register("pdf-preview", PdfPreviewController)
 

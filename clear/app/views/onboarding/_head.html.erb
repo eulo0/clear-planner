@@ -1,0 +1,13 @@
+<%# locals: step (0..4), big (default false) %>
+<% big = local_assigns.fetch(:big, false) %>
+<div class="head">
+  <div class="brand <%= "lg" if big %>">
+    <span class="gem"><%= image_tag "simple_logo.png", alt: "Clear", width: 56, height: 56, style: "width:100%;height:100%;display:block;object-fit:contain;" %></span>
+    <div class="binfo">
+      <div class="bword">Clear</div>
+    </div>
+  </div>
+  <div class="progress" aria-hidden="true">
+    <% 5.times do |i| %><i class="<%= "done" if i < step %><%= "now" if i == step %>"></i><% end %>
+  </div>
+</div>

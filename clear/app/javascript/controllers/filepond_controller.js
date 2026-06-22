@@ -3,6 +3,11 @@ import * as FilePond from "filepond"
 
 export default class extends Controller {
   static targets = ["input"]
+  static values = {
+    allowMultiple: { type: Boolean, default: false },
+    maxFiles: { type: Number, default: 1 },
+    label: { type: String, default: "" }
+  }
 
   connect() {
     if (!this.hasInputTarget) return
@@ -12,8 +17,8 @@ export default class extends Controller {
     this._beforeCache = () => this.teardown()
     document.addEventListener("turbo:before-cache", this._beforeCache)
     this.pond = FilePond.create(this.inputTarget, {
-      allowMultiple: false,
-      maxFiles: 1,
+      allowMultiple: this.allowMultipleValue,
+      maxFiles: this.allowMultipleValue ? this.maxFilesValue : 1,
       storeAsFile: true,
       credits: false,
       acceptedFileTypes: [
@@ -21,9 +26,19 @@ export default class extends Controller {
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         "application/msword"
       ],
-      labelIdle: "<span style=\"color: rgb(212 212 216);\">Drag & Drop your file or <span style=\"color: var(--studs-accent); text-decoration: underline; text-decoration-color: currentColor;\">Browse</span></span>",
+      labelIdle: this.labelValue || this.defaultLabel(),
       oninit: () => this.element.classList.add("filepond-ready")
     })
+  }
+
+  defaultLabel() {
+    const browse = (text) =>
+      `<span style="color: var(--studs-accent); text-decoration: underline; text-decoration-color: currentColor;">${text}</span>`
+
+    if (this.allowMultipleValue) {
+      return `<span style="color: rgb(212 212 216);">Drag & drop, or ${browse("click to browse")}</span>`
+    }
+    return `<span style="color: rgb(212 212 216);">Drag & Drop your file or ${browse("Browse")}</span>`
   }
 
   disconnect() {
