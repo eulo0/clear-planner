@@ -141,6 +141,9 @@
 }
 /* Weekends render identically to weekdays (no weekend background/number override). */
 .yr-day.is-out { background: rgba(0, 0, 0, 0.30); }
+/* Drill-down overlay: covers the cell so clicking the day opens the day view. */
+.yr-day-link { position: absolute; inset: 0; z-index: 2; cursor: pointer; }
+.yr-day:not(.has-ev):hover .yr-day-link { background: color-mix(in srgb, var(--studs-accent) 6%, transparent); }
 .yr-daynum { font-size: 10.5px; font-weight: 500; color: #e4e4e7; line-height: 16px; height: 16px; font-variant-numeric: tabular-nums; }
 .yr-day.is-out .yr-daynum { color: #71717a; opacity: 0.7; }
 .yr-day.has-ev { cursor: pointer; background: color-mix(in srgb, var(--studs-accent) calc(var(--n, 1) * 2%), var(--studs-panel-bg-2)); }
@@ -228,6 +231,7 @@
           name: "calendar_dashboard",
           selected_value: "yearly",
           items: [
+            { label: "Daily", value: "daily" },
             { label: "Weekly", value: "weekly" },
             { label: "Monthly", value: "monthly" },
             { label: "Yearly", value: "yearly" }
@@ -310,6 +314,15 @@
                         <span class="yr-dot" style="background: <%= color %>; color: <%= color %>;"></span>
                       <% end %>
                     </span>
+                  <% end %>
+                  <%# Drill-down: click an in-month day to open it in the day view. Overlay link
+                      sits above the cell content; the hover tooltip still works because the
+                      year-calendar controller resolves the cell via closest(".yr-day.has-ev"). %>
+                  <% if in_month %>
+                    <%= link_to dashboard_path(view: "daily", start_date: date, filter: current_filter),
+                          class: "yr-day-link",
+                          data: { turbo_frame: "dashboard_calendar" },
+                          "aria-label": "View #{date.strftime('%A, %B %-d')}" do %><% end %>
                   <% end %>
                 </div>
               <% end %>

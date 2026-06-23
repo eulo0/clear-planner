@@ -179,6 +179,10 @@ export default class extends Controller {
     if (scope) body.set("scope", scope)
     const filter = new URLSearchParams(window.location.search).get("filter")
     if (filter) body.set("filter", filter)
+    // Tell the server to re-render the day frame (not the default weekly/monthly) when the
+    // drag happened in the daily view — detected by the day-view marker in the DOM. Without
+    // this the reschedule stream rebuilds the weekly frame and the view flips to weekly.
+    if (document.querySelector('[data-calendar-view-target="dayMarker"]')) body.set("view", "daily")
 
     fetch(el.dataset.rescheduleUrl, {
       method: "PATCH",

@@ -40,7 +40,7 @@
           variant: :dashboard_view,
           name: "calendar_dashboard",
           selected_value: "monthly",
-          items: [
+          items: (@project ? [] : [ { label: "Daily", value: "daily" } ]) + [
             { label: "Weekly", value: "weekly" },
             { label: "Monthly", value: "monthly" },
           ] + (@project ? [] : [ { label: "Yearly", value: "yearly" } ])
@@ -209,6 +209,11 @@
                     <% end %>
                   </div>
                 </div>
+                <%# Drill-down: click the day to open it in the day view. %>
+                <%= link_to dashboard_path(view: "daily", start_date: day, filter: course_filter_id),
+                      class: "absolute inset-0 z-10 hover:bg-white/5 transition-colors",
+                      data: { turbo_frame: "dashboard_calendar" },
+                      "aria-label": "View #{day.strftime('%A, %B %-d')}" do %><% end %>
               </td>
             <% end %>
           </tr>

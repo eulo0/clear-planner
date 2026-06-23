@@ -2,7 +2,7 @@ class DashboardController < ApplicationController
   layout "app_shell"
   before_action :authenticate_user!
 
-  CALENDAR_VIEWS = %w[weekly monthly yearly].freeze
+  CALENDAR_VIEWS = %w[weekly monthly yearly daily].freeze
 
   def show
     @start_date       = resolve_start_date
@@ -13,11 +13,17 @@ class DashboardController < ApplicationController
     # An explicit ?view param wins; otherwise fall back to the saved preference cookie so a
     # bare /dashboard (e.g. the left-nav link) renders the user's last view server-side — no
     # client round-trip, no flash. The cookie is written client-side in calendar_view_controller.
-    @view             = params[:view].presence || saved_calendar_view
+    # The param is validated against the allow-list (same as the cookie) so a tampered/garbage
+    # ?view can't drive rendering — unknown values fall through to the saved/default view.
+    requested_view    = params[:view].presence
+    requested_view    = nil unless CALENDAR_VIEWS.include?(requested_view)
+    @view             = requested_view || saved_calendar_view
 
     # Lazy: only the selected view's data is computed.
     if @view == "yearly"
       build_year_calendar
+    elsif @view == "daily"
+      build_day_occurrences
     else
       build_week_and_month_occurrences
     end
@@ -68,7 +74,7 @@ class DashboardController < ApplicationController
     # The full-page dashboard always opens on "now"; in-frame navigation passes
     # start_date. The year view also honors start_date on a full load so a
     # specific year is bookmarkable.
-    honor_param = turbo_frame_request? || params[:view] == "yearly"
+    honor_param = turbo_frame_request? || params[:view] == "yearly" || params[:view] == "daily"
     if honor_param && params[:start_date].present?
       Date.parse(params[:start_date])
     else
@@ -91,6 +97,12 @@ class DashboardController < ApplicationController
     )
     @month_events_by_date = group_occurrences_by_date(@month_occurrences)
     @month_date = @start_date
+  end
+
+  def build_day_occurrences
+    range_start = @start_date.beginning_of_day
+    range_end   = @start_date.end_of_day
+    @occurrences = calendar_occurrences_for_range(range_start, range_end, draft: @draft, filter: @calendar_filter)
   end
 
   def build_year_calendar

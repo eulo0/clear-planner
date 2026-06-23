@@ -491,9 +491,12 @@ class EventsController < ApplicationController
   def render_reschedule_stream
     project     = @event.project
     start_date  = parse_start_date(params[:start_date])
+    # Daily view (dashboard-only) must re-render the single-day frame, not the default weekly
+    # one — otherwise dragging/resizing in the day view flips it back to weekly.
+    daily       = (params[:view] == "daily")
     week_start  = start_date.beginning_of_week
-    range_start = week_start.beginning_of_day
-    range_end   = (week_start + 6.days).end_of_day
+    range_start = daily ? start_date.beginning_of_day : week_start.beginning_of_day
+    range_end   = daily ? start_date.end_of_day : (week_start + 6.days).end_of_day
 
     if project.present?
       events            = project.occurrences_for_week(start_date)
@@ -501,7 +504,7 @@ class EventsController < ApplicationController
       locals = { events: events, start_date: start_date, draft: nil, blocked_intervals: blocked_intervals }
     else
       events = calendar_occurrences_for_range(range_start, range_end, filter: params[:filter])
-      locals = { events: events, start_date: start_date, draft: nil }
+      locals = { events: events, start_date: start_date, draft: nil, view: (daily ? "daily" : nil) }
     end
 
     render turbo_stream: [

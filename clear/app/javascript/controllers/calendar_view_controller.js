@@ -1,10 +1,10 @@
 import { Controller } from "@hotwired/stimulus"
 
 const DASHBOARD_VIEW_TOGGLE_NAME = "calendar_dashboard"
-const VIEWS = ["weekly", "monthly", "yearly"]
+const VIEWS = ["weekly", "monthly", "yearly", "daily"]
 
 export default class extends Controller {
-  static targets = ["weeklyWrapper", "monthlyWrapper", "yearMarker"]
+  static targets = ["weeklyWrapper", "monthlyWrapper", "yearMarker", "dayMarker"]
   static values = { baseUrl: String }
 
   connect() {
@@ -12,6 +12,14 @@ export default class extends Controller {
     // reads the same cookie), so the marker is authoritative here — no fetch, no flash.
     if (this.hasYearMarkerTarget) {
       this.currentView = "yearly"
+      this.syncToggleDropdowns()
+      return
+    }
+
+    // The day frame is likewise server-rendered (it carries a single day's grid, not the
+    // weekly/monthly wrappers), so its marker is authoritative — same pattern as yearly.
+    if (this.hasDayMarkerTarget) {
+      this.currentView = "daily"
       this.syncToggleDropdowns()
       return
     }
@@ -32,10 +40,10 @@ export default class extends Controller {
     // /dashboard renders the last view directly — see DashboardController#saved_calendar_view.
     this.persistView(nextView)
 
-    if (nextView === "yearly") {
-      this.navigateToView("yearly")        // weekly/monthly aren't in the DOM yet — fetch
-    } else if (this.hasYearMarkerTarget) {
-      this.navigateToView(null)            // leaving the year frame — fetch weekly/monthly back
+    if (nextView === "yearly" || nextView === "daily") {
+      this.navigateToView(nextView)        // server-rendered views — weekly/monthly aren't in the DOM yet, fetch
+    } else if (this.hasYearMarkerTarget || this.hasDayMarkerTarget) {
+      this.navigateToView(null)            // leaving a server-rendered frame — fetch weekly/monthly back
     } else {
       this.syncView()                      // weekly <-> monthly are both present — instant
       if (event?.detail) this.focusActiveViewToggle()

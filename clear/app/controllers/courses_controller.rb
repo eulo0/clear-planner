@@ -407,15 +407,18 @@ class CoursesController < ApplicationController
   # (project calendars render events only), so there is no project branch.
   def render_reschedule_stream
     start_date  = parse_start_date(params[:start_date])
+    # Daily view (dashboard-only) must re-render the single-day frame, not the default weekly
+    # one — otherwise dragging/resizing a course in the day view flips it back to weekly.
+    daily       = (params[:view] == "daily")
     week_start  = start_date.beginning_of_week
-    range_start = week_start.beginning_of_day
-    range_end   = (week_start + 6.days).end_of_day
+    range_start = daily ? start_date.beginning_of_day : week_start.beginning_of_day
+    range_end   = daily ? start_date.end_of_day : (week_start + 6.days).end_of_day
 
     occurrences = calendar_occurrences_for_range(range_start, range_end, filter: params[:filter])
 
     render turbo_stream: [
       turbo_stream.replace("dashboard_calendar", partial: "dashboard/calendar_frame",
-        locals: { events: occurrences, start_date: start_date, draft: nil }),
+        locals: { events: occurrences, start_date: start_date, draft: nil, view: (daily ? "daily" : nil) }),
       turbo_stream.replace("agenda_list", partial: "agenda/list"),
       turbo_stream.update("event_popover", "")
     ]
