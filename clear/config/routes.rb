@@ -77,6 +77,7 @@ Rails.application.routes.draw do
       patch :update_grade_calculation
       get   :grades
       post  :convert
+      patch :reschedule
     end
     resources :course_items, only: %i[index create show edit update destroy]
   end
