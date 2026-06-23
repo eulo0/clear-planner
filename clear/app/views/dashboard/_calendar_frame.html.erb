@@ -9,6 +9,27 @@
       <%= render "dashboard/year_calendar",
            year_calendar: local_assigns[:year_calendar] || @year_calendar %>
     </div>
+  <% elsif local_assigns[:view] == "daily" %>
+    <div data-controller="calendar-view"
+         data-calendar-view-base-url-value="<%= base_url %>"
+         class="h-full min-h-0 w-full flex flex-col">
+      <%# Marker so the toggle controller knows the day frame is server-rendered (like yearly). %>
+      <span data-calendar-view-target="dayMarker" hidden></span>
+      <%# Wrap exactly like the weekly view (weeklyWrapper) so the shell sizes/scrolls the same
+          way — without this height-context match the shell scrolls internally and its scrollbar
+          squares off the rounded corner (whereas weekly/monthly/yearly stay rounded). %>
+      <div class="w-full min-w-0">
+        <%= render "dashboard/calendar",
+             events: events,
+             start_date: start_date,
+             days: [ start_date.to_date ],
+             view: "daily",
+             draft: local_assigns[:draft],
+             courses: local_assigns[:courses],
+             course_filter_id: local_assigns[:course_filter_id],
+             blocked_intervals: local_assigns[:blocked_intervals] || [] %>
+      </div>
+    </div>
   <% else %>
     <div data-controller="calendar-view"
          data-calendar-view-base-url-value="<%= base_url %>"
