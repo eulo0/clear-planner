@@ -7,7 +7,7 @@ class EventsController < ApplicationController
   layout "app_shell"
 
   before_action :authenticate_user!
-  before_action :set_event, only: %i[show edit update destroy convert]
+  before_action :set_event, only: %i[show edit update destroy convert reschedule]
 
   def index
     @q = params[:q].to_s.strip
@@ -325,7 +325,213 @@ class EventsController < ApplicationController
     end
   end
 
+  # Drag-and-drop / resize from the weekly view.
+  # Live mode: instant write. Draft mode: stage the change as a draft op so it
+  # previews as an EDITED pill and commits on apply (see DRAG_DROP_EVENTS_PLAN.md).
+  def reschedule
+    # .to_s collapses a missing param (nil → "") into the same unparseable case
+    # as malformed input: Time.zone.parse returns nil rather than raising, so a
+    # bad/incomplete request yields a clean 400 instead of an unhandled 500.
+    new_start = Time.zone.parse(params[:new_starts_at].to_s)
+    new_end   = Time.zone.parse(params[:new_ends_at].to_s)
+    return head :bad_request if new_start.nil? || new_end.nil?
+
+    if in_draft_mode?
+      stage_draft_reschedule(new_start, new_end)
+      return render_draft_reschedule_stream
+    end
+
+    if !@event.recurring?
+      @event.update!(starts_at: new_start, ends_at: new_end)
+    else
+      occ_date = parse_start_date(params[:start_date])
+      case params[:scope]
+      when "this"
+        reschedule_single_occurrence(reschedule_anchor_date(occ_date), new_start, new_end)
+      when "following"
+        reschedule_this_and_following(occ_date, new_start, new_end)
+      when "all"
+        @event.update!(whole_series_shift_attrs(occ_date, new_start, new_end))
+      end
+    end
+
+    render_reschedule_stream
+  end
+
   private
+
+  # Stage a drag/resize as draft operations instead of writing live.
+  def stage_draft_reschedule(new_start, new_end)
+    occ_date = parse_start_date(params[:start_date])
+    draft = current_user_draft
+
+    if @draft_temp_id.present?
+      # Draft-created event: just move it (proxy renders as non-recurring).
+      existing = draft.find_create_op("event", @draft_temp_id)&.fetch("data", {}) || {}
+      draft.update_create("event", @draft_temp_id,
+        existing.merge("starts_at" => new_start.iso8601, "ends_at" => new_end.iso8601))
+      return
+    end
+
+    if !@event.recurring?
+      stage_event_update(@event.id, starts_at: new_start.iso8601, ends_at: new_end.iso8601)
+    else
+      case params[:scope]
+      when "this"
+        anchor = reschedule_anchor_date(occ_date)
+        if restores_rule_slot?(anchor, new_start, new_end)
+          draft.remove_reschedule_occurrence("event", @event.id, anchor)
+        else
+          draft.add_reschedule_occurrence("event", @event.id, anchor,
+            starts_at: new_start.iso8601, ends_at: new_end.iso8601)
+        end
+      when "all"
+        stage_event_update(@event.id, whole_series_shift_attrs(occ_date, new_start, new_end))
+      when "following"
+        day_delta = (new_start.to_date - occ_date).to_i
+        stage_event_update(@event.id, repeat_until: (occ_date - 1.day).iso8601)
+        draft.add_create("event", {
+          "title" => @event.title, "color" => @event.color, "location" => @event.location,
+          "description" => @event.description, "priority" => @event.priority,
+          "starts_at" => new_start.iso8601, "ends_at" => new_end.iso8601,
+          "recurring" => true,
+          "repeat_days" => @event.repeat_days.map { |wd| (wd + day_delta) % 7 },
+          "repeat_until" => @event.repeat_until.iso8601
+        })
+      end
+    end
+  end
+
+  # Merge new attributes into any pending update op for this event so a drag
+  # doesn't clobber other staged edits (add_update is a full replace).
+  def stage_event_update(id, attrs)
+    existing = current_user_draft.find_update_op("event", id)&.fetch("data", {}) || {}
+    current_user_draft.add_update("event", id, existing.merge(attrs.stringify_keys))
+  end
+
+  # The original rule date an occurrence is anchored to — the override row's
+  # excluded_date. A relocated block renders at its NEW date, so the client sends
+  # that moved date as start_date but echoes the original rule date as
+  # anchor_date; re-dragging then updates the same override row instead of
+  # spawning a duplicate keyed on the moved date. Falls back to the visible date
+  # for a first-time drag of an untouched occurrence.
+  def reschedule_anchor_date(occ_date)
+    params[:anchor_date].present? ? parse_start_date(params[:anchor_date]) : occ_date
+  end
+
+  # "This occurrence only" — suppress the rule's slot on occ_date and relocate it
+  # to the new time via an Option B override row. If the drop lands exactly back
+  # on the rule's own slot the override is redundant, so drop the row entirely and
+  # let the plain rule occurrence reappear (avoids a frozen, desync-prone copy).
+  def reschedule_single_occurrence(occ_date, new_start, new_end)
+    if restores_rule_slot?(occ_date, new_start, new_end)
+      @event.event_exceptions.where(excluded_date: occ_date).destroy_all
+      return
+    end
+
+    ex = @event.event_exceptions.find_or_initialize_by(excluded_date: occ_date)
+    ex.update!(override_starts_at: new_start, override_ends_at: new_end)
+  end
+
+  # True when a single-occurrence move lands the occurrence back exactly on the
+  # slot its recurrence rule would generate for occ_date — same start instant and
+  # same duration — making any override row a no-op.
+  def restores_rule_slot?(occ_date, new_start, new_end)
+    return false unless new_start == occurrence_start_on(occ_date)
+
+    rule_end = @event.ends_at.present? ? new_start + (@event.ends_at - @event.starts_at) : nil
+    new_end == rule_end
+  end
+
+  # "All events" — attributes that shift the entire series by the drag delta,
+  # moving both the time-of-day and (if the weekday changed) every repeat day.
+  def whole_series_shift_attrs(occ_date, new_start, new_end)
+    original_occ_start = occurrence_start_on(occ_date)
+    delta_seconds = new_start - original_occ_start
+    day_delta = (new_start.to_date - occ_date).to_i
+    new_starts_at = @event.starts_at + delta_seconds
+
+    {
+      starts_at: new_starts_at.iso8601,
+      ends_at: (new_starts_at + (new_end - new_start)).iso8601,
+      repeat_days: @event.repeat_days.map { |wd| (wd + day_delta) % 7 }
+    }
+  end
+
+  # "This and following" — cap the old series the day before the drop, then spawn
+  # a new series from the drop point with the shifted weekday(s). Exceptions on or
+  # after the drop date follow the new series.
+  def reschedule_this_and_following(occ_date, new_start, new_end)
+    day_delta = (new_start.to_date - occ_date).to_i
+
+    new_event = @event.dup
+    new_event.assign_attributes(
+      starts_at: new_start,
+      ends_at: new_end,
+      repeat_until: @event.repeat_until,
+      repeat_days: @event.repeat_days.map { |wd| (wd + day_delta) % 7 }
+    )
+
+    Event.transaction do
+      @event.update!(repeat_until: occ_date - 1.day)
+      new_event.save!
+      @event.event_exceptions.where("excluded_date >= ?", occ_date).update_all(event_id: new_event.id)
+    end
+  end
+
+  # The datetime the rule would have produced for occ_date (event's time-of-day).
+  def occurrence_start_on(occ_date)
+    s = @event.starts_at.in_time_zone
+    Time.zone.local(occ_date.year, occ_date.month, occ_date.day, s.hour, s.min, s.sec)
+  end
+
+  # Re-render the weekly calendar frame after a reschedule, preserving the
+  # active course filter (params[:filter]) and start_date so the view doesn't
+  # silently reset them.
+  def render_reschedule_stream
+    project     = @event.project
+    start_date  = parse_start_date(params[:start_date])
+    week_start  = start_date.beginning_of_week
+    range_start = week_start.beginning_of_day
+    range_end   = (week_start + 6.days).end_of_day
+
+    if project.present?
+      events            = project.occurrences_for_week(start_date)
+      blocked_intervals = group_blocked_intervals(project, start_date)
+      locals = { events: events, start_date: start_date, draft: nil, blocked_intervals: blocked_intervals }
+    else
+      events = calendar_occurrences_for_range(range_start, range_end, filter: params[:filter])
+      locals = { events: events, start_date: start_date, draft: nil }
+    end
+
+    render turbo_stream: [
+      turbo_stream.replace("dashboard_calendar", partial: "dashboard/calendar_frame", locals: locals),
+      turbo_stream.replace("agenda_list", partial: "agenda/list"),
+      turbo_stream.update("event_popover", "")
+    ]
+  end
+
+  # Draft counterpart of render_reschedule_stream: re-render the weekly frame with
+  # the staged drag/resize previewed (EDITED pill, new position). Rendered
+  # unconditionally — the drag controller submits via fetch, which doesn't send a
+  # Turbo-Frame header, so the turbo_frame_request? guard in
+  # render_draft_calendar_update would wrongly fall through to a redirect.
+  def render_draft_reschedule_stream
+    draft       = current_user_draft
+    start_date  = parse_start_date(params[:start_date])
+    week_start  = start_date.beginning_of_week
+    range_start = week_start.beginning_of_day
+    range_end   = (week_start + 6.days).end_of_day
+
+    occurrences = calendar_occurrences_for_range(range_start, range_end, draft: draft, filter: params[:filter])
+
+    render turbo_stream: [
+      turbo_stream.replace("dashboard_calendar", partial: "dashboard/calendar_frame",
+        locals: { events: occurrences, start_date: start_date, draft: draft }),
+      turbo_stream.replace("agenda_list", partial: "agenda/list"),
+      turbo_stream.update("event_popover", "")
+    ]
+  end
 
   def convertible_source
     @event

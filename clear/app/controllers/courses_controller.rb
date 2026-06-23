@@ -4,7 +4,7 @@ class CoursesController < ApplicationController
   layout "app_shell"
 
   before_action :authenticate_user!
-  before_action :set_course, only: %i[show edit update destroy update_grade_weights update_grade_calculation grades convert]
+  before_action :set_course, only: %i[show edit update destroy update_grade_weights update_grade_calculation grades convert reschedule]
 
   def index
     @q = params[:q].to_s.strip
@@ -248,6 +248,30 @@ class CoursesController < ApplicationController
     end
   end
 
+  # Drag-to-move / bottom-edge resize of a course block on the weekly calendar.
+  # Courses store a single weekly meeting time (start_time/end_time + repeat_days),
+  # so every drag is a WHOLE-SERIES change — no scope prompt, no per-occurrence
+  # override rows. A vertical drag/resize rewrites the meeting time; a cross-day
+  # drag swaps the dragged weekday in repeat_days ("replace the dragged day").
+  def reschedule
+    # .to_s collapses a missing param into the unparseable case; Time.zone.parse
+    # returns nil rather than raising, yielding a clean 400 on bad input.
+    new_start = Time.zone.parse(params[:new_starts_at].to_s)
+    new_end   = Time.zone.parse(params[:new_ends_at].to_s)
+    return head :bad_request if new_start.nil? || new_end.nil?
+
+    occ_date = parse_start_date(params[:start_date])
+    attrs    = whole_series_course_attrs(occ_date, new_start, new_end)
+
+    if in_draft_mode?
+      stage_course_reschedule(attrs)
+      return render_draft_reschedule_stream
+    end
+
+    @course.update!(attrs)
+    render_reschedule_stream
+  end
+
   private
 
   def convertible_source
@@ -337,6 +361,85 @@ class CoursesController < ApplicationController
     raw.present? ? Date.parse(raw) : Date.current
   rescue ArgumentError
     Date.current
+  end
+
+  # Whole-series attributes for a course drag/resize. Always rewrites the meeting
+  # time of day; only touches repeat_days when the block was dropped on a different
+  # weekday (swap source weekday out, target weekday in). Deliberately never sets
+  # meeting_days: a changed meeting_days makes the before_validation callback
+  # re-derive repeat_days from its M–F-only string, which would clobber the swap
+  # and silently drop any weekend day. repeat_days is the calendar's source of
+  # truth; the edit form's meeting_days labels just go stale until the next save.
+  def whole_series_course_attrs(occ_date, new_start, new_end)
+    attrs = {
+      "start_time" => new_start.strftime("%H:%M:%S"),
+      "end_time"   => new_end.strftime("%H:%M:%S")
+    }
+
+    source_wday = occ_date.wday
+    target_wday = new_start.to_date.wday
+    if source_wday != target_wday
+      days = Array(@course.repeat_days).map(&:to_i)
+      attrs["repeat_days"] = (days - [ source_wday ] + [ target_wday ]).uniq.sort
+    end
+
+    attrs
+  end
+
+  # Stage a course drag as a draft op instead of writing live. A draft-created
+  # course (temp id) updates its create op in place; an existing course merges into
+  # any pending update op so the drag doesn't clobber other staged edits.
+  def stage_course_reschedule(attrs)
+    draft = current_user_draft
+
+    if @draft_temp_id.present?
+      existing = draft.find_create_op("course", @draft_temp_id)&.fetch("data", {}) || {}
+      draft.update_create("course", @draft_temp_id, existing.merge(attrs))
+      return
+    end
+
+    existing = draft.find_update_op("course", @course.id)&.fetch("data", {}) || {}
+    draft.add_update("course", @course.id, existing.merge(attrs))
+  end
+
+  # Re-render the weekly calendar frame after a live reschedule, preserving the
+  # active course filter and start_date. Courses only appear on the dashboard
+  # (project calendars render events only), so there is no project branch.
+  def render_reschedule_stream
+    start_date  = parse_start_date(params[:start_date])
+    week_start  = start_date.beginning_of_week
+    range_start = week_start.beginning_of_day
+    range_end   = (week_start + 6.days).end_of_day
+
+    occurrences = calendar_occurrences_for_range(range_start, range_end, filter: params[:filter])
+
+    render turbo_stream: [
+      turbo_stream.replace("dashboard_calendar", partial: "dashboard/calendar_frame",
+        locals: { events: occurrences, start_date: start_date, draft: nil }),
+      turbo_stream.replace("agenda_list", partial: "agenda/list"),
+      turbo_stream.update("event_popover", "")
+    ]
+  end
+
+  # Draft counterpart: re-render the weekly frame with the staged drag previewed
+  # (EDITED pill). Rendered unconditionally — the drag controller submits via fetch,
+  # which sends no Turbo-Frame header, so a turbo_frame_request? guard would wrongly
+  # fall through to a redirect.
+  def render_draft_reschedule_stream
+    draft       = current_user_draft
+    start_date  = parse_start_date(params[:start_date])
+    week_start  = start_date.beginning_of_week
+    range_start = week_start.beginning_of_day
+    range_end   = (week_start + 6.days).end_of_day
+
+    occurrences = calendar_occurrences_for_range(range_start, range_end, draft: draft, filter: params[:filter])
+
+    render turbo_stream: [
+      turbo_stream.replace("dashboard_calendar", partial: "dashboard/calendar_frame",
+        locals: { events: occurrences, start_date: start_date, draft: draft }),
+      turbo_stream.replace("agenda_list", partial: "agenda/list"),
+      turbo_stream.update("event_popover", "")
+    ]
   end
 
   def grade_weights_params

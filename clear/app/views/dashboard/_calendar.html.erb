@@ -131,8 +131,26 @@
     opacity: 0.45;
   }
 </style>
-<div class="flex h-full min-h-0 flex-col" data-controller="agenda-highlight event-popover" data-calendar-view-target="weeklyContent">
+<div class="flex h-full min-h-0 flex-col" data-controller="agenda-highlight event-popover recurring-scope-prompt" data-action="event-drag:recurring->recurring-scope-prompt#open" data-calendar-view-target="weeklyContent">
   <%= render "draft/banner", start_date: week_start_date.iso8601, active_draft: draft %>
+  <!-- Recurring-event reschedule scope prompt -->
+  <div data-recurring-scope-prompt-target="overlay"
+       class="hidden fixed inset-0 z-[120] flex items-center justify-center"
+       data-action="click->recurring-scope-prompt#cancel">
+    <div class="absolute inset-0 bg-black/60"></div>
+    <div class="relative w-52 rounded-lg border border-zinc-700 py-1"
+         style="background-color: #18181b; box-shadow: 0 8px 30px rgba(0,0,0,0.7);"
+         onclick="event.stopPropagation()">
+      <button type="button" data-scope="this" data-action="click->recurring-scope-prompt#choose"
+              class="w-full text-left px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-800 transition">
+        This event only
+      </button>
+      <button type="button" data-scope="all" data-action="click->recurring-scope-prompt#choose"
+              class="w-full text-left px-3 py-2 text-sm text-rose-300 hover:bg-rose-950/40 transition">
+        All events in series
+      </button>
+    </div>
+  </div>
   <!-- Toolbar -->
   <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
     <div>
@@ -399,7 +417,10 @@
       </div>
     <% end %>
     <!-- Body grid -->
-    <div class="grid" style="grid-template-columns: <%= time_col_px %>px repeat(7, minmax(0, 1fr));">
+    <div class="grid" style="grid-template-columns: <%= time_col_px %>px repeat(7, minmax(0, 1fr));"
+         data-controller="event-drag"
+         data-event-drag-hour-height-value="<%= hour_height_px %>"
+         data-event-drag-snap-minutes-value="30">
       <!-- Hours gutter -->
       <div style="border-right: 1px solid var(--studs-border); background-color: var(--studs-panel-bg-soft);">
         <% 24.times do |h| %>
@@ -430,6 +451,8 @@
         <% is_weekend = day.saturday? || day.sunday? %>
         <div class="relative"
              data-action="click->agenda-highlight#clearFromDay"
+             data-event-drag-target="day"
+             data-date="<%= day.iso8601 %>"
           style="border-right: 1px solid var(--studs-divider);">
           <!-- Clickable time slots -->
           <% can_create_event = @project ? @project.membership_for(current_user)&.can_edit_content? : true %>
@@ -541,6 +564,7 @@
                 {
                   record: record, model: model,
                   draft_status: e.respond_to?(:draft_status) ? e.draft_status : nil,
+                  override_date: e.respond_to?(:override_date) ? e.override_date : nil,
                   seg_start: seg_start, seg_end: seg_end,
                   top: top_px, height: height_px,
                   col: 0, group_cols: 1
@@ -659,6 +683,53 @@
                 end
               %>
               <% event_starts_epoch = (seg[:seg_start].to_f * 1000).to_i %>
+              <%# Move: events, courses, and course items. Resize: events and
+                  courses only (a course item is a point-in-time due date with no
+                  real duration). Neither on a draft-deleted block. %>
+              <% movable   = !is_draft_deleted && (model == "event" || model == "course" || model == "course_item") %>
+              <% resizable = !is_draft_deleted && (model == "event" || model == "course") %>
+              <% base_action = popover_enabled ? "click->agenda-highlight#selectFromCalendar click->event-popover#show" : nil %>
+              <% drag_action  = movable ? "#{base_action} pointerdown->event-drag#startMove".strip : base_action %>
+              <% drag_data =
+                if movable && model == "event"
+                  {
+                    event_drag_target: "event",
+                    reschedule_url: reschedule_event_path(record),
+                    event_recurring: record.recurring?,
+                    occurrence_date: seg[:seg_start].to_date.iso8601,
+                    # Stable origin date for override rows: a relocated block shows
+                    # at its new date but must re-target the row keyed on its
+                    # original rule date so re-drags don't duplicate it.
+                    anchor_date: (seg[:override_date] || seg[:seg_start].to_date).iso8601,
+                    event_start: seg[:seg_start].iso8601,
+                    event_end: seg[:seg_end].iso8601
+                  }
+                elsif movable && model == "course"
+                  # Courses are whole-series only: no scope prompt (event_recurring
+                  # omitted, so event-drag#submit takes its direct-submit branch)
+                  # and no anchor_date (no per-occurrence override rows).
+                  {
+                    event_drag_target: "event",
+                    reschedule_url: reschedule_course_path(record),
+                    occurrence_date: seg[:seg_start].to_date.iso8601,
+                    event_start: seg[:seg_start].iso8601,
+                    event_end: seg[:seg_end].iso8601
+                  }
+                elsif movable && model == "course_item"
+                  # Course items are a single point-in-time due date: drag moves
+                  # due_at only. event_recurring omitted (direct submit), no
+                  # anchor_date, and no resize handle (see `resizable` below).
+                  {
+                    event_drag_target: "event",
+                    reschedule_url: reschedule_course_course_item_path(record.course, record),
+                    occurrence_date: seg[:seg_start].to_date.iso8601,
+                    event_start: seg[:seg_start].iso8601,
+                    event_end: seg[:seg_end].iso8601
+                  }
+                else
+                  {}
+                end
+              %>
               <%= link_to href,
                 id: highlight_id,
                 class: "#{is_due ? due_classes : event_classes}#{seg[:seg_start] < Time.current ? " is-past" : ""}",
@@ -667,9 +738,9 @@
                   calendar_event: true,
                   event_starts_at: event_starts_epoch,
                   turbo_frame: popover_enabled ? "event_popover" : nil,
-                  action: popover_enabled ? "click->agenda-highlight#selectFromCalendar click->event-popover#show" : nil,
+                  action: drag_action,
                   turbo_prefetch: false
-                } do %>
+                }.merge(drag_data) do %>
                 <% badge_inline_style =
                   if badge_class.present?
                     ""
@@ -708,6 +779,11 @@
                     <div class="opacity-60 text-[10px] font-medium mt-0.5"><%= start_label %> – <%= end_label %></div>
                   <% end %>
                 </div>
+                <% if resizable %>
+                  <%# Bottom-edge resize handle (Phase 1) %>
+                  <div class="absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize"
+                       data-action="pointerdown->event-drag#startResize"></div>
+                <% end %>
               <% end %>
             <% end %>
           </div>

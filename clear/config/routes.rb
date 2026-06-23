@@ -47,6 +47,7 @@ Rails.application.routes.draw do
     end
     member do
       post :convert
+      patch :reschedule
     end
   end
 
@@ -76,8 +77,13 @@ Rails.application.routes.draw do
       patch :update_grade_calculation
       get   :grades
       post  :convert
+      patch :reschedule
     end
-    resources :course_items, only: %i[index create show edit update destroy]
+    resources :course_items, only: %i[index create show edit update destroy] do
+      member do
+        patch :reschedule
+      end
+    end
   end
   resources :agenda
 

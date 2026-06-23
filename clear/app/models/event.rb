@@ -31,7 +31,11 @@ class Event < ApplicationRecord
 
   after_create_commit :create_notification
 
-  Occurrence = Struct.new(:event, :starts_at, :ends_at, :draft_status, keyword_init: true) do
+  # override_date is the rule date a relocated (Option B override) occurrence was
+  # moved FROM — i.e. the exception's excluded_date. It is the stable key a
+  # re-drag uses to update the same override row instead of creating a new one.
+  # nil for ordinary rule-generated occurrences.
+  Occurrence = Struct.new(:event, :starts_at, :ends_at, :draft_status, :override_date, keyword_init: true) do
     delegate :id, :title, :location, :description, :color, :contrast_text_color, to: :event
   end
 
@@ -41,27 +45,41 @@ class Event < ApplicationRecord
       return [ Occurrence.new(event: self, starts_at: starts_at, ends_at: ends_at) ]
     end
 
-    window_start_date = [ range_start.to_date, starts_at.to_date ].max
-    window_end_date   = [ range_end.to_date, repeat_until ].min
-    return [] if window_end_date < window_start_date
-
     start_time = starts_at.in_time_zone
     duration = ends_at.present? ? (ends_at.in_time_zone - start_time) : nil
-    excluded = event_exceptions.where(excluded_date: window_start_date..window_end_date)
-                               .pluck(:excluded_date).to_set
 
     out = []
-    d = window_start_date
-    while d <= window_end_date
-      if repeat_days.include?(d.wday) && !excluded.include?(d)
-        occ_start = Time.zone.local(d.year, d.month, d.day, start_time.hour, start_time.min, start_time.sec)
-        occ_end   = duration.present? ? (occ_start + duration) : nil
-        out << Occurrence.new(event: self, starts_at: occ_start, ends_at: occ_end)
+
+    # Pass 1 — rule-generated occurrences, suppressing any date that carries an
+    # exception (whether a plain exclusion or a relocated/override row; both mean
+    # "the rule's occurrence on this date does not appear in its original slot").
+    window_start_date = [ range_start.to_date, starts_at.to_date ].max
+    window_end_date   = [ range_end.to_date, repeat_until ].min
+
+    if window_end_date >= window_start_date
+      excluded = event_exceptions.where(excluded_date: window_start_date..window_end_date)
+                                 .pluck(:excluded_date).to_set
+      d = window_start_date
+      while d <= window_end_date
+        if repeat_days.include?(d.wday) && !excluded.include?(d)
+          occ_start = Time.zone.local(d.year, d.month, d.day, start_time.hour, start_time.min, start_time.sec)
+          occ_end   = duration.present? ? (occ_start + duration) : nil
+          out << Occurrence.new(event: self, starts_at: occ_start, ends_at: occ_end)
+        end
+        d += 1.day
       end
-      d += 1.day
     end
 
-    out
+    # Pass 2 — relocated occurrences (Option B override rows) whose new start
+    # lands inside the queried range. The new slot may fall on a weekday outside
+    # repeat_days, or even past repeat_until, so this is independent of Pass 1's
+    # rule window.
+    event_exceptions.where(override_starts_at: range_start..range_end).find_each do |ex|
+      out << Occurrence.new(event: self, starts_at: ex.override_starts_at, ends_at: ex.override_ends_at,
+                            override_date: ex.excluded_date)
+    end
+
+    out.sort_by(&:starts_at)
   end
 
   def contrast_text_color
