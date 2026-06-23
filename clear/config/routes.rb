@@ -47,6 +47,7 @@ Rails.application.routes.draw do
     end
     member do
       post :convert
+      patch :reschedule
     end
   end
 

@@ -25,6 +25,7 @@ class CalendarDraft < ApplicationRecord
     def to_model = self
     def model_name = Event.model_name
     def recurring = false
+    def recurring? = false
 
     def contrast_text_color
       Event.new(color: color.presence || "#34D399").contrast_text_color
@@ -85,6 +86,31 @@ class CalendarDraft < ApplicationRecord
     update!(operations: filtered + [ {
       "type" => "update", "model" => model, "id" => id, "data" => data.stringify_keys
     } ])
+  end
+
+  # Stage a single-occurrence reschedule (drag of one instance of a recurring
+  # record while in draft mode). Collapses repeats for the same occurrence.
+  def add_reschedule_occurrence(model, id, occurrence_date, data)
+    date_str = occurrence_date.to_s
+    filtered = operations.reject do |op|
+      op["type"] == "reschedule_occurrence" && op["model"] == model &&
+        op["id"] == id && op["occurrence_date"] == date_str
+    end
+    update!(operations: filtered + [ {
+      "type" => "reschedule_occurrence", "model" => model, "id" => id,
+      "occurrence_date" => date_str, "data" => data.stringify_keys
+    } ])
+  end
+
+  # Drop a staged single-occurrence reschedule (e.g. the occurrence was dragged
+  # back onto the slot its rule already produces, making the op redundant).
+  def remove_reschedule_occurrence(model, id, occurrence_date)
+    date_str = occurrence_date.to_s
+    filtered = operations.reject do |op|
+      op["type"] == "reschedule_occurrence" && op["model"] == model &&
+        op["id"] == id && op["occurrence_date"] == date_str
+    end
+    update!(operations: filtered) if filtered.size != operations.size
   end
 
   def add_delete(model, id)
@@ -150,6 +176,13 @@ class CalendarDraft < ApplicationRecord
           when "create" then user.events.create!(op["data"].symbolize_keys)
           when "update" then user.events.find(op["id"]).update!(op["data"].symbolize_keys)
           when "delete" then user.events.find(op["id"]).destroy!
+          when "reschedule_occurrence"
+            event = user.events.find(op["id"])
+            ex = event.event_exceptions.find_or_initialize_by(excluded_date: Date.parse(op["occurrence_date"]))
+            ex.update!(
+              override_starts_at: op["data"]["starts_at"],
+              override_ends_at: op["data"]["ends_at"]
+            )
           end
         when "course"
           case op["type"]
@@ -193,6 +226,13 @@ class CalendarDraft < ApplicationRecord
 
     event_create_ops = operations.select { |op| op["type"] == "create" && op["model"] == "event" }
 
+    # Single-occurrence reschedules (drag of one instance of a recurring event in
+    # draft). Suppress the original-date occurrence; inject the moved one below.
+    event_reschedule_ops = operations.select { |op| op["type"] == "reschedule_occurrence" && op["model"] == "event" }
+    event_reschedule_dates = Hash.new { |h, k| h[k] = {} }
+    event_reschedule_ops.each { |op| event_reschedule_dates[op["id"]][op["occurrence_date"]] = op }
+    event_by_id = {}
+
     # ── Course draft ops ──
     course_deleted_ids = operations
       .select { |op| op["type"] == "delete" && op["model"] == "course" }
@@ -228,7 +268,14 @@ class CalendarDraft < ApplicationRecord
       model  = record.model_name.singular
 
       if model == "event"
+        event_by_id[record.id] ||= record
         next if rebuilt_event_occurrences.key?(record.id)
+
+        # A single-occurrence reschedule suppresses the rule's slot on that date;
+        # the moved occurrence is injected after the loop.
+        if event_reschedule_dates[record.id].key?(occ.starts_at.to_date.to_s)
+          next
+        end
 
         if event_deleted_ids.include?(record.id)
           next Event::Occurrence.new(
@@ -245,7 +292,14 @@ class CalendarDraft < ApplicationRecord
             e
           end
 
-          if record.recurring? != updated.recurring?
+          # Rebuild from the recurrence rule when its shape changes — recurring
+          # flips, or (mirroring courses/shifts) the weekdays or end date move.
+          # This covers scope=all (weekday shift) and scope=following (capped
+          # repeat_until) reschedules staged as updates.
+          if record.recurring? != updated.recurring? ||
+             (updated.recurring? &&
+              (Array(record.repeat_days).map(&:to_s).sort != Array(updated.repeat_days).map(&:to_s).sort ||
+               record.repeat_until != updated.repeat_until))
             rebuilt_event_occurrences[record.id] = updated.occurrences_between(range_start, range_end).map do |updated_occ|
               Event::Occurrence.new(event: updated, starts_at: updated_occ.starts_at, ends_at: updated_occ.ends_at, draft_status: "updated")
             end
@@ -353,6 +407,20 @@ class CalendarDraft < ApplicationRecord
       occ
     end.compact
     rebuilt_event_occurrences.each_value { |rows| result.concat(rows) }
+
+    # Inject moved single-occurrence reschedules whose new start falls in range.
+    event_reschedule_ops.each do |op|
+      event = event_by_id[op["id"]] ||= Event.find_by(id: op["id"])
+      next unless event && !event_deleted_ids.include?(op["id"])
+
+      data = op["data"]
+      new_start = (Time.zone.parse(data["starts_at"].to_s) rescue nil)
+      next unless new_start && new_start >= range_start && new_start <= range_end
+      new_end = data["ends_at"].present? ? (Time.zone.parse(data["ends_at"].to_s) rescue nil) : nil
+
+      result << Event::Occurrence.new(event: event, starts_at: new_start, ends_at: new_end,
+                                      draft_status: "updated", override_date: Date.parse(op["occurrence_date"]))
+    end
     rebuilt_course_occurrences.each_value { |rows| result.concat(rows) }
     rebuilt_shift_occurrences.each_value { |rows| result.concat(rows) }
 

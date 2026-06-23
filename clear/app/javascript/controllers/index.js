@@ -91,6 +91,9 @@ application.register("dropdown", DropdownController)
 import DurationFillController from "./duration_fill_controller"
 application.register("duration-fill", DurationFillController)
 
+import EventDragController from "./event_drag_controller"
+application.register("event-drag", EventDragController)
+
 import EventPopoverController from "./event_popover_controller"
 application.register("event-popover", EventPopoverController)
 
@@ -129,6 +132,9 @@ application.register("profile-nav", ProfileNavController)
 
 import RecurrenceToggleController from "./recurrence_toggle_controller"
 application.register("recurrence-toggle", RecurrenceToggleController)
+
+import RecurringScopePromptController from "./recurring_scope_prompt_controller"
+application.register("recurring-scope-prompt", RecurringScopePromptController)
 
 import RemovableCardController from "./removable_card_controller"
 application.register("removable-card", RemovableCardController)
