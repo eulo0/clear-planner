@@ -683,13 +683,15 @@
                 end
               %>
               <% event_starts_epoch = (seg[:seg_start].to_f * 1000).to_i %>
-              <%# Drag/resize: events and courses; works live and in draft, but not
-                  on a draft-deleted block (it has no real target to move) %>
-              <% draggable = !is_draft_deleted && (model == "event" || model == "course") %>
+              <%# Move: events, courses, and course items. Resize: events and
+                  courses only (a course item is a point-in-time due date with no
+                  real duration). Neither on a draft-deleted block. %>
+              <% movable   = !is_draft_deleted && (model == "event" || model == "course" || model == "course_item") %>
+              <% resizable = !is_draft_deleted && (model == "event" || model == "course") %>
               <% base_action = popover_enabled ? "click->agenda-highlight#selectFromCalendar click->event-popover#show" : nil %>
-              <% drag_action  = draggable ? "#{base_action} pointerdown->event-drag#startMove".strip : base_action %>
+              <% drag_action  = movable ? "#{base_action} pointerdown->event-drag#startMove".strip : base_action %>
               <% drag_data =
-                if draggable && model == "event"
+                if movable && model == "event"
                   {
                     event_drag_target: "event",
                     reschedule_url: reschedule_event_path(record),
@@ -702,13 +704,24 @@
                     event_start: seg[:seg_start].iso8601,
                     event_end: seg[:seg_end].iso8601
                   }
-                elsif draggable && model == "course"
+                elsif movable && model == "course"
                   # Courses are whole-series only: no scope prompt (event_recurring
                   # omitted, so event-drag#submit takes its direct-submit branch)
                   # and no anchor_date (no per-occurrence override rows).
                   {
                     event_drag_target: "event",
                     reschedule_url: reschedule_course_path(record),
+                    occurrence_date: seg[:seg_start].to_date.iso8601,
+                    event_start: seg[:seg_start].iso8601,
+                    event_end: seg[:seg_end].iso8601
+                  }
+                elsif movable && model == "course_item"
+                  # Course items are a single point-in-time due date: drag moves
+                  # due_at only. event_recurring omitted (direct submit), no
+                  # anchor_date, and no resize handle (see `resizable` below).
+                  {
+                    event_drag_target: "event",
+                    reschedule_url: reschedule_course_course_item_path(record.course, record),
                     occurrence_date: seg[:seg_start].to_date.iso8601,
                     event_start: seg[:seg_start].iso8601,
                     event_end: seg[:seg_end].iso8601
@@ -766,7 +779,7 @@
                     <div class="opacity-60 text-[10px] font-medium mt-0.5"><%= start_label %> – <%= end_label %></div>
                   <% end %>
                 </div>
-                <% if draggable %>
+                <% if resizable %>
                   <%# Bottom-edge resize handle (Phase 1) %>
                   <div class="absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize"
                        data-action="pointerdown->event-drag#startResize"></div>

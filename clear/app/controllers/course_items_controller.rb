@@ -5,7 +5,7 @@ class CourseItemsController < ApplicationController
 
   before_action :authenticate_user!
   before_action :set_course
-  before_action :set_course_item, only: %i[show edit update destroy]
+  before_action :set_course_item, only: %i[show edit update destroy reschedule]
 
   def index
     @course_items = @course.course_items.order(:due_at)
@@ -110,6 +110,34 @@ class CourseItemsController < ApplicationController
         end
       end
     end
+  end
+
+  # Drag-reschedule from the weekly calendar. A course item is a single
+  # point-in-time due date, so a drag moves due_at only and always applies
+  # immediately (no draft staging, unlike events/courses).
+  def reschedule
+    # .to_s collapses a missing param into the unparseable case; Time.zone.parse
+    # returns nil rather than raising, yielding a clean 400 on bad input.
+    new_start = Time.zone.parse(params[:new_starts_at].to_s)
+    return head :bad_request if new_start.nil?
+
+    @course_item.update!(due_at: new_start)
+
+    start_date  = parse_start_date(params[:start_date])
+    week_start  = start_date.beginning_of_week
+    range_start = week_start.beginning_of_day
+    range_end   = (week_start + 6.days).end_of_day
+    occurrences = calendar_occurrences_for_range(range_start, range_end, filter: params[:filter])
+
+    render turbo_stream: [
+      turbo_stream.replace(
+        "dashboard_calendar",
+        partial: "dashboard/calendar_frame",
+        locals: { events: occurrences, start_date: start_date }
+      ),
+      turbo_stream.replace("agenda_list", partial: "agenda/list"),
+      turbo_stream.update("event_popover", "")
+    ]
   end
 
   def destroy

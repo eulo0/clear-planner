@@ -79,7 +79,11 @@ Rails.application.routes.draw do
       post  :convert
       patch :reschedule
     end
-    resources :course_items, only: %i[index create show edit update destroy]
+    resources :course_items, only: %i[index create show edit update destroy] do
+      member do
+        patch :reschedule
+      end
+    end
   end
   resources :agenda
 
