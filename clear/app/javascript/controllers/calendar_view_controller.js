@@ -37,7 +37,7 @@ export default class extends Controller {
 
     this.currentView = nextView
     // Persist every view (incl. yearly) in a cookie the server reads, so the next bare
-    // /dashboard renders the last view directly — see DashboardController#saved_calendar_view.
+    // /calendar renders the last view directly — see DashboardController#saved_calendar_view.
     this.persistView(nextView)
 
     if (nextView === "yearly" || nextView === "daily") {
@@ -51,7 +51,7 @@ export default class extends Controller {
   }
 
   // View preference persistence. A cookie (not localStorage) so the server can read it on a
-  // bare /dashboard and render the saved view directly. Lax + 1yr, mirrors the old stickiness.
+  // bare /calendar and render the saved view directly. Lax + 1yr, mirrors the old stickiness.
   persistView(view) {
     document.cookie = `calendar_view=${view}; path=/; max-age=${60 * 60 * 24 * 365}; samesite=lax`
   }

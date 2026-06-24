@@ -22,12 +22,22 @@ class ApplicationController < ActionController::Base
 
   private
 
+  # Hard-blocks a feature that was retired from the left nav: any direct visit is
+  # bounced to the app root. Controllers opt in via a before_action. Pass
+  # `unless: :turbo_frame_request?` to keep an embedded frame (e.g. the agenda
+  # list refreshed after a convert) working while blocking full-page access.
+  def redirect_removed_feature
+    redirect_to authenticated_root_path
+  end
+
   def calendar_occurrences_for_range(range_start, range_end, draft: nil, filter: nil, work_shifts_in_range: false)
     # filter values: nil/"" = all, "events" = events only, "work_shifts" = work shifts only,
     # "courses" = all courses only, numeric string = specific course ID
     course_id        = filter.presence && filter !~ /\A(events|work_shifts|courses)\z/ ? filter : nil
     show_events      = filter.blank? || filter == "events"
-    show_work_shifts = filter.blank? || filter == "work_shifts"
+    # Work shifts were stripped from the UI entirely — never surface them on the
+    # calendar, agenda, or analytics, regardless of filter. The model/data stay.
+    show_work_shifts = false
     show_courses     = filter.blank? || filter == "courses" || course_id.present?
 
     if show_events

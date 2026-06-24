@@ -1,6 +1,10 @@
 class AgendaController < ApplicationController
   layout "app_shell"
   before_action :authenticate_user!
+  # The standalone Agenda page was retired from the nav. Block full-page access,
+  # but let turbo-frame requests through: the calendar's `agenda_list` frame is
+  # served by #index and is refreshed after every event/course convert.
+  before_action :redirect_removed_feature, unless: :turbo_frame_request?
   include Pagy::Method
 
   def index

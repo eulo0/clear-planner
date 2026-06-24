@@ -3,6 +3,8 @@
 class ScheduleController < ApplicationController
   layout "app_shell"
   before_action :authenticate_user!
+  # Schedule was retired from the nav; block all direct access.
+  before_action :redirect_removed_feature
 
   def week
     reference_date = params[:date]&.to_date || Date.current

@@ -68,13 +68,9 @@
             items: (
               [
                 { label: "Dashboard",   path: "/dashboard",   icon_name: "dashboard-circle-stroke-rounded" },
-                { label: "Schedule",    path: "/schedule",    icon_name: "calendar-02-stroke-rounded" },
-                { label: "Agenda",      path: "/agenda",      icon_name: "view-agenda-stroke-rounded" },
-                { label: "Analytics",   path: "/analytics",   icon_name: "eye-stroke-rounded" },
+                { label: "Calendar",    path: "/calendar",    icon_name: "calendar-02-stroke-rounded" },
                 { label: "Courses",     path: "/courses",     icon_name: "course-stroke-rounded" },
                 { label: "Events",      path: "/events",      icon_name: "timeline-event-stroke-rounded" },
-                { label: "Groups",    path: "/projects",    icon_name: "users-group-stroke-rounded" },
-                { label: "Work Shifts", path: "/work_shifts", icon_name: "apartment-stroke-rounded" },
               ] +
               (current_user&.admin? ? [
                 { label: "Users", path: "/admin/users", icon_name: "user-02-stroke-rounded" }

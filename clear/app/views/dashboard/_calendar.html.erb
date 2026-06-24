@@ -214,9 +214,7 @@
             { label: "All", value: "" },
             { label: "All Events", value: "events" },
             { label: "All Courses", value: "courses" },
-          ] + courses_for_filter.map { |c| { label: c.title, value: c.id.to_s } } + [
-            { label: "All Work Shifts", value: "work_shifts" },
-          ]
+          ] + courses_for_filter.map { |c| { label: c.title, value: c.id.to_s } }
         ) %>
         </div>
         <div class="mx-1 h-5 w-px rounded-full" style="background-color: var(--studs-border);"></div>

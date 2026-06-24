@@ -144,31 +144,35 @@ Rails.application.routes.draw do
   end
 
   authenticated :user do
-    root "dashboard#show", as: :authenticated_root
+    root "analytics#show", as: :authenticated_root
   end
 
   unauthenticated do
     root "home#index"
   end
 
-  get "/dashboard",       to: "dashboard#show"
-  get "dashboard/agenda", to: "dashboard#agenda", as: :dashboard_agenda
+  # The calendar (DashboardController#show) now lives at /calendar; the `dashboard`
+  # helper name is kept stable so existing dashboard_path references resolve here.
+  get "/calendar",       to: "dashboard#show", as: :dashboard
+  get "calendar/agenda", to: "dashboard#agenda", as: :dashboard_agenda
 
-  post   "dashboard/draft",         to: "draft#enter",   as: :enter_draft
-  post   "dashboard/draft/create",  to: "draft#create",  as: :create_draft
-  get    "dashboard/draft/changes", to: "draft#changes", as: :draft_changes
-  patch  "dashboard/draft/restore", to: "draft#restore", as: :draft_restore
-  patch  "dashboard/draft/apply",   to: "draft#apply",   as: :apply_draft
-  delete "dashboard/draft",         to: "draft#discard", as: :discard_draft
-  patch  "dashboard/draft/exit",    to: "draft#exit",    as: :exit_draft
-  patch  "dashboard/draft/:id/name", to: "draft#rename",  as: :rename_draft
-  delete "dashboard/draft/:id",     to: "draft#destroy", as: :delete_draft
+  post   "calendar/draft",         to: "draft#enter",   as: :enter_draft
+  post   "calendar/draft/create",  to: "draft#create",  as: :create_draft
+  get    "calendar/draft/changes", to: "draft#changes", as: :draft_changes
+  patch  "calendar/draft/restore", to: "draft#restore", as: :draft_restore
+  patch  "calendar/draft/apply",   to: "draft#apply",   as: :apply_draft
+  delete "calendar/draft",         to: "draft#discard", as: :discard_draft
+  patch  "calendar/draft/exit",    to: "draft#exit",    as: :exit_draft
+  patch  "calendar/draft/:id/name", to: "draft#rename",  as: :rename_draft
+  delete "calendar/draft/:id",     to: "draft#destroy", as: :delete_draft
 
 
   get "projects/join", to: "projects#join", as: :join_project
   get "/ui",             to: "ui#show"
-  get "/analytics",         to: "analytics#show",    as: "analytics"
-  get "/analytics/compare", to: "analytics#compare", as: "analytics_compare"
+  # The analytics page is now the user-facing "Dashboard", served at /dashboard.
+  # Helper names (analytics / analytics_compare) are kept stable.
+  get "/dashboard",         to: "analytics#show",    as: "analytics"
+  get "/dashboard/compare", to: "analytics#compare", as: "analytics_compare"
   get "/schedule",       to: "schedule#week"
   get "/schedule/week",  to: "schedule#week"
 

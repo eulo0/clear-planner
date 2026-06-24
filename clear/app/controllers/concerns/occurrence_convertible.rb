@@ -10,6 +10,12 @@ module OccurrenceConvertible
     source = convertible_source
     target_type = params[:target_type].to_s
 
+    # Work shifts were retired from the UI; refuse conversions that would create one,
+    # independent of the (now removed) change-type dropdown option.
+    if target_type == "work_shift"
+      return render_convert_error("Work shifts are no longer available.")
+    end
+
     if past_occurrence?(source, params[:start_date])
       return render_convert_error("You can't change the type of a past occurrence.")
     end

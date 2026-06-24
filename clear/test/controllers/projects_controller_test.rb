@@ -6,22 +6,23 @@ class ProjectsControllerTest < ActionDispatch::IntegrationTest
     sign_in users(:one)
   end
 
-  test "should get index" do
+  # Groups was retired from the nav: the index + creation entry points are blocked
+  # (redirect to the app root). Member-scoped actions below stay reachable.
+  test "index is blocked (redirects to root)" do
     get projects_url
-    assert_response :success
+    assert_redirected_to authenticated_root_path
   end
 
-  test "should get new" do
+  test "new is blocked (redirects to root)" do
     get new_project_url
-    assert_response :success
+    assert_redirected_to authenticated_root_path
   end
 
-  test "should create project" do
-    assert_difference("Project.count") do
+  test "create is blocked (redirects to root, creates nothing)" do
+    assert_no_difference("Project.count") do
       post projects_url, params: { project: { title: "New Project" } }
     end
-
-    assert_redirected_to project_url(Project.last)
+    assert_redirected_to authenticated_root_path
   end
 
   test "should show project" do
