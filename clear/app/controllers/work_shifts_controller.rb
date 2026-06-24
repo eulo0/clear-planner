@@ -6,6 +6,8 @@ class WorkShiftsController < ApplicationController
   layout "app_shell"
 
   before_action :authenticate_user!
+  # Work shifts were stripped from the UI entirely; block all direct access.
+  before_action :redirect_removed_feature
   before_action :set_work_shift, only: %i[show edit update destroy convert]
 
   def index

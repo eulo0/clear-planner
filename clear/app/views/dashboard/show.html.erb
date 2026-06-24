@@ -1,5 +1,6 @@
+<% content_for :page_title, "Calendar" %>
 <%# Must live in the page head (content_for :head) — Turbo Drive only reads the
-    turbo-cache-control meta from the head. Without it, Turbo caches /dashboard and previews a
+    turbo-cache-control meta from the head. Without it, Turbo caches /calendar and previews a
     stale (e.g. weekly) snapshot when you navigate back, flashing the wrong view before the
     fresh server render paints. %>
 <% content_for :head do %>

@@ -1,4 +1,4 @@
-<% content_for :page_title, "Analytics" %>
+<% content_for :page_title, "Dashboard" %>
 <% content_for :page_subtitle, "Week of #{@week_start.strftime("%b %-d")} – #{@week_end.strftime("%b %-d, %Y")}" %>
 
 <style>
@@ -65,7 +65,6 @@
   stat_rows = [
     { label: "Events",          color: "#60a5fa", left: @left_stats[:event_count],    right: @right_stats[:event_count] },
     { label: "Course Sessions", color: "#34d399", left: @left_stats[:course_count],   right: @right_stats[:course_count] },
-    { label: "Work Shifts",     color: "#a78bfa", left: @left_stats[:shift_count],    right: @right_stats[:shift_count] },
     { label: "Deadlines",       color: "#fbbf24", left: @left_stats[:deadline_count], right: @right_stats[:deadline_count] },
   ]
 %>

@@ -13,7 +13,8 @@
                 when "course"     then convert_course_path(record)
                 when "work_shift" then convert_work_shift_path(record)
                 end
-  options = type_labels.except(source_type)
+  # Work shifts were retired from the UI: never offer "Work shift" as a convert target.
+  options = type_labels.except(source_type, "work_shift")
   variant = local_assigns.fetch(:variant, :drawer)
   trigger_class = if variant == :popover
                     "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-zinc-200 hover:bg-zinc-800 transition"

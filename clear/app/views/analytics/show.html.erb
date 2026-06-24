@@ -1,4 +1,4 @@
-<% content_for :page_title, "Analytics" %>
+<% content_for :page_title, "Dashboard" %>
 <% content_for :page_subtitle, "Week of #{@week_start.strftime("%b %-d")} – #{@week_end.strftime("%b %-d, %Y")}" %>
 
 <style>
@@ -35,7 +35,6 @@
       { label: "Events",          count: @event_count,    past: @events_past,     upcoming: @events_upcoming,    color: "#60a5fa", icon: "timeline-event-stroke-rounded", draft_key: :event_count },
       { label: "Course Sessions", count: @course_count,   past: @courses_past,    upcoming: @courses_upcoming,   color: "#34d399", icon: "course-stroke-rounded",          draft_key: :course_count },
       { label: "Deadlines",       count: @deadline_count, past: @deadlines_past,  upcoming: @deadlines_upcoming, color: "#fbbf24", icon: "task-done-01-stroke-rounded",    draft_key: :deadline_count },
-      { label: "Work Shifts",     count: @shift_count,    past: @shifts_past,     upcoming: @shifts_upcoming,    color: "#a78bfa", icon: "apartment-stroke-rounded",       draft_key: :shift_count },
     ]
   %>
   <% stat_cards.each do |card| %>

@@ -1,6 +1,10 @@
 class ProjectsController < ApplicationController
   layout "app_shell"
   before_action :authenticate_user!
+  # Groups was retired from the nav: block the index + creation entry points, but
+  # leave member-scoped actions (show/agenda/chat/join) intact so existing project
+  # events and their project-scoped calendar keep working.
+  before_action :redirect_removed_feature, only: %i[index new create destroy_all]
   before_action :set_project, only: %i[show edit update destroy agenda chat]
   before_action :require_owner!, only: %i[edit update]
 
