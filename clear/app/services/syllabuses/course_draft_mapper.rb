@@ -34,8 +34,13 @@ module Syllabuses
     def remap_preview_attrs(draft)
       cols = Course.column_names
       out = (draft || {}).deep_dup
-      out.delete("course_items")
-      out.delete(:course_items)
+
+      # Draft-level metadata that isn't a Course attribute — must be stripped
+      # before building a Course, or Course.new raises UnknownAttributeError.
+      %w[course_items source parse_warning].each do |meta|
+        out.delete(meta)
+        out.delete(meta.to_sym)
+      end
 
       if cols.include?("start_time") && out["start_time"].blank? && out["starts_at"].present?
         out["start_time"] = out["starts_at"]

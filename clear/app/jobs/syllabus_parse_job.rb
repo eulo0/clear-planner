@@ -3,17 +3,20 @@
 class SyllabusParseJob < ApplicationJob
   queue_as :default
 
+  DEGRADED_WARNING = "Parsed with the basic (non-AI) reader — double-check dates and times."
+
   def perform(syllabus_id)
     syllabus = Syllabus.find(syllabus_id)
 
     syllabus.update!(parse_status: "processing", parse_error: nil)
 
-    text  = ::Syllabuses::TextExtractor.call(syllabus)
-    attrs = ::Syllabuses::CourseAttributesExtractor.call(text, fallback_title: syllabus.title)
-    items = ::Syllabuses::CourseItemsExtractor.call(text, term: attrs[:term])
+    text = extract_text_safely(syllabus)
+    attrs, items, source = extract(syllabus, text)
 
     draft = build_course_draft(attrs)
-    draft[:course_items] = items if items.present?
+    draft[:course_items]  = items if items.present?
+    draft[:source]        = source
+    draft[:parse_warning] = DEGRADED_WARNING if source == "regex_fallback"
 
     syllabus.update!(
       parsed_text: text,
@@ -28,6 +31,29 @@ class SyllabusParseJob < ApplicationJob
   end
 
   private
+
+  # Try the AI extractor first; on any AI failure, fall back to the regex
+  # pipeline. The chosen path is tagged on the draft (`source`) and a warning is
+  # surfaced when degraded, so a silent quality drop can't masquerade as a clean
+  # parse.
+  def extract(syllabus, text)
+    result = ::Syllabuses::AiExtractor.call(syllabus)
+    [ result[:attrs], result[:items], "ai" ]
+  rescue ::Syllabuses::AiExtractor::Error => e
+    Rails.logger.warn("[SyllabusParseJob] AI extraction failed (#{e.message}); falling back to regex")
+    attrs = ::Syllabuses::CourseAttributesExtractor.call(text, fallback_title: syllabus.title)
+    items = ::Syllabuses::CourseItemsExtractor.call(text, term: attrs[:term])
+    [ attrs, items, "regex_fallback" ]
+  end
+
+  # Best-effort text for storage + the regex fallback. Never fails the parse
+  # (a scanned PDF legitimately yields no text; the AI vision path covers it).
+  def extract_text_safely(syllabus)
+    ::Syllabuses::TextExtractor.call(syllabus)
+  rescue => e
+    Rails.logger.warn("[SyllabusParseJob] text extraction failed: #{e.message}")
+    ""
+  end
 
   def build_course_draft(attrs)
     draft = {}

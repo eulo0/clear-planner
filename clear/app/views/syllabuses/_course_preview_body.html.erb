@@ -20,6 +20,12 @@
           data: { turbo_method: :post, turbo_frame: "_top" } %>
   </div>
 <% else %>
+  <% parse_warning = syllabus.course_draft.is_a?(Hash) ? syllabus.course_draft["parse_warning"] : nil %>
+  <% if parse_warning.present? %>
+    <div class="mb-4 rounded-2xl px-4 py-3 text-sm text-amber-200 bg-amber-500/10 border border-amber-300/40">
+      <%= parse_warning %>
+    </div>
+  <% end %>
   <%= form_with model: course,
         url: confirm_course_syllabus_path(syllabus),
         method: :post,
