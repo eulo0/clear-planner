@@ -105,7 +105,7 @@
                   <div class="<%= label_base %> <%= label_ok %>" style="<%= label_ok_style %>">Due Date</div>
                   <input type="datetime-local"
                          name="items[<%= i %>][due_at]"
-                         value="<%= item[:due_at].present? ? item[:due_at].to_s.gsub(" ", "T") : "" %>"
+                         value="<%= datetime_local_value(item[:due_at]) %>"
                          class="<%= input_base %> <%= input_ok %>"
                          style="<%= input_ok_style %>">
                 </div>

@@ -28,11 +28,15 @@ class SyllabusesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should create syllabus and attach to current user" do
-    assert_no_difference("Syllabus.count") do
+    assert_difference("Syllabus.count", 1) do
       post syllabuses_url, params: { syllabus: { title: "My Syllabus" } }
     end
 
-    assert_redirected_to courses_url
+    syllabus = Syllabus.order(:created_at).last
+    assert_equal @user, syllabus.user
+    # Parsing kicks off in `create`; AI output varies, so assert only that the
+    # record persisted and we land on its preview — not on any draft contents.
+    assert_redirected_to course_preview_syllabus_path(syllabus)
   end
 
   test "should show syllabus" do
