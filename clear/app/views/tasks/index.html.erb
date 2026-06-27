@@ -1,0 +1,178 @@
+<% content_for :page_title, "Tasks" %>
+<% content_for :page_subtitle, "Break course items into do-able steps — then let AI fit them into your week" %>
+
+<%#
+  Static mockup of the v2 Tasks page — "Plan" tab. Data is hardcoded in
+  TasksController. Tabs + the New-task drawer are wired by the `tasks-page`
+  Stimulus controller; everything else (filter, auto-schedule, break-down,
+  schedule, complete) is visual-only for now. Styling uses the app's --studs-*
+  tokens; class names are `tsk-` prefixed to avoid cascade collisions.
+%>
+
+<style>
+  .tsk-tabs{ display:inline-flex; gap:4px; padding:4px; border:1px solid var(--studs-border); background:var(--studs-panel-bg-2); border-radius:9999px; }
+  .tsk-tab{ display:inline-flex; align-items:center; gap:8px; border:0; background:transparent; color:var(--studs-fg-3,#a1a1aa); font-size:13px; font-weight:600; padding:7px 15px; border-radius:9999px; cursor:pointer; transition:all .15s ease; }
+  .tsk-tab:hover{ color:#fafafa; }
+  .tsk-tab.is-active{ background:linear-gradient(135deg,var(--studs-accent),var(--studs-accent-secondary)); color:var(--studs-accent-text); box-shadow:0 0 12px color-mix(in srgb,var(--studs-accent) 35%,transparent); }
+  .tsk-tab-c{ font-size:11px; font-weight:700; border-radius:9999px; padding:0 7px; min-width:18px; text-align:center; }
+  .tsk-tab.is-active .tsk-tab-c{ background:color-mix(in srgb,var(--studs-accent-text) 18%,transparent); color:var(--studs-accent-text); }
+  .tsk-tab:not(.is-active) .tsk-tab-c{ background:rgba(255,255,255,.07); color:#a1a1aa; }
+
+  .tsk-chip{ display:inline-flex; align-items:center; gap:6px; border-radius:9999px; padding:3px 10px; font-size:11.5px; font-weight:500; white-space:nowrap; }
+  .tsk-chip.course{ background:color-mix(in srgb,var(--cc) 15%,transparent); border:1px solid color-mix(in srgb,var(--cc) 38%,transparent); color:#fafafa; }
+  .tsk-chip.course .dot{ height:7px; width:7px; border-radius:9999px; background:var(--cc); }
+  .tsk-chip.est{ background:var(--studs-panel-bg-2); border:1px solid var(--studs-border); color:#a1a1aa; }
+  .tsk-chip.due{ background:transparent; color:#71717a; padding-left:2px; }
+  .tsk-chip.due.overdue{ color:#fca5a5; }
+  .tsk-chip.sched{ background:color-mix(in srgb,var(--studs-accent) 16%,transparent); border:1px solid color-mix(in srgb,var(--studs-accent) 45%,transparent); color:color-mix(in srgb,var(--studs-accent) 75%,#fff); }
+  .tsk-chip.unsched{ background:transparent; border:1px dashed rgba(255,255,255,.18); color:#71717a; }
+  .tsk-badge{ font-size:9.5px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; padding:2px 7px; border-radius:6px; border:1px solid; }
+
+  .tsk-card{ border:1px solid var(--studs-border); background:var(--studs-panel-bg-2); border-radius:1rem; overflow:hidden; margin-bottom:16px; }
+  .tsk-card-head{ display:flex; align-items:center; gap:14px; padding:15px 17px; background:var(--studs-panel-header); border-bottom:1px solid var(--studs-border); user-select:none; }
+  .tsk-card.is-collapsed .tsk-card-head{ border-bottom:0; }
+  .tsk-card-chev{ display:inline-flex; color:#71717a; transition:transform .2s ease; }
+  .tsk-card.is-collapsed .tsk-card-chev{ transform:rotate(-90deg); }
+  .tsk-card.is-collapsed .tsk-card-body{ display:none; }
+  .tsk-prog{ display:flex; align-items:center; gap:9px; margin-left:auto; flex-shrink:0; }
+  .tsk-prog .bar{ width:84px; height:6px; border-radius:9999px; background:rgba(255,255,255,.1); overflow:hidden; }
+  .tsk-prog .fill{ height:100%; background:linear-gradient(90deg,var(--studs-accent),color-mix(in srgb,var(--studs-accent) 60%,#fff)); }
+  .tsk-prog .ptxt{ font-size:11px; color:#71717a; white-space:nowrap; }
+
+  .tsk-row{ display:flex; align-items:center; gap:14px; padding:13px 17px; border-bottom:1px solid var(--studs-divider); transition:background .15s ease; }
+  .tsk-row:last-child{ border-bottom:0; }
+  .tsk-row:hover{ background:rgba(255,255,255,.025); }
+  .tsk-cbx{ height:20px; width:20px; flex-shrink:0; border-radius:7px; border:1.7px solid #71717a; background:transparent; display:inline-flex; align-items:center; justify-content:center; color:transparent; cursor:pointer; transition:all .15s ease; padding:0; }
+  .tsk-cbx:hover{ border-color:color-mix(in srgb,var(--studs-accent) 70%,#fff); }
+  .tsk-cbx.is-done{ background:var(--studs-accent); border-color:var(--studs-accent); color:var(--studs-accent-text); }
+
+  .tsk-aisuggest{ border:1px dashed color-mix(in srgb,var(--studs-accent) 55%,transparent); background:color-mix(in srgb,var(--studs-accent) 6%,transparent); border-radius:.75rem; margin:8px; }
+  .tsk-aitag{ display:inline-flex; align-items:center; gap:5px; font-size:10px; letter-spacing:.05em; text-transform:uppercase; color:color-mix(in srgb,var(--studs-accent) 75%,#fff); }
+  .tsk-accept{ display:inline-flex; align-items:center; gap:5px; border-radius:9999px; border:1px solid var(--studs-accent); background:color-mix(in srgb,var(--studs-accent) 22%,transparent); color:color-mix(in srgb,var(--studs-accent) 80%,#fff); font-size:12px; font-weight:600; padding:5px 12px; cursor:pointer; }
+  .tsk-iconbtn{ border:0; background:transparent; color:#71717a; height:30px; width:28px; border-radius:8px; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; }
+  .tsk-iconbtn:hover{ background:rgba(255,255,255,.06); color:#d4d4d8; }
+  .tsk-btn-sched{ display:inline-flex; align-items:center; gap:5px; border-radius:9999px; border:1px solid color-mix(in srgb,var(--studs-accent) 45%,transparent); background:color-mix(in srgb,var(--studs-accent) 10%,transparent); color:color-mix(in srgb,var(--studs-accent) 80%,#fff); font-size:12px; font-weight:600; padding:5px 12px; cursor:pointer; }
+  .tsk-btn-sched:hover{ background:color-mix(in srgb,var(--studs-accent) 22%,transparent); }
+  .tsk-add{ display:flex; align-items:center; gap:10px; padding:12px 17px; color:#71717a; font-size:13px; border-top:1px solid var(--studs-divider); cursor:pointer; }
+  .tsk-add:hover{ color:color-mix(in srgb,var(--studs-accent) 75%,#fff); }
+  .tsk-empty{ padding:16px 17px; font-size:13px; color:#71717a; border-bottom:1px solid var(--studs-divider); }
+
+  .tsk-bd{ display:inline-flex; align-items:center; gap:6px; border-radius:9999px; border:1px solid var(--studs-border); background:transparent; color:#d4d4d8; padding:7px 13px; font-size:12.5px; font-weight:500; cursor:pointer; }
+  .tsk-bd:hover{ border-color:var(--studs-accent); color:#fafafa; }
+
+  /* list / missed views */
+  .tsk-sec{ display:flex; align-items:center; gap:8px; margin:2px 2px 10px; font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#71717a; }
+  .tsk-sec .n{ color:#52525b; font-weight:600; }
+  .tsk-list{ border:1px solid var(--studs-border); background:var(--studs-panel-bg-2); border-radius:1rem; overflow:hidden; }
+  .tsk-list.is-missed{ border-color:color-mix(in srgb,#f43f5e 32%,var(--studs-border)); }
+  .tsk-empty-state{ display:flex; flex-direction:column; align-items:center; gap:9px; text-align:center; padding:54px 24px; border:1px dashed var(--studs-border); border-radius:1rem; background:var(--studs-panel-bg-2); }
+  .tsk-empty-state .t{ font-size:14px; font-weight:600; color:#d4d4d8; }
+  .tsk-empty-state .s{ font-size:12.5px; color:#71717a; max-width:360px; line-height:1.5; }
+
+  /* drawer */
+  .tsk-scrim{ position:fixed; inset:0; z-index:70; background:rgba(0,0,0,.6); backdrop-filter:blur(2px); opacity:0; pointer-events:none; transition:opacity .25s ease; }
+  .tsk-scrim.is-on{ opacity:1; pointer-events:auto; }
+  .tsk-drawer{ position:fixed; top:0; right:0; bottom:0; z-index:75; width:480px; max-width:94vw; background:var(--studs-sidebar-bg); border-left:1px solid var(--studs-border); box-shadow:0 25px 50px -12px rgba(0,0,0,.6); transform:translateX(100%); transition:transform .25s ease; display:flex; flex-direction:column; }
+  .tsk-drawer.is-open{ transform:translateX(0); }
+  .tsk-pick{ display:inline-flex; align-items:center; gap:8px; border-radius:9999px; border:1px solid var(--studs-border); background:var(--studs-panel-bg-2); color:#d4d4d8; padding:8px 14px; font-size:13px; font-weight:500; cursor:pointer; }
+  .tsk-pick:hover{ border-color:var(--studs-accent); color:#fafafa; }
+  .tsk-pick .dot{ height:9px; width:9px; border-radius:9999px; }
+  .tsk-field{ display:flex; align-items:center; gap:7px; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.1em; color:var(--studs-accent); opacity:.85; margin:18px 0 9px; }
+  .tsk-field:first-child{ margin-top:0; }
+  .tsk-input{ width:100%; border-radius:.75rem; padding:12px 14px; font-size:14px; color:#fafafa; background:rgba(9,9,11,.6); border:1px solid var(--studs-border); outline:none; }
+  .tsk-input:focus{ border-color:color-mix(in srgb,var(--studs-accent) 60%,transparent); box-shadow:0 0 0 2px color-mix(in srgb,var(--studs-accent) 25%,transparent); }
+</style>
+
+<div class="space-y-4" data-controller="tasks-page">
+  <!-- Toolbar: tabs + page actions -->
+  <div class="flex flex-wrap items-center gap-3">
+    <div class="tsk-tabs">
+      <button class="tsk-tab is-active" data-tab="list" data-tasks-page-target="tab" data-action="tasks-page#switch">
+        <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="20" y2="12"/><line x1="8" y1="18" x2="20" y2="18"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg>
+        List <span class="tsk-tab-c"><%= @counts[:list] %></span>
+      </button>
+      <button class="tsk-tab" data-tab="breakdown" data-tasks-page-target="tab" data-action="tasks-page#switch">
+        <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>
+        Breakdown <span class="tsk-tab-c"><%= @counts[:breakdown] %></span>
+      </button>
+      <button class="tsk-tab" data-tab="missed" data-tasks-page-target="tab" data-action="tasks-page#switch">
+        <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        Missed <span class="tsk-tab-c" data-count="missed"><%= @counts[:missed] %></span>
+      </button>
+    </div>
+
+    <div class="ml-auto flex items-center gap-2">
+      <button type="button" class="studs-nav-btn">
+        <span class="h-2 w-2 rounded-full" style="background:#a1a1aa;"></span>
+        All courses
+        <%= icon "arrow-down-01-stroke-rounded", class: "h-3.5 w-3.5 opacity-60" %>
+      </button>
+      <button type="button" class="studs-nav-btn">
+        <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3Z"/></svg>
+        Auto-schedule
+      </button>
+      <button type="button" class="studs-btn-accent" data-action="tasks-page#openDrawer">
+        <%= icon "add-01-stroke-rounded", class: "h-4 w-4" %>
+        New task
+      </button>
+    </div>
+  </div>
+
+  <!-- LIST PANE: every task, grouped Unscheduled / Scheduled -->
+  <div data-tasks-page-target="pane" data-pane="list">
+    <% unscheduled = @all_tasks.reject { |t| t[:scheduled].present? } %>
+    <% scheduled   = @all_tasks.select { |t| t[:scheduled].present? } %>
+    <% if unscheduled.any? %>
+      <div class="mb-6">
+        <div class="tsk-sec">Unscheduled <span class="n"><%= unscheduled.size %></span></div>
+        <div class="tsk-list">
+          <% unscheduled.each do |task| %>
+            <%= render "task_row", task: task, course: task[:course], personal: task[:personal], hide_schedule: true %>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+    <% if scheduled.any? %>
+      <div>
+        <div class="tsk-sec">Scheduled <span class="n"><%= scheduled.size %></span></div>
+        <div class="tsk-list">
+          <% scheduled.each do |task| %>
+            <%= render "task_row", task: task, course: task[:course], personal: task[:personal] %>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+
+  <!-- BREAKDOWN PANE: deadline cards (accordion) -->
+  <div data-tasks-page-target="pane" data-pane="breakdown" class="hidden">
+    <% @groups.each do |group| %>
+      <%= render "course_item_card", group: group %>
+    <% end %>
+  </div>
+
+  <!-- MISSED PANE: past-due, not-done tasks -->
+  <div data-tasks-page-target="pane" data-pane="missed" class="hidden">
+    <% visible_missed = @missed_tasks.reject { |t| t[:done] } %>
+    <div data-missed-list class="<%= "hidden" if visible_missed.empty? %>">
+      <div class="tsk-sec" style="color:#fca5a5;">Past due · not done</div>
+      <div class="tsk-list is-missed">
+        <% @missed_tasks.each do |task| %>
+          <%= render "task_row", task: task.merge(overdue: true), course: task[:course],
+                     extra_class: "tsk-missed-row#{' hidden' if task[:done]}" %>
+        <% end %>
+      </div>
+    </div>
+    <div data-missed-empty class="<%= "hidden" unless visible_missed.empty? %>">
+      <div class="tsk-empty-state">
+        <%= icon "task-done-01-stroke-rounded", class: "h-7 w-7 text-zinc-600" %>
+        <div class="t">Nothing past due</div>
+        <div class="s">Missed tracks tasks whose deadline has passed and aren't done yet. You're all caught up — keep it that way.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- New-task drawer -->
+  <div class="tsk-scrim" data-tasks-page-target="scrim" data-action="click->tasks-page#closeDrawer"></div>
+  <%= render "new_task_drawer", courses: @courses %>
+</div>
