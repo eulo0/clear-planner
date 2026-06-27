@@ -17,7 +17,7 @@ class CourseCodeFieldTest < ActionDispatch::IntegrationTest
     sign_in user
     post courses_path, params: { course: {
       title: "Intro", code: "FORT 101", start_time: "09:00",
-      start_date: "2026-01-13", end_date: "2026-12-01", repeat_days: [1]
+      start_date: "2026-01-13", end_date: "2026-12-01", repeat_days: [ 1 ]
     } }
     assert_equal "FORT 101", user.courses.last.code
   end

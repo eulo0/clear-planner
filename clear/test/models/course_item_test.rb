@@ -6,7 +6,7 @@ class CourseItemTest < ActiveSupport::TestCase
                          password: "password123", confirmed_at: Time.current)
     @course = @user.courses.create!(title: "Intro", code: "FORT 101",
                                     start_time: "09:00", start_date: Date.new(2026, 1, 13),
-                                    end_date: Date.new(2026, 5, 1), repeat_days: [1])
+                                    end_date: Date.new(2026, 5, 1), repeat_days: [ 1 ])
   end
 
   test "source enum defaults to manual and supports canvas" do
