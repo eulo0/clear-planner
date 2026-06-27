@@ -17,3 +17,7 @@ production:
     class: CheckUpcomingRemindersJob
     queue: default
     schedule: every 15 minutes
+  refresh_canvas_subscriptions:
+    class: CanvasSyncEnqueueAllJob
+    queue: default
+    schedule: every 6 hours

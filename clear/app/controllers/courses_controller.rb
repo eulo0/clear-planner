@@ -455,6 +455,7 @@ class CoursesController < ApplicationController
     params.require(:course).permit(
       :title,
       :term,
+      :code,
       :color,
       :start_date,
       :end_date,

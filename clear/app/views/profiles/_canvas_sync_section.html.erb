@@ -1,0 +1,81 @@
+<% sub = user.canvas_subscription %>
+<% input_class = "w-full rounded-md px-2.5 py-1 text-sm text-zinc-100 placeholder:text-zinc-600 bg-zinc-950/60 focus:outline-none focus:ring-2 transition-all duration-150 border" %>
+<% input_style = "border-color: var(--studs-border); --tw-ring-color: var(--studs-accent);" %>
+
+<% if sub %>
+  <% status_color = { "done" => "text-emerald-400", "processing" => "text-amber-400", "failed" => "text-red-400" }[sub.status] || "text-zinc-500" %>
+
+  <!-- Header: title + live status -->
+  <div class="flex items-start justify-between gap-4">
+    <div>
+      <div class="text-sm text-zinc-200">LMS Sync</div>
+      <div class="text-xs text-zinc-500">Imports assignments for courses whose code matches one in Clear.</div>
+    </div>
+    <span class="shrink-0 inline-flex items-center gap-1.5 text-xs font-medium <%= status_color %>">
+      <span class="h-1.5 w-1.5 rounded-full bg-current"></span><%= sub.status %>
+    </span>
+  </div>
+
+  <!-- Feed (inline-editable, mirrors the username row) -->
+  <div class="mt-4 flex items-center justify-between gap-4" data-controller="username-edit">
+    <div class="min-w-0">
+      <div class="text-xs text-zinc-400">Feed</div>
+      <div data-username-edit-target="display" class="mt-1 text-sm text-zinc-100 truncate"><%= sub.masked_feed_url %></div>
+      <%= form_with scope: :canvas_subscription, url: canvas_sync_path, method: :patch,
+            id: "canvas_feed_form", class: "mt-1 hidden items-center gap-2",
+            data: { turbo: false, username_edit_target: "form" } do |f| %>
+        <%= f.url_field :feed_url, placeholder: "Paste a new feed URL",
+              class: "#{input_class} max-w-[16rem]", style: input_style,
+              data: { username_edit_target: "input" } %>
+      <% end %>
+    </div>
+    <div class="shrink-0 translate-y-3">
+      <button type="button" data-username-edit-target="editButton"
+              data-action="click->username-edit#edit"
+              class="studs-nav-btn px-3 py-1.5 text-xs">Change</button>
+      <div data-username-edit-target="actions" class="hidden items-center gap-2">
+        <button type="submit" form="canvas_feed_form" class="studs-btn-accent !px-4 !py-1.5">Save</button>
+        <button type="button" data-action="click->username-edit#cancel"
+                class="studs-nav-btn px-3 py-1.5 text-xs">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Meta -->
+  <div class="mt-3 space-y-1 text-xs">
+    <% if sub.last_synced_at %>
+      <div class="text-zinc-400">Last synced <%= sub.last_synced_at.strftime("%b %-d, %-I:%M %p") %></div>
+    <% end %>
+    <% if (summary = sub.last_summary).present? %>
+      <div class="text-zinc-300">
+        Created <%= summary["created"] %> &middot; Updated <%= summary["updated"] %> &middot; Linked <%= summary["linked"] %> &middot; Removed <%= summary["deleted"] %>
+      </div>
+      <% if summary["skipped_unmatched"].present? %>
+        <div class="text-zinc-500">Skipped (no matching course code): <%= Array(summary["skipped_unmatched"]).join(", ") %></div>
+      <% end %>
+    <% end %>
+    <% if sub.last_error.present? %>
+      <div class="text-red-400 break-words">Error: <%= sub.last_error %></div>
+    <% end %>
+  </div>
+
+  <!-- Actions -->
+  <div class="mt-4 flex flex-wrap items-center gap-2">
+    <%= button_to "Sync now", refresh_canvas_sync_path, method: :post,
+          data: { turbo: false }, class: "studs-btn-accent !px-4 !py-1.5 cursor-pointer" %>
+    <%= button_to "Remove", canvas_sync_path, method: :delete,
+          data: { turbo: false }, class: "studs-nav-btn px-3 py-1.5 text-xs cursor-pointer" %>
+  </div>
+<% else %>
+  <!-- Not connected -->
+  <div class="mb-3">
+    <div class="text-sm text-zinc-200">LMS Sync</div>
+    <div class="text-xs text-zinc-500">Subscribe to your LMS calendar feed (Canvas, Moodle, etc.) to import assignments for matching course codes.</div>
+  </div>
+  <%= form_with scope: :canvas_subscription, url: canvas_sync_path, method: :post,
+        data: { turbo: false }, class: "flex items-center gap-2" do |f| %>
+    <%= f.url_field :feed_url, placeholder: "Paste your LMS calendar feed (.ics) URL",
+          class: input_class, style: input_style %>
+    <%= f.submit "Connect & Sync", class: "studs-btn-accent !px-4 !py-1.5 cursor-pointer shrink-0" %>
+  <% end %>
+<% end %>

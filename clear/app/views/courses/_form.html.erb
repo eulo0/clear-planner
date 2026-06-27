@@ -79,13 +79,22 @@
       <%= f.date_field :end_date, class: input_classes, style: input_style %>
     </div>
   </div>
-  <!-- Term -->
-  <div>
-    <%= f.label :term, "Term", class: label_classes, style: label_style %>
-    <%= f.text_field :term,
-          class: input_classes,
-          style: input_style,
-          placeholder: "e.g. Fall 2025, Spring 2026…" %>
+  <!-- Term + Course code -->
+  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+    <div>
+      <%= f.label :term, "Term", class: label_classes, style: label_style %>
+      <%= f.text_field :term,
+            class: input_classes,
+            style: input_style,
+            placeholder: "e.g. Fall 2025, Spring 2026…" %>
+    </div>
+    <div>
+      <%= f.label :code, "Course code", class: label_classes, style: label_style %>
+      <%= f.text_field :code,
+            class: input_classes,
+            style: input_style,
+            placeholder: "e.g. FORT 101 — matches your Canvas feed" %>
+    </div>
   </div>
   <!-- Professor + Location -->
   <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">

@@ -16,12 +16,25 @@ class CourseItem < ApplicationRecord
     other: 8
   }
 
+  enum :source, { manual: 0, syllabus: 1, canvas: 2 }, prefix: :source
+
+  thread_mattr_accessor :suppress_sync_notifications, instance_accessor: false, default: false
+
+  def self.suppressing_sync_notifications
+    previous = suppress_sync_notifications
+    self.suppress_sync_notifications = true
+    yield
+  ensure
+    self.suppress_sync_notifications = previous
+  end
+
   validates :title, presence: true
   validates :kind, presence: true
   validates :points_possible, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
   validates :points_earned, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
 
-  after_create_commit :create_assignment_notification
+  after_create_commit :create_assignment_notification,
+                      unless: -> { CourseItem.suppress_sync_notifications }
 
   def display_title
     course_name = course&.title.presence || "Course"
