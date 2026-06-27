@@ -87,6 +87,13 @@ Rails.application.routes.draw do
   end
   resources :agenda
 
+  # Canvas sync is managed inline from the profile drawer; these are the backing
+  # action endpoints (no standalone show/new page).
+  resource :canvas_sync, only: %i[create update destroy],
+           controller: "canvas_subscriptions", path: "syncs" do
+    post :refresh, on: :collection
+  end
+
   resources :syllabuses do
     member do
       post :create_course

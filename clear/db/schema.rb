@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_21_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_27_001723) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -52,6 +52,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_21_120000) do
     t.index ["user_id"], name: "index_calendar_drafts_on_user_id"
   end
 
+  create_table "canvas_subscriptions", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.text "feed_url", null: false
+    t.text "last_error"
+    t.jsonb "last_summary"
+    t.datetime "last_synced_at"
+    t.string "status", default: "idle", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "user_id", null: false
+    t.index ["user_id"], name: "index_canvas_subscriptions_on_user_id", unique: true
+  end
+
   create_table "course_exceptions", force: :cascade do |t|
     t.bigint "course_id", null: false
     t.datetime "created_at", null: false
@@ -62,6 +74,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_21_120000) do
   end
 
   create_table "course_items", force: :cascade do |t|
+    t.string "canvas_uid"
     t.bigint "course_id", null: false
     t.datetime "created_at", null: false
     t.text "details"
@@ -69,8 +82,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_21_120000) do
     t.integer "kind", default: 0, null: false
     t.decimal "points_earned"
     t.decimal "points_possible"
+    t.integer "source", default: 0, null: false
     t.string "title", null: false
     t.datetime "updated_at", null: false
+    t.index ["course_id", "canvas_uid"], name: "index_course_items_on_course_and_canvas_uid", unique: true, where: "(canvas_uid IS NOT NULL)"
     t.index ["course_id", "due_at"], name: "index_course_items_on_course_id_and_due_at"
     t.index ["course_id"], name: "index_course_items_on_course_id"
   end
@@ -303,6 +318,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_21_120000) do
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "calendar_drafts", "users"
+  add_foreign_key "canvas_subscriptions", "users"
   add_foreign_key "course_exceptions", "courses"
   add_foreign_key "course_items", "courses"
   add_foreign_key "courses", "projects"
