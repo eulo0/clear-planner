@@ -5,7 +5,8 @@ import { Controller } from "@hotwired/stimulus"
 // task completion that stays in sync across every pane a task appears in.
 // Data is server-rendered sample data; nothing persists to a backend yet.
 export default class extends Controller {
-  static targets = ["tab", "pane", "drawer", "scrim"]
+  static targets = ["tab", "pane", "drawer", "scrim", "controls", "statusBar"]
+  static values = { toggleUrl: String }
 
   connect() {
     this._onKey = (e) => {
@@ -33,6 +34,28 @@ export default class extends Controller {
   activate(tab) {
     this.tabTargets.forEach((t) => t.classList.toggle("is-active", t.dataset.tab === tab))
     this.paneTargets.forEach((p) => p.classList.toggle("hidden", p.dataset.pane !== tab))
+    // Row 2 (operate-on-the-list controls) is irrelevant on Missed; the status
+    // toggle only means something on List.
+    if (this.hasControlsTarget) this.controlsTarget.classList.toggle("hidden", tab === "missed")
+    if (this.hasStatusBarTarget) this.statusBarTarget.classList.toggle("hidden", tab !== "list")
+  }
+
+  // Re-apply the last-active tab/pane after the Turbo frame swaps in new
+  // (filtered) content. The pane elements live inside the frame and are
+  // replaced on reload, so their hidden/active classes must be re-set.
+  restoreView() {
+    this.activate(this.readView() || "list")
+  }
+
+  // Immediately highlight the clicked status button. The buttons live outside
+  // the turbo frame so the server-rendered `is-active` class never reaches them
+  // after a frame-only swap.
+  selectStatus(event) {
+    if (!this.hasStatusBarTarget) return
+    const clicked = event.currentTarget
+    this.statusBarTarget.querySelectorAll("button").forEach((btn) => {
+      btn.classList.toggle("is-active", btn === clicked)
+    })
   }
 
   readView() {
@@ -72,6 +95,16 @@ export default class extends Controller {
 
     this.refreshProgress()
     this.refreshMissed()
+
+    // Persist completion to the server (optimistic UI already applied above).
+    if (this.hasToggleUrlValue && id) {
+      const csrf = document.querySelector('meta[name="csrf-token"]')?.content
+      fetch(`${this.toggleUrlValue}/${id}/toggle`, {
+        method: "PATCH",
+        headers: { "X-CSRF-Token": csrf, "Accept": "text/html" },
+        credentials: "same-origin"
+      })
+    }
   }
 
   refreshProgress() {

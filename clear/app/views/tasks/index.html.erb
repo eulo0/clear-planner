@@ -69,6 +69,12 @@
   .tsk-empty-state .t{ font-size:14px; font-weight:600; color:#d4d4d8; }
   .tsk-empty-state .s{ font-size:12.5px; color:#71717a; max-width:360px; line-height:1.5; }
 
+  /* two-row control bar (row 2: operate on the list) */
+  .tsk-seg{ display:inline-flex; flex-shrink:0; border:1px solid var(--studs-border); background:var(--studs-panel-bg-2); border-radius:9999px; padding:3px; gap:2px; }
+  .tsk-seg button{ border:0; background:transparent; color:#a1a1aa; font-size:12px; font-weight:600; padding:6px 12px; border-radius:9999px; cursor:pointer; white-space:nowrap; }
+  .tsk-seg button:hover{ color:#fafafa; }
+  .tsk-seg button.is-active{ background:var(--studs-accent); color:var(--studs-accent-text); }
+
   /* drawer */
   .tsk-scrim{ position:fixed; inset:0; z-index:70; background:rgba(0,0,0,.6); backdrop-filter:blur(2px); opacity:0; pointer-events:none; transition:opacity .25s ease; }
   .tsk-scrim.is-on{ opacity:1; pointer-events:auto; }
@@ -83,41 +89,74 @@
   .tsk-input:focus{ border-color:color-mix(in srgb,var(--studs-accent) 60%,transparent); box-shadow:0 0 0 2px color-mix(in srgb,var(--studs-accent) 25%,transparent); }
 </style>
 
-<div class="space-y-4" data-controller="tasks-page">
-  <!-- Toolbar: tabs + page actions -->
-  <div class="flex flex-wrap items-center gap-3">
-    <div class="tsk-tabs">
-      <button class="tsk-tab is-active" data-tab="list" data-tasks-page-target="tab" data-action="tasks-page#switch">
-        <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="20" y2="12"/><line x1="8" y1="18" x2="20" y2="18"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg>
-        List <span class="tsk-tab-c"><%= @counts[:list] %></span>
-      </button>
-      <button class="tsk-tab" data-tab="breakdown" data-tasks-page-target="tab" data-action="tasks-page#switch">
-        <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>
-        Breakdown <span class="tsk-tab-c"><%= @counts[:breakdown] %></span>
-      </button>
-      <button class="tsk-tab" data-tab="missed" data-tasks-page-target="tab" data-action="tasks-page#switch">
-        <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-        Missed <span class="tsk-tab-c" data-count="missed"><%= @counts[:missed] %></span>
-      </button>
+<div class="space-y-4" data-controller="tasks-page" data-tasks-page-toggle-url-value="<%= tasks_path %>">
+  <!-- Two-row control bar -->
+  <div class="space-y-4">
+    <!-- Row 1: navigate + create -->
+    <div class="flex flex-wrap items-center gap-3">
+      <div class="tsk-tabs">
+        <button class="tsk-tab is-active" data-tab="list" data-tasks-page-target="tab" data-action="tasks-page#switch">
+          <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="20" y2="12"/><line x1="8" y1="18" x2="20" y2="18"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg>
+          List <span class="tsk-tab-c"><%= @counts[:list] %></span>
+        </button>
+        <button class="tsk-tab" data-tab="breakdown" data-tasks-page-target="tab" data-action="tasks-page#switch">
+          <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>
+          Breakdown <span class="tsk-tab-c"><%= @counts[:breakdown] %></span>
+        </button>
+        <button class="tsk-tab" data-tab="missed" data-tasks-page-target="tab" data-action="tasks-page#switch">
+          <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          Missed <span class="tsk-tab-c" data-count="missed"><%= @counts[:missed] %></span>
+        </button>
+      </div>
+
+      <div class="ml-auto flex items-center gap-2">
+        <button type="button" class="studs-nav-btn">
+          <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3Z"/></svg>
+          Auto-schedule
+        </button>
+        <button type="button" class="studs-btn-accent" data-action="tasks-page#openDrawer">
+          <%= icon "add-01-stroke-rounded", class: "h-4 w-4" %>
+          New task
+        </button>
+      </div>
     </div>
 
-    <div class="ml-auto flex items-center gap-2">
-      <button type="button" class="studs-nav-btn">
-        <span class="h-2 w-2 rounded-full" style="background:#a1a1aa;"></span>
-        All courses
-        <%= icon "arrow-down-01-stroke-rounded", class: "h-3.5 w-3.5 opacity-60" %>
-      </button>
-      <button type="button" class="studs-nav-btn">
-        <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3Z"/></svg>
-        Auto-schedule
-      </button>
-      <button type="button" class="studs-btn-accent" data-action="tasks-page#openDrawer">
-        <%= icon "add-01-stroke-rounded", class: "h-4 w-4" %>
-        New task
-      </button>
-    </div>
+    <!-- Row 2: operate on the list (hidden on Missed) -->
+    <%= form_with url: tasks_path, method: :get,
+                  data: { turbo_frame: "tasks_board", controller: "search", search_target: "form" } do |f| %>
+      <div class="flex items-center gap-2" data-tasks-page-target="controls">
+        <%= render Studs::SearchBarComponent.new(
+              variant: :pill,
+              placeholder: "Search tasks, courses…",
+              class_name: "grow",
+              value: params[:q],
+              data: {
+                search_target: "input",
+                action: "input->search#search keydown->search#submit"
+              }
+            ) %>
+        <div data-action="dropdown:select->search#search">
+          <%= render Studs::DropdownComponent.new(
+            label: "All courses",
+            variant: :dashboard_view,
+            name: "course_id",
+            selected_value: params[:course_id],
+            items: [
+              { label: "All courses", value: "" },
+              *@courses.map { |c| { label: c[:name], value: c[:id].to_s } }
+            ]
+          ) %>
+        </div>
+        <div class="tsk-seg" data-tasks-page-target="statusBar">
+          <button type="submit" name="status" value="all"         data-action="click->tasks-page#selectStatus" class="<%= 'is-active' if params[:status].blank? || params[:status] == 'all' %>">All</button>
+          <button type="submit" name="status" value="unscheduled" data-action="click->tasks-page#selectStatus" class="<%= 'is-active' if params[:status] == 'unscheduled' %>">Unscheduled</button>
+          <button type="submit" name="status" value="scheduled"   data-action="click->tasks-page#selectStatus" class="<%= 'is-active' if params[:status] == 'scheduled' %>">Scheduled</button>
+        </div>
+      </div>
+    <% end %>
   </div>
 
+  <%= turbo_frame_tag "tasks_board", data: { action: "turbo:frame-render->tasks-page#restoreView" } do %>
   <!-- LIST PANE: every task, grouped Unscheduled / Scheduled -->
   <div data-tasks-page-target="pane" data-pane="list">
     <% unscheduled = @all_tasks.reject { |t| t[:scheduled].present? } %>
@@ -159,6 +198,7 @@
       <div class="tsk-list is-missed">
         <% @missed_tasks.each do |task| %>
           <%= render "task_row", task: task.merge(overdue: true), course: task[:course],
+                     personal: task[:personal],
                      extra_class: "tsk-missed-row#{' hidden' if task[:done]}" %>
         <% end %>
       </div>
@@ -171,8 +211,9 @@
       </div>
     </div>
   </div>
+  <% end %>
 
   <!-- New-task drawer -->
-  <div class="tsk-scrim" data-tasks-page-target="scrim" data-action="click->tasks-page#closeDrawer"></div>
-  <%= render "new_task_drawer", courses: @courses %>
+  <div class="tsk-scrim <%= 'is-on' if @task&.errors&.any? %>" data-tasks-page-target="scrim" data-action="click->tasks-page#closeDrawer"></div>
+  <%= render "new_task_drawer", courses: @courses, grouped_course_items: @grouped_course_items, task: @task %>
 </div>

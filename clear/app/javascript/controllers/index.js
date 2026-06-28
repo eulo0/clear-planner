@@ -148,6 +148,9 @@ application.register("search", SearchController)
 import SidebarController from "./sidebar_controller"
 application.register("sidebar", SidebarController)
 
+import TaskFormController from "./task_form_controller"
+application.register("task-form", TaskFormController)
+
 import TasksPageController from "./tasks_page_controller"
 application.register("tasks-page", TasksPageController)
 

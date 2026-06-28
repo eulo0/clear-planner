@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_27_001723) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_27_010000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -250,6 +250,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_27_001723) do
     t.index ["user_id"], name: "index_syllabuses_on_user_id"
   end
 
+  create_table "tasks", force: :cascade do |t|
+    t.datetime "completed_at"
+    t.bigint "course_item_id"
+    t.datetime "created_at", null: false
+    t.text "description"
+    t.boolean "done", default: false, null: false
+    t.integer "duration_minutes", null: false
+    t.datetime "scheduled_at"
+    t.string "title", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "user_id", null: false
+    t.index ["course_item_id"], name: "index_tasks_on_course_item_id"
+    t.index ["user_id", "scheduled_at"], name: "index_tasks_on_user_id_and_scheduled_at"
+    t.index ["user_id"], name: "index_tasks_on_user_id"
+  end
+
   create_table "users", force: :cascade do |t|
     t.datetime "confirmation_sent_at"
     t.string "confirmation_token"
@@ -337,6 +353,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_27_001723) do
   add_foreign_key "schedules", "users"
   add_foreign_key "syllabuses", "courses", on_delete: :nullify
   add_foreign_key "syllabuses", "users"
+  add_foreign_key "tasks", "course_items", on_delete: :nullify
+  add_foreign_key "tasks", "users"
   add_foreign_key "work_shift_exceptions", "work_shifts"
   add_foreign_key "work_shifts", "users"
 end
