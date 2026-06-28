@@ -63,6 +63,10 @@ export default class extends Controller {
 
   frameLoaded() {
     window.clearTimeout(this._skeletonTimer)
+    if (this._skipNextFrameLoad) {
+      this._skipNextFrameLoad = false
+      return
+    }
     this.open()
   }
 
@@ -79,7 +83,10 @@ export default class extends Controller {
 
     const form = event.detail.formSubmission?.formElement
     const shouldClose = form?.dataset?.drawerCloseOnSuccess === "true"
-    if (shouldClose) this.close()
+    if (shouldClose) {
+      this._skipNextFrameLoad = true
+      this.close()
+    }
   }
 
   syncWithFrame() {

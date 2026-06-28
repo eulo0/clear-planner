@@ -769,6 +769,13 @@ select.studs-nav-btn {
   overflow: hidden;
 }
 
+/* Icons ship with a hardcoded color="#000000" attribute; force them to inherit
+   the button's (theme-aware) text color so they stay legible on every accent —
+   white on green/blue/etc., dark on mono/amber/lime. */
+.studs-btn-accent svg {
+  color: inherit;
+}
+
 .studs-btn-accent::before {
   content: "";
   position: absolute;

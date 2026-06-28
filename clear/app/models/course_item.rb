@@ -3,6 +3,7 @@
 class CourseItem < ApplicationRecord
   belongs_to :course
   has_many :notifications, as: :notifiable, dependent: :destroy
+  has_many :tasks, dependent: :nullify
 
   enum :kind, {
     assignment: 0,

@@ -1,0 +1,88 @@
+<%# A course item (deadline) card with its tasks. Local: group (Hash). %>
+<% g = group %>
+<div class="tsk-card">
+  <div class="tsk-card-head" style="cursor:pointer;" data-action="click->tasks-page#toggleCard">
+    <div class="flex min-w-0 flex-1 flex-wrap items-center gap-2.5">
+      <% if g[:personal] %>
+        <span class="tsk-badge" style="background:rgba(161,161,170,.14);border-color:rgba(161,161,170,.4);color:#d4d4d8;">Personal</span>
+      <% else %>
+        <% ts = g[:type_style] %>
+        <span class="tsk-badge" style="background:<%= ts[:bg] %>;border-color:<%= ts[:bd] %>;color:<%= ts[:fg] %>;"><%= g[:type] %></span>
+      <% end %>
+      <span class="text-[15px] font-semibold text-zinc-100"><%= g[:title] %></span>
+      <% if g[:personal] %>
+        <span class="tsk-chip course" style="--cc:#a1a1aa;"><span class="dot"></span>Not tied to a course</span>
+      <% else %>
+        <% c = g[:course] %>
+        <span class="tsk-chip course" style="--cc:<%= c[:color] %>;"><span class="dot"></span><%= c[:code] %> · <%= c[:name] %></span>
+        <span class="tsk-chip due <%= "overdue" if g[:overdue] %>">Due <%= g[:due] %></span>
+      <% end %>
+    </div>
+
+    <% if g[:progress][:total] > 0 %>
+      <div class="tsk-prog">
+        <div class="bar"><div class="fill" style="width:<%= g[:progress][:pct] %>%;"></div></div>
+        <span class="ptxt"><%= g[:progress][:done] %> of <%= g[:progress][:total] %> done</span>
+      </div>
+    <% end %>
+
+    <% if !g[:personal] && !g[:broken_down] && g[:suggestions].any? %>
+      <button type="button" class="tsk-bd" data-no-toggle>
+        <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3Z"/></svg>
+        Break down with AI
+      </button>
+    <% end %>
+
+    <span class="tsk-card-chev">
+      <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+    </span>
+  </div>
+
+  <div class="tsk-card-body">
+
+  <% if g[:tasks].any? %>
+    <% g[:tasks].each do |task| %>
+      <%= render "task_row", task: task, status_only: true %>
+    <% end %>
+  <% else %>
+    <div class="tsk-empty">No tasks yet — break it down with AI, or add one below.</div>
+  <% end %>
+
+  <% if g[:broken_down] %>
+    <% g[:suggestions].each do |s| %>
+      <% est = s[:estimate] %>
+      <% est_label = est < 60 ? "#{est} min" : "#{est / 60}h#{est % 60 > 0 ? " #{est % 60}m" : ""}" %>
+      <div class="tsk-row tsk-aisuggest">
+        <span class="tsk-cbx" style="border-style:dashed;"></span>
+        <div class="min-w-0 flex-1">
+          <div class="text-sm font-medium text-zinc-100"><%= s[:title] %></div>
+          <div class="mt-1.5 flex flex-wrap items-center gap-2">
+            <span class="tsk-aitag">
+              <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3Z"/></svg>
+              AI suggested
+            </span>
+            <span class="tsk-chip est">
+              <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 8v4.5l3 2"/></svg>
+              <%= est_label %>
+            </span>
+          </div>
+        </div>
+        <div class="flex shrink-0 items-center gap-1.5">
+          <button type="button" class="tsk-accept">
+            <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-11"/></svg>
+            Accept
+          </button>
+          <button type="button" class="tsk-iconbtn" aria-label="Dismiss">
+            <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+          </button>
+        </div>
+      </div>
+    <% end %>
+  <% end %>
+
+  <div class="tsk-add">
+    <%= icon "add-01-stroke-rounded", class: "h-4 w-4" %>
+    Add a task to <%= g[:title] %>
+  </div>
+  </div>
+</div>

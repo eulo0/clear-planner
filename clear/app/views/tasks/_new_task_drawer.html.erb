@@ -1,0 +1,76 @@
+<%# New-task drawer. Locals: courses (Array of {id,name,...}), grouped_course_items (Hash), task (Task|nil). %>
+<% new_task = local_assigns[:task] %>
+<aside class="tsk-drawer <%= 'is-open' if new_task&.errors&.any? %>" data-tasks-page-target="drawer">
+  <%= form_with url: tasks_path, method: :post, class: "flex flex-col min-h-0 flex-1" do %>
+    <div class="flex items-start justify-between p-5" style="border-bottom:1px solid var(--studs-border); background:var(--studs-panel-header);">
+      <div>
+        <h2 class="text-lg font-semibold text-zinc-100">New task</h2>
+        <p class="mt-0.5 text-xs text-zinc-400">Create a step and attach it to a course item.</p>
+      </div>
+      <button type="button" class="tsk-iconbtn" data-action="tasks-page#closeDrawer" aria-label="Close">
+        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+      </button>
+    </div>
+
+    <div class="flex-1 min-h-0 overflow-y-auto p-5">
+      <%= content_tag(:div, new_task.errors.full_messages.to_sentence,
+            class: "mb-4 rounded-xl px-4 py-3 text-sm text-red-300",
+            style: "border:1px solid rgba(239,68,68,0.3);background:rgba(127,29,29,0.2);") if new_task&.errors&.any? %>
+      <div class="tsk-field">Task</div>
+      <input type="text" name="task[title]" required class="tsk-input" placeholder="e.g. Draft the introduction">
+
+      <div class="mt-5" data-controller="task-form"
+           data-task-form-grouped-value="<%= grouped_course_items.to_json %>">
+        <div class="grid grid-cols-2 gap-3">
+          <div class="col-span-2" data-task-form-target="courseCol">
+            <div class="tsk-field">Course</div>
+            <div data-action="dropdown:select->task-form#courseSelected">
+              <%= render Studs::DropdownComponent.new(
+                label: "No course (personal)",
+                variant: :duration,
+                name: "_course_filter",
+                selected_value: "",
+                items: [
+                  { label: "No course (personal)", value: "" },
+                  *courses.map { |c| { label: c[:name], value: c[:id].to_s } }
+                ]
+              ) %>
+            </div>
+          </div>
+          <div class="hidden" data-task-form-target="courseItemWrapper">
+            <div class="tsk-field">Course item</div>
+            <%= render Studs::DropdownComponent.new(
+              label: "— select course item —",
+              variant: :duration,
+              name: "task[course_item_id]",
+              selected_value: nil,
+              items: []
+            ) %>
+          </div>
+        </div>
+      </div>
+
+      <div class="tsk-field">Estimated time</div>
+      <%= render Studs::DropdownComponent.new(
+        label: "— select duration —",
+        variant: :duration,
+        name: "task[duration_minutes]",
+        selected_value: 15,
+        items: ApplicationHelper::DURATION_OPTIONS.map { |label, value| { label: label, value: value.to_s } }
+      ) %>
+
+      <div class="tsk-field">When</div>
+      <input type="datetime-local" name="task[scheduled_at]" class="tsk-input">
+      <p class="mt-2 text-xs text-zinc-500">Leave blank to add to the backlog.</p>
+    </div>
+
+    <div class="flex items-center gap-2.5 p-4" style="border-top:1px solid var(--studs-border); background:var(--studs-panel-header);">
+      <button type="button" class="studs-nav-btn" data-action="tasks-page#closeDrawer">Cancel</button>
+      <span class="flex-1"></span>
+      <button type="submit" class="studs-btn-accent">
+        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-11"/></svg>
+        Create task
+      </button>
+    </div>
+  <% end %>
+</aside>
