@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class Event < ApplicationRecord
+  include Colorable
+
   belongs_to :user
   belongs_to :project, optional: true
   has_many :event_exceptions, dependent: :destroy
@@ -82,19 +84,6 @@ class Event < ApplicationRecord
     out.sort_by(&:starts_at)
   end
 
-  def contrast_text_color
-    hex = color.to_s.delete("#")
-    return "#0A0A0A" unless hex.length == 6
-
-    r = hex[0..1].to_i(16)
-    g = hex[2..3].to_i(16)
-    b = hex[4..5].to_i(16)
-
-    luminance = (0.2126 * srgb_linear(r) + 0.7152 * srgb_linear(g) + 0.0722 * srgb_linear(b))
-
-    luminance > 0.55 ? "#0A0A0A" : "#F9FAFB"
-  end
-
   private
 
   def derive_ends_at_from_duration
@@ -161,11 +150,6 @@ class Event < ApplicationRecord
         message: %(#{creator_name} added #{base_message} in group "#{project.title}")
       )
     end
-  end
-
-  def srgb_linear(channel_0_255)
-    c = channel_0_255 / 255.0
-    c <= 0.03928 ? (c / 12.92) : (((c + 0.055) / 1.055)**2.4)
   end
 
   def self.ransackable_attributes(auth_object = nil)

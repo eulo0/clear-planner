@@ -90,6 +90,14 @@
           style: "#{input_style} resize: vertical;",
           placeholder: "Optional notes…" %>
   </div>
+  <!-- Color -->
+  <div>
+    <%= f.label :color, "Color", class: label_classes, style: label_style %>
+    <%= f.color_field :color,
+          value: task.color || "#34D399",
+          class: "h-10 w-14 cursor-pointer rounded-xl border border-zinc-800 bg-zinc-950/40" %>
+    <p class="mt-2 text-xs text-zinc-500">Defaults to the course color, or green for a personal task.</p>
+  </div>
   <!-- Submit -->
   <div class="flex items-center gap-3 pt-4"
        style="border-top: 1px solid var(--studs-divider);">

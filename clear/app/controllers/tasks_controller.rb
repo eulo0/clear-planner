@@ -22,6 +22,11 @@ class TasksController < ApplicationController
     end
   end
 
+  def show
+    @task = current_user.tasks.includes(course_item: :course).find(params[:id])
+    render partial: "tasks/popover_detail", locals: { task: @task }
+  end
+
   def edit
     @task = current_user.tasks.includes(:course_item).find(params[:id])
     render partial: "tasks/edit_drawer",
@@ -31,10 +36,7 @@ class TasksController < ApplicationController
   def update
     @task = current_user.tasks.includes(:course_item).find(params[:id])
     if @task.update(task_params)
-      respond_to do |format|
-        format.turbo_stream { render turbo_stream: turbo_stream.action("refresh") }
-        format.html { redirect_to tasks_path, status: :see_other, notice: "Task updated." }
-      end
+      redirect_to tasks_path, status: :see_other, notice: "Task updated."
     else
       render partial: "tasks/edit_drawer",
              locals: { task: @task, courses: courses_for_select, grouped_course_items: grouped_course_items_for_js },
@@ -44,7 +46,7 @@ class TasksController < ApplicationController
 
   def destroy
     current_user.tasks.find(params[:id]).destroy!
-    redirect_to tasks_path, status: :see_other, notice: "Task deleted."
+    redirect_back_or_to tasks_path, status: :see_other, notice: "Task deleted."
   end
 
   def toggle
@@ -88,6 +90,6 @@ class TasksController < ApplicationController
   end
 
   def task_params
-    params.require(:task).permit(:title, :description, :duration_minutes, :scheduled_at, :course_item_id)
+    params.require(:task).permit(:title, :description, :duration_minutes, :scheduled_at, :course_item_id, :color)
   end
 end

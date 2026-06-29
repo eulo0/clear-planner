@@ -614,7 +614,7 @@
             <% segments.each do |seg| %>
               <% record    = seg[:record]; model = seg[:model] %>
               <% draft_status = seg[:draft_status] %>
-              <% is_course = (model == "course"); is_due = (model == "course_item"); is_work_shift = (model == "work_shift") %>
+              <% is_course = (model == "course"); is_due = (model == "course_item"); is_work_shift = (model == "work_shift"); is_task = (model == "task") %>
               <% is_draft_created = (draft_status == "created") %>
               <% is_draft_updated = (draft_status == "updated") %>
               <% is_draft_deleted = (draft_status == "deleted") %>
@@ -656,6 +656,8 @@
                   "SHIFT"
                 elsif is_course
                   "COURSE"
+                elsif is_task
+                  "TASK"
                 else
                   "EVENT"
                 end

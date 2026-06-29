@@ -91,7 +91,18 @@ class ApplicationController < ActionController::Base
       course_items       = []
     end
 
-    result = (event_occurrences + course_occurrences + work_shift_occurrences + course_items).sort_by(&:starts_at)
+    # Tasks only appear in the default "all" view; per-filter support is deferred to Phase 2.
+    if filter.blank?
+      task_occurrences =
+        current_user.tasks.scheduled
+          .where("scheduled_at <= ?", range_end)
+          .where("scheduled_at + (duration_minutes * interval '1 minute') >= ?", range_start)
+          .flat_map { |t| t.occurrences_between(range_start, range_end) }
+    else
+      task_occurrences = []
+    end
+
+    result = (event_occurrences + course_occurrences + work_shift_occurrences + course_items + task_occurrences).sort_by(&:starts_at)
 
     draft&.operation_count&.positive? ? draft.build_preview_occurrences(result, range_start, range_end) : result
   end
