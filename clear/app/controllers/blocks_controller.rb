@@ -28,7 +28,10 @@ class BlocksController < ApplicationController
 
   def destroy
     @block.destroy
-    redirect_to blocks_path, notice: "Block removed."
+    respond_to do |format|
+      format.html { redirect_to blocks_path, notice: "Block removed." }
+      format.json { head :no_content }
+    end
   end
 
   def reschedule

@@ -433,9 +433,28 @@
     <% end %>
     <!-- Body grid -->
     <div class="grid" style="grid-template-columns: <%= time_col_px %>px repeat(<%= col_count %>, minmax(0, 1fr));"
-         data-controller="event-drag"
+         data-controller="event-drag block-builder block-popover"
          data-event-drag-hour-height-value="<%= hour_height_px %>"
-         data-event-drag-snap-minutes-value="30">
+         data-event-drag-snap-minutes-value="30"
+         data-block-builder-px-per-minute-value="<%= px_per_minute %>"
+         data-block-builder-grid-start-min-value="0"
+         data-block-builder-snap-minutes-value="15"
+         data-block-builder-allow-day-change-value="true"
+         data-action="block-builder:requestMenu->block-popover#open">
+      <!-- Availability block delete popover -->
+      <div data-block-popover-target="menu"
+           class="hidden absolute z-[110] rounded-xl border border-zinc-700 overflow-hidden"
+           style="background-color:#18181b; box-shadow:0 8px 30px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.06);">
+        <button type="button"
+                data-action="click->block-popover#delete"
+                class="flex w-full items-center gap-2 px-4 py-2.5 text-left text-[13px] font-semibold text-red-400 hover:bg-red-500/10">
+          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M6 7h12M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m-7 0v12a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V7"/>
+          </svg>
+          Delete block
+        </button>
+      </div>
       <!-- Hours gutter -->
       <div style="border-right: 1px solid var(--studs-border); background-color: var(--studs-panel-bg-soft);">
         <% 24.times do |h| %>
@@ -468,6 +487,7 @@
              data-action="click->agenda-highlight#clearFromDay"
              data-event-drag-target="day"
              data-date="<%= day.iso8601 %>"
+             data-wday="<%= day.wday %>"
           style="border-right: 1px solid var(--studs-divider);">
           <!-- Clickable time slots -->
           <% can_create_event = @project ? @project.membership_for(current_user)&.can_edit_content? : true %>
@@ -538,19 +558,37 @@
             </div>
           <% end %>
           <!-- Unified Event layer -->
-          <div class="relative" style="height: <%= day_height_px %>px;">
-            <%# Availability bands — render first so they sit behind events (z-0 vs z-10+) %>
+          <div class="relative" style="height: <%= day_height_px %>px;" data-block-layer>
+            <%# Availability bands — drag to move/resize, click to open the delete
+                popover. They sit above grid/blocked layers but below events
+                (z-3 vs z-10+), so overlapping events stay grabbable first. %>
             <% availability_blocks.select { |b| Array(b.repeat_days).include?(day.wday) }.each do |blk| %>
               <% blk_top    = blk.start_minute * px_per_minute %>
               <% blk_height = (blk.end_minute - blk.start_minute) * px_per_minute %>
               <% blk_color  = blk.color.presence || "#6366f1" %>
               <div class="absolute"
-                   style="top: <%= blk_top %>px; height: <%= blk_height %>px; left: 2px; right: 2px; z-index: 0; pointer-events: none; border-radius: 9px;
+                   data-block-builder-target="band"
+                   data-block-id="<%= blk.id %>"
+                   data-current-wday="<%= day.wday %>"
+                   data-reschedule-url="<%= reschedule_block_path(blk) %>"
+                   data-delete-url="<%= block_path(blk) %>"
+                   data-start-minute="<%= blk.start_minute %>"
+                   data-end-minute="<%= blk.end_minute %>"
+                   data-action="pointerdown->block-builder#startMove"
+                   style="top: <%= blk_top %>px; height: <%= blk_height %>px; left: 2px; right: 2px; z-index: 3; cursor: grab; user-select: none; border-radius: 9px; overflow: hidden;
                           background: repeating-linear-gradient(45deg,
                             <%= blk_color %>22 0, <%= blk_color %>22 7px,
                             <%= blk_color %>0d 7px, <%= blk_color %>0d 16px);
                           border: 1.5px dashed <%= blk_color %>55;">
                 <span style="position:absolute; top:3px; left:7px; font-size:10px; font-weight:600; letter-spacing:.02em; color: <%= blk_color %>; opacity:.85;"><%= blk.label %></span>
+                <%# Bottom-edge resize handle — taller hit area + hover grip so it's discoverable %>
+                <div class="group/resize absolute bottom-0 left-0 right-0 h-3 flex items-end justify-center pb-0.5"
+                     style="cursor: ns-resize;"
+                     data-action="pointerdown->block-builder#startResize"
+                     data-block-builder-target="resizeHandle">
+                  <div class="h-1 w-6 rounded-full opacity-0 group-hover/resize:opacity-80 transition-opacity"
+                       style="background: <%= blk_color %>;"></div>
+                </div>
               </div>
             <% end %>
             <% day_events = events_by_day.fetch(day, []) %>

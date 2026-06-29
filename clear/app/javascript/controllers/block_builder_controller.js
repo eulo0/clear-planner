@@ -10,6 +10,10 @@ export default class extends Controller {
     pxPerMinute:  { type: Number, default: 1.2 },
     gridStartMin: { type: Number, default: 360 },
     snapMinutes:  { type: Number, default: 15 },
+    // When true, dragging a band to a different day column re-targets its
+    // weekday (repeat_days) and relocates the DOM node. The /blocks routine
+    // builder leaves this false, preserving its move-within-day-only contract.
+    allowDayChange: { type: Boolean, default: false },
   }
 
   // ── Entry points wired from each band's data-action attributes ──────────
@@ -39,9 +43,14 @@ export default class extends Controller {
     this.moved   = false
     this.startY  = event.clientY
 
-    this.originRect     = band.getBoundingClientRect()
-    this.originalHeight = band.style.height
-    this.grabOffsetY    = event.clientY - this.originRect.top
+    this.originRect      = band.getBoundingClientRect()
+    this.originalHeight  = band.style.height
+    // Preserve the band's resting z-index (e.g. "3" on the calendar, where it
+    // must stay above the clickable timeslot links). _begin lifts it to "60"
+    // during the drag; _resetEl restores this exact value — clearing it instead
+    // would drop the band below the timeslots and block the next interaction.
+    this.originalZIndex  = band.style.zIndex
+    this.grabOffsetY     = event.clientY - this.originRect.top
     this.startMinute    = parseInt(band.dataset.startMinute, 10)
     this.endMinute      = parseInt(band.dataset.endMinute, 10)
     this.durationMin    = this.endMinute - this.startMinute
@@ -96,7 +105,10 @@ export default class extends Controller {
     if (!el) return
 
     if (!this.moved) {
+      // A click (no drag) requests the band's context menu (e.g. delete popover
+      // on the calendar). Harmless where no listener exists (/blocks builder).
       this._resetEl(el)
+      this.dispatch("requestMenu", { detail: { band: el } })
       return
     }
 
@@ -106,7 +118,7 @@ export default class extends Controller {
     if (!target) { this._resetEl(el); return }
 
     const newWday = parseInt(target.colEl.dataset.wday, 10)
-    this._submit(el, target.startMinute, target.endMinute, newWday)
+    this._submit(el, target.startMinute, target.endMinute, newWday, target.colEl)
   }
 
   // ── Rendering helpers ───────────────────────────────────────────────────
@@ -126,17 +138,20 @@ export default class extends Controller {
 
   // ── Network ─────────────────────────────────────────────────────────────
 
-  _submit(el, startMinute, endMinute, wday) {
+  _submit(el, startMinute, endMinute, wday, colEl) {
     const url  = el.dataset.rescheduleUrl
     const body = new URLSearchParams()
     body.set("start_minute", startMinute)
     body.set("end_minute",   endMinute)
-    // Persist day change: re-send repeat_days with the new wday replacing old ones.
-    // For a simple move-within-day case, repeat_days may be unchanged but we
-    // always send the value so the server can do partial day remap if needed.
-    // Current implementation: the band carries its day implicitly (column). We
-    // only update start/end_minute here; day changes would require a separate
-    // update action (out of scope for v1 drag).
+
+    // Cross-day move: only when the host opts in (calendar) and the band landed
+    // on a different weekday column than it started on. We send the single new
+    // weekday — each block is one day (BlockRoutine emits repeat_days: [wday]).
+    const currentWday = parseInt(el.dataset.currentWday ?? "", 10)
+    const dayChanged  = this.allowDayChangeValue &&
+                        Number.isInteger(wday) && wday !== currentWday
+    if (dayChanged) body.append("repeat_days[]", wday)
+
     fetch(url, {
       method: "PATCH",
       headers: {
@@ -152,6 +167,13 @@ export default class extends Controller {
           // _resetEl height restore below is a no-op (not a revert).
           el.dataset.startMinute = startMinute
           el.dataset.endMinute   = endMinute
+          if (dayChanged && colEl) {
+            // Reparent into the destination column so the band physically
+            // lives where it now belongs (transform is cleared by _resetEl).
+            el.dataset.currentWday = wday
+            const layer = colEl.querySelector("[data-block-layer]") || colEl
+            layer.appendChild(el)
+          }
           el.style.top    = `${(startMinute - this.gridStartMinValue) * this.pxPerMinuteValue}px`
           const newHeight = `${Math.max((endMinute - startMinute) * this.pxPerMinuteValue, 16)}px`
           el.style.height = newHeight
@@ -198,7 +220,7 @@ export default class extends Controller {
     el.style.transform  = ""
     el.style.height     = this.originalHeight ?? ""
     el.style.opacity    = ""
-    el.style.zIndex     = ""
+    el.style.zIndex     = this.originalZIndex || ""
     el.style.transition = ""
     el.style.cursor     = "grab"
   }

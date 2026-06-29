@@ -49,6 +49,9 @@ application.register("avatar-crop", AvatarCropController)
 import BlockBuilderController from "./block_builder_controller"
 application.register("block-builder", BlockBuilderController)
 
+import BlockPopoverController from "./block_popover_controller"
+application.register("block-popover", BlockPopoverController)
+
 import CalendarViewController from "./calendar_view_controller"
 application.register("calendar-view", CalendarViewController)
 
