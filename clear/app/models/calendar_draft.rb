@@ -79,6 +79,7 @@ class CalendarDraft < ApplicationRecord
     def model_name    = Task.model_name
     def location      = nil
     def description   = nil
+    def course_item   = nil
 
     def contrast_text_color
       Task.new(color: color.presence || "#34D399").contrast_text_color

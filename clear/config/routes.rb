@@ -183,6 +183,7 @@ Rails.application.routes.draw do
   resources :tasks, only: %i[index new create show edit update destroy] do
     member do
       patch :toggle
+      patch :reschedule
     end
   end
   get "/schedule",       to: "schedule#week"

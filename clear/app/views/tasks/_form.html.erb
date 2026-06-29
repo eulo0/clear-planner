@@ -4,6 +4,8 @@
               method: :patch,
               class: "space-y-5",
               data: { drawer_close_on_success: "true" } do |f| %>
+  <%= hidden_field_tag :start_date, params[:start_date] if params[:start_date].present? %>
+  <%= hidden_field_tag :filter, params[:filter] if params[:filter].present? %>
   <% if task.errors.any? %>
     <div class="rounded-2xl p-4 text-red-300"
          style="border: 1px solid rgba(239,68,68,0.3); background-color: rgba(127,29,29,0.2);">

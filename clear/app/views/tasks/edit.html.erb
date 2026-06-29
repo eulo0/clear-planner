@@ -1,0 +1,23 @@
+<%# Turbo-frame fallback: ensures the event_drawer frame is present in the response
+    if the Turbo-Frame header is not detected, so the drawer edit form opens correctly. %>
+<div hidden><%= render "tasks/edit_drawer", task: @task, courses: @courses, grouped_course_items: @grouped_course_items %></div>
+<% content_for :page_title, "Edit Task" %>
+<% content_for :page_subtitle, @task.title.presence || "Update details" %>
+<div class="rounded-2xl p-6"
+     style="border: 1px solid var(--studs-border); background-color: var(--studs-panel-bg);">
+  <div class="mb-6 pb-4" style="border-bottom: 1px solid var(--studs-divider);">
+    <div class="flex items-center justify-between">
+      <div>
+        <div class="text-base font-semibold text-zinc-100">Edit task</div>
+        <div class="mt-0.5 text-sm text-zinc-500">Update the details below and save.</div>
+      </div>
+      <button type="button" onclick="history.back()" class="studs-nav-btn">
+        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+        </svg>
+        Back
+      </button>
+    </div>
+  </div>
+  <%= render "tasks/form", task: @task, courses: @courses, grouped_course_items: @grouped_course_items %>
+</div>

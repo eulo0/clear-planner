@@ -687,7 +687,7 @@
                 "#{draft_style_extra}"
               %>
               <% highlight_id = "#{model}-#{record.id}-#{seg[:seg_start].to_date.iso8601}" %>
-              <% draft_created_editable = is_draft_created && (model == "event" || model == "course" || model == "work_shift") %>
+              <% draft_created_editable = is_draft_created && model.in?(%w[event course work_shift task]) %>
               <% popover_enabled = !is_draft_deleted && (!is_draft_created || draft_created_editable) %>
               <% href =
                 if is_draft_deleted
@@ -702,8 +702,8 @@
               <%# Move: events, courses, and course items. Resize: events and
                   courses only (a course item is a point-in-time due date with no
                   real duration). Neither on a draft-deleted block. %>
-              <% movable   = !is_draft_deleted && (model == "event" || model == "course" || model == "course_item") %>
-              <% resizable = !is_draft_deleted && (model == "event" || model == "course") %>
+              <% movable   = !is_draft_deleted && (model == "event" || model == "course" || model == "course_item" || model == "task") %>
+              <% resizable = !is_draft_deleted && (model == "event" || model == "course" || model == "task") %>
               <% base_action = popover_enabled ? "click->agenda-highlight#selectFromCalendar click->event-popover#show" : nil %>
               <% drag_action  = movable ? "#{base_action} pointerdown->event-drag#startMove".strip : base_action %>
               <% drag_data =
@@ -738,6 +738,15 @@
                   {
                     event_drag_target: "event",
                     reschedule_url: reschedule_course_course_item_path(record.course, record),
+                    occurrence_date: seg[:seg_start].to_date.iso8601,
+                    event_start: seg[:seg_start].iso8601,
+                    event_end: seg[:seg_end].iso8601
+                  }
+                elsif movable && model == "task"
+                  # Tasks are non-recurring: direct-submit branch, no anchor_date.
+                  {
+                    event_drag_target: "event",
+                    reschedule_url: reschedule_task_path(record),
                     occurrence_date: seg[:seg_start].to_date.iso8601,
                     event_start: seg[:seg_start].iso8601,
                     event_end: seg[:seg_end].iso8601
