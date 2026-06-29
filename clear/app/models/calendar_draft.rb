@@ -8,10 +8,10 @@ class CalendarDraft < ApplicationRecord
   validates :name, presence: true, length: { maximum: 32 }
   validate :user_draft_limit, on: :create
 
-  # Operations format (model can be "event" or "course"):
-  #   create: { "type" => "create", "model" => "event"|"course", "temp_id" => "d_abc", "data" => {...} }
-  #   update: { "type" => "update", "model" => "event"|"course", "id" => 42, "data" => {...} }
-  #   delete: { "type" => "delete", "model" => "event"|"course", "id" => 42 }
+  # Operations format (model can be "event", "course", "shift", or "task"):
+  #   create: { "type" => "create", "model" => "event"|"course"|"shift"|"task", "temp_id" => "d_abc", "data" => {...} }
+  #   update: { "type" => "update", "model" => "event"|"course"|"shift"|"task", "id" => 42, "data" => {...} }
+  #   delete: { "type" => "delete", "model" => "event"|"course"|"shift"|"task", "id" => 42 }
 
   # Lightweight struct used to represent draft-created events in the calendar preview.
   # Must respond to the same interface that _calendar.html.erb expects from an Event.
@@ -64,6 +64,32 @@ class CalendarDraft < ApplicationRecord
 
     def contrast_text_color
       WorkShift.new(color: color.presence || "#34D399").contrast_text_color
+    end
+  end
+
+  # Lightweight struct used to represent draft-created tasks in the calendar preview.
+  DraftTaskProxy = Struct.new(
+    :temp_id, :title, :scheduled_at, :duration_minutes, :color,
+    keyword_init: true
+  ) do
+    def id            = temp_id
+    def to_param      = temp_id
+    def persisted?    = true
+    def to_model      = self
+    def model_name    = Task.model_name
+    def location      = nil
+    def description   = nil
+
+    def contrast_text_color
+      Task.new(color: color.presence || "#34D399").contrast_text_color
+    end
+
+    def occurrences_between(range_start, range_end)
+      return [] unless scheduled_at
+      starts = scheduled_at
+      ends   = scheduled_at + duration_minutes.to_i.minutes
+      return [] unless starts <= range_end && ends >= range_start
+      [ Task::Occurrence.new(event: self, starts_at: starts, ends_at: ends, draft_status: "created") ]
     end
   end
 
@@ -195,6 +221,12 @@ class CalendarDraft < ApplicationRecord
           when "create" then user.work_shifts.create!(op["data"].symbolize_keys)
           when "update" then user.work_shifts.find(op["id"]).update!(op["data"].symbolize_keys)
           when "delete" then user.work_shifts.find(op["id"]).destroy!
+          end
+        when "task"
+          case op["type"]
+          when "create" then user.tasks.create!(op["data"].symbolize_keys)
+          when "update" then user.tasks.find(op["id"]).update!(op["data"].symbolize_keys)
+          when "delete" then user.tasks.find(op["id"]).destroy!
           end
         end
       end
