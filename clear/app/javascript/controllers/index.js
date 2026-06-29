@@ -46,6 +46,9 @@ application.register("auto-schedule-toggle", AutoScheduleToggleController)
 import AvatarCropController from "./avatar_crop_controller"
 application.register("avatar-crop", AvatarCropController)
 
+import BlockBuilderController from "./block_builder_controller"
+application.register("block-builder", BlockBuilderController)
+
 import CalendarViewController from "./calendar_view_controller"
 application.register("calendar-view", CalendarViewController)
 

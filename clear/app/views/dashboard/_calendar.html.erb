@@ -1,6 +1,7 @@
 <% draft            = local_assigns[:draft] %>
 <% in_draft         = draft.present? %>
 <% blocked_intervals = local_assigns.fetch(:blocked_intervals, []) %>
+<% availability_blocks = calendar_availability_blocks %>
 <% course_filter_id = local_assigns[:course_filter_id].presence || params[:filter].presence %>
 <% courses_for_filter = local_assigns[:courses] || course_filter_courses %>
 <% hour_height_px   = 72 %>
@@ -538,6 +539,20 @@
           <% end %>
           <!-- Unified Event layer -->
           <div class="relative" style="height: <%= day_height_px %>px;">
+            <%# Availability bands — render first so they sit behind events (z-0 vs z-10+) %>
+            <% availability_blocks.select { |b| Array(b.repeat_days).include?(day.wday) }.each do |blk| %>
+              <% blk_top    = blk.start_minute * px_per_minute %>
+              <% blk_height = (blk.end_minute - blk.start_minute) * px_per_minute %>
+              <% blk_color  = blk.color.presence || "#6366f1" %>
+              <div class="absolute"
+                   style="top: <%= blk_top %>px; height: <%= blk_height %>px; left: 2px; right: 2px; z-index: 0; pointer-events: none; border-radius: 9px;
+                          background: repeating-linear-gradient(45deg,
+                            <%= blk_color %>22 0, <%= blk_color %>22 7px,
+                            <%= blk_color %>0d 7px, <%= blk_color %>0d 16px);
+                          border: 1.5px dashed <%= blk_color %>55;">
+                <span style="position:absolute; top:3px; left:7px; font-size:10px; font-weight:600; letter-spacing:.02em; color: <%= blk_color %>; opacity:.85;"><%= blk.label %></span>
+              </div>
+            <% end %>
             <% day_events = events_by_day.fetch(day, []) %>
             <% due_height_px = 28 %>
             <% due_min_minutes = 10 %>

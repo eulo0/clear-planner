@@ -124,6 +124,16 @@ class ApplicationController < ActionController::Base
   end
   helper_method :course_filter_courses
 
+  # Active availability blocks for the PERSONAL calendar only (never group/project
+  # calendars, which set @project). Loaded here — not in a single controller action —
+  # so the hatch bands render in every calendar path: the dashboard show AND the
+  # drag/reschedule turbo-stream re-renders from EventsController/TasksController.
+  def calendar_availability_blocks
+    return [] if @project.present?
+    @_calendar_availability_blocks ||= (current_user&.blocks&.active&.to_a || [])
+  end
+  helper_method :calendar_availability_blocks
+
   # For showing all the different draft options
   def current_user_drafts
     @current_user_drafts ||= current_user.calendar_drafts.recent

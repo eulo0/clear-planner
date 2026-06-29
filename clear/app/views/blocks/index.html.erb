@@ -1,0 +1,167 @@
+<%# Routine builder — Mon–Fri week grid of recurring time-of-day blocks.
+    Bands are positioned using the same px-per-minute math as the main calendar
+    (72px/hour = 1.2px/minute) but clipped to 6am–11pm (360–1380 min).
+    Direct DB writes — no CalendarDraft involvement. %>
+<% hour_height_px = 72 %>
+<% px_per_minute  = hour_height_px / 60.0 %>
+<% grid_start_min = 360  %> <%# 6:00 AM %>
+<% grid_end_min   = 1380 %> <%# 11:00 PM %>
+<% grid_hours     = (grid_end_min - grid_start_min) / 60 %> <%# 17 hours %>
+<% grid_height_px = grid_hours * hour_height_px %>
+
+<style>
+  .routine-builder {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    padding: 1.5rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .routine-builder__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .routine-builder__head h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--studs-text, #f4f4f5);
+    letter-spacing: -0.02em;
+  }
+
+  .routine-builder__hint {
+    font-size: 0.8rem;
+    color: var(--studs-text-muted, #71717a);
+    max-width: 36rem;
+  }
+
+  .routine-grid {
+    display: grid;
+    grid-template-columns: 60px repeat(5, minmax(0, 1fr));
+    border-radius: 1rem;
+    border: 1px solid var(--studs-border, rgba(255,255,255,0.08));
+    background-color: var(--studs-panel-bg-2, #18181b);
+    overflow: hidden;
+  }
+
+  .routine-grid__time-col {
+    grid-row: 2;
+    position: relative;
+    height: <%= grid_height_px %>px;
+    border-right: 1px solid var(--studs-border, rgba(255,255,255,0.08));
+    background-color: var(--studs-panel-bg-soft, #1c1c1f);
+  }
+
+  .routine-grid__hour-label {
+    position: absolute;
+    right: 6px;
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--studs-text-muted, #52525b);
+    transform: translateY(-50%);
+    white-space: nowrap;
+  }
+
+  .routine-grid__day-header {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--studs-text-muted, #71717a);
+    border-bottom: 1px solid var(--studs-border, rgba(255,255,255,0.08));
+    border-right: 1px solid var(--studs-border, rgba(255,255,255,0.08));
+    background-color: var(--studs-panel-header, #1c1c1f);
+  }
+
+  .routine-grid__col {
+    position: relative;
+    height: <%= grid_height_px %>px;
+    border-right: 1px solid var(--studs-divider, rgba(255,255,255,0.05));
+  }
+
+  .routine-grid__col-inner {
+    position: absolute;
+    inset: 0;
+  }
+
+  .routine-grid__hour-line {
+    position: absolute;
+    left: 0;
+    right: 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+
+  .routine-grid__halfhour-line {
+    position: absolute;
+    left: 0;
+    right: 0;
+    border-bottom: 1px dashed rgba(255,255,255,0.025);
+  }
+
+  .block-band {
+    position: absolute;
+  }
+</style>
+
+<div class="routine-builder" data-controller="block-builder"
+     data-block-builder-px-per-minute-value="<%= px_per_minute %>"
+     data-block-builder-grid-start-min-value="<%= grid_start_min %>"
+     data-block-builder-snap-minutes-value="15">
+
+  <header class="routine-builder__head">
+    <h1>Your weekly routine</h1>
+    <div class="flex items-center gap-2">
+      <% if @mode == "proposed" %>
+        <%= button_to "Accept routine", accept_blocks_path, method: :post, class: "btn btn--primary" %>
+        <%= button_to "Discard", discard_proposed_blocks_path, method: :delete, class: "btn btn--ghost" %>
+      <% else %>
+        <p class="routine-builder__hint">Drag or resize bands to adjust. Ask the assistant to "set up my week" to regenerate.</p>
+      <% end %>
+    </div>
+  </header>
+
+  <div class="routine-grid">
+    <%# Header row: corner + day labels %>
+    <div class="routine-grid__day-header" style="grid-column: 1; grid-row: 1;"></div>
+    <% %w[Mon Tue Wed Thu Fri].each_with_index do |day, idx| %>
+      <div class="routine-grid__day-header" style="grid-column: <%= idx + 2 %>; grid-row: 1;"><%= day %></div>
+    <% end %>
+
+    <%# Time gutter %>
+    <div class="routine-grid__time-col" style="grid-column: 1; grid-row: 2;">
+      <% grid_hours.times do |h| %>
+        <% absolute_hour = (grid_start_min / 60) + h %>
+        <% label = absolute_hour < 12 ? "#{absolute_hour == 0 ? 12 : absolute_hour} AM" :
+                   absolute_hour == 12 ? "12 PM" : "#{absolute_hour - 12} PM" %>
+        <div class="routine-grid__hour-label" style="top: <%= h * hour_height_px %>px;">
+          <%= label %>
+        </div>
+      <% end %>
+    </div>
+
+    <%# Day columns %>
+    <% %w[Mon Tue Wed Thu Fri].each_with_index do |day, idx| %>
+      <% wday = idx + 1 %>
+      <div class="routine-grid__col" style="grid-column: <%= idx + 2 %>; grid-row: 2;"
+           data-wday="<%= wday %>">
+        <div class="routine-grid__col-inner">
+          <%# Hour grid lines %>
+          <% grid_hours.times do |h| %>
+            <div class="routine-grid__hour-line" style="top: <%= h * hour_height_px %>px;"></div>
+            <div class="routine-grid__halfhour-line" style="top: <%= h * hour_height_px + hour_height_px / 2 %>px;"></div>
+          <% end %>
+          <%# Block bands for this weekday %>
+          <% @blocks.select { |b| b.repeat_days.include?(wday) }.each do |band| %>
+            <%= render "blocks/block_band", band: band %>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+</div>

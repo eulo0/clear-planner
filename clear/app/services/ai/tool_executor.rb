@@ -20,6 +20,7 @@ module Ai
       when "show_schedule"      then show_schedule(args)
       when "show_create_form"   then show_create_form(args)
       when "show_draft_picker"  then show_draft_picker
+      when "propose_routine"    then propose_routine(args)
       else
         { error: "Unknown tool: #{name}" }
       end
@@ -289,6 +290,53 @@ module Ai
     def show_draft_picker
       drafts = @user.calendar_drafts.recent.to_a
       { success: true, partial: { name: "ai_chat/draft_select_form", locals: { drafts: drafts, start_date: Date.current.iso8601 } } }
+    end
+
+    def propose_routine(args)
+      intent = args.slice(
+        "study_hours_per_week", "deep_work_hours_per_week", "errand_hours_per_week",
+        "preferred_dayparts", "avoid", "keep_free"
+      )
+
+      if intent.slice("study_hours_per_week", "deep_work_hours_per_week", "errand_hours_per_week")
+                .values.all? { |v| v.to_f <= 0 }
+        return { success: false, errors: [ "No hours specified — provide at least one of study/deep_work/errand hours." ] }
+      end
+
+      busy   = busy_by_wday_for_week
+      result = Scheduling::BlockRoutine.new(user: @user, intent: intent, busy_by_wday: busy).call
+
+      created = []
+      ActiveRecord::Base.transaction do
+        @user.blocks.proposed.delete_all
+        created = result[:blocks].map do |b|
+          @user.blocks.create!(label: b.label, color: b.color, repeat_days: b.repeat_days,
+                               start_minute: b.start_minute, end_minute: b.end_minute, status: "proposed")
+        end
+      end
+
+      { success: true, proposed_count: created.size, unplaceable: result[:unplaceable], review_path: "/blocks" }
+    rescue ActiveRecord::RecordInvalid => e
+      { success: false, errors: [ "Could not save routine: #{e.message}" ] }
+    end
+
+    # Builds { wday => [[start_min, end_min], ...] } of fixed commitments for the
+    # current week from the occurrences fetcher (classes, shifts, events).
+    def busy_by_wday_for_week
+      week_start = Date.current.beginning_of_week(:monday).beginning_of_day
+      week_end   = (Date.current.beginning_of_week(:monday) + 6.days).end_of_day
+      occurrences = @ctx.occurrences_fetcher.call(week_start, week_end, draft: nil)
+
+      busy = Hash.new { |h, k| h[k] = [] }
+      occurrences.each do |occ|
+        next unless occ.respond_to?(:starts_at) && occ.respond_to?(:ends_at) && occ.starts_at && occ.ends_at
+        wday  = occ.starts_at.wday
+        s_min = occ.starts_at.hour * 60 + occ.starts_at.min
+        raw_e = occ.ends_at.hour * 60 + occ.ends_at.min
+        e_min = occ.ends_at.to_date > occ.starts_at.to_date ? 24 * 60 : raw_e
+        busy[wday] << [ s_min, e_min ]
+      end
+      busy
     end
 
     # Builds a string-keyed hash of only the args keys that were explicitly

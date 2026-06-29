@@ -166,6 +166,11 @@ module Ai
       parts << "\nOther inline UI tools: use show_schedule to display the user's calendar visually " \
                "(prefer calling it after any calendar change so the user can see the result), " \
                "and show_draft_picker to let the user interactively pick or create a draft."
+      parts << "\nRoutine setup: when the user asks to \"set up my week\", \"build a study routine\", or create their " \
+               "schedule structure, call propose_routine with INTENT ONLY (hours per week per category and " \
+               "preferred_dayparts) — NEVER pass times or days-of-week with times. The app lays out the actual " \
+               "non-conflicting blocks and shows the user a review screen. After calling it, tell the user how many " \
+               "blocks were proposed, mention any unplaceable categories, and point them to review their routine."
       parts << "\nYou can also manage work shifts: create with create_work_shift, edit with edit_work_shift, " \
                "or delete with delete_work_shift. Each work shift listed above has an [ID:...] you can use. " \
                "For recurring shifts, repeat_days uses weekday numbers (0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat)."

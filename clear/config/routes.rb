@@ -186,6 +186,16 @@ Rails.application.routes.draw do
       patch :reschedule
     end
   end
+  resources :blocks, only: %i[index create update destroy] do
+    member do
+      patch :reschedule
+    end
+    collection do
+      post :accept
+      delete :discard_proposed
+    end
+  end
+
   get "/schedule",       to: "schedule#week"
   get "/schedule/week",  to: "schedule#week"
 

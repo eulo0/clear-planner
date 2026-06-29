@@ -19,7 +19,7 @@ module Scheduling
                    search_starts_at: nil, search_ends_at: nil,
                    work_day_start: DEFAULT_WORK_DAY_START, work_day_end: DEFAULT_WORK_DAY_END,
                    exclude_event_id: nil, allow_displacement: true,
-                   extra_busy: nil)
+                   extra_busy: nil, allowed_intervals: nil)
       @user = user
       @duration_minutes = duration_minutes.to_i
       @priority = priority
@@ -33,6 +33,7 @@ module Scheduling
       @exclude_event_id = exclude_event_id
       @allow_displacement = allow_displacement
       @extra_busy = Array(extra_busy)
+      @allowed_intervals = Array(allowed_intervals).map { |s, e| [ s, e ] }.sort_by(&:first)
     end
 
     def find_slot
@@ -47,13 +48,19 @@ module Scheduling
       intervals = busy_intervals
 
       while candidate + @duration_minutes.minutes <= @search_ends_at
-        candidate = snap_into_work_hours(candidate)
-        slot_end = candidate + @duration_minutes.minutes
-
-        if slot_end > end_of_work_day(candidate)
-          candidate = start_of_next_work_day(candidate)
-          next
+        if @allowed_intervals.any?
+          snapped = snap_into_allowed(candidate)
+          return nil unless snapped
+          candidate = snapped
+          return nil if candidate + @duration_minutes.minutes > @search_ends_at
+        else
+          candidate = snap_into_work_hours(candidate)
+          if candidate + @duration_minutes.minutes > end_of_work_day(candidate)
+            candidate = start_of_next_work_day(candidate)
+            next
+          end
         end
+        slot_end = candidate + @duration_minutes.minutes
 
         immovable = intervals.find { |i| !i.movable && i.starts_at < slot_end && i.ends_at > candidate }
         if immovable
@@ -239,6 +246,17 @@ module Scheduling
     def round_up(time)
       step = GRANULARITY_MINUTES.minutes
       Time.zone.at(((time.to_i + step - 1) / step) * step)
+    end
+
+    # Returns the earliest candidate >= the given time that starts a duration-long
+    # slot fully inside one of @allowed_intervals, or nil if none remain.
+    def snap_into_allowed(candidate)
+      @allowed_intervals.each do |as, ae|
+        next if ae <= candidate
+        start = round_up([ candidate, as ].max)
+        return start if start + @duration_minutes.minutes <= ae
+      end
+      nil
     end
 
     def snap_into_work_hours(time)

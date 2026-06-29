@@ -13,7 +13,8 @@ module Ai
       Ai::Tools::DeleteWorkShift,
       Ai::Tools::ShowSchedule,
       Ai::Tools::ShowCreateForm,
-      Ai::Tools::ShowDraftPicker
+      Ai::Tools::ShowDraftPicker,
+      Ai::Tools::ProposeRoutine
     ].freeze
 
     Result = Data.define(:text, :history, :refresh_draft_ui, :partials, :new_draft, :error)

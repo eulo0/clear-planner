@@ -1,0 +1,26 @@
+<% color = band.color.presence || "#6366f1" %>
+<div class="block-band absolute left-1 right-1"
+     data-block-builder-target="band"
+     data-block-id="<%= band.id %>"
+     data-reschedule-url="<%= reschedule_block_path(band) %>"
+     data-start-minute="<%= band.start_minute %>"
+     data-end-minute="<%= band.end_minute %>"
+     data-action="pointerdown->block-builder#startMove"
+     style="--block-color: <%= color %>;
+            top: <%= ((band.start_minute - 360) * 1.2).round(2) %>px;
+            height: <%= [(band.end_minute - band.start_minute) * 1.2, 16].max.round(2) %>px;
+            background: repeating-linear-gradient(45deg,
+              <%= color %>22 0, <%= color %>22 7px,
+              <%= color %>0d 7px, <%= color %>0d 16px);
+            border: 1.5px dashed <%= color %>99;
+            border-radius: 6px;
+            cursor: grab;
+            user-select: none;
+            overflow: hidden;">
+  <span class="block-band__label text-[11px] font-semibold px-1.5 leading-tight block truncate pt-0.5"
+        style="color: <%= color %>;"><%= band.label %></span>
+  <%# Bottom-edge resize handle %>
+  <div class="absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize"
+       data-action="pointerdown->block-builder#startResize"
+       data-block-builder-target="resizeHandle"></div>
+</div>
