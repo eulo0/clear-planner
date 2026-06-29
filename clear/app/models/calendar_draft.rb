@@ -287,6 +287,19 @@ class CalendarDraft < ApplicationRecord
 
     shift_create_ops = operations.select { |op| op["type"] == "create" && op["model"] == "shift" }
 
+    # ── Task draft ops ──
+    task_deleted_ids = operations
+      .select { |op| op["type"] == "delete" && op["model"] == "task" }
+      .map { |op| op["id"] }
+
+    task_update_ops = operations
+      .select { |op| op["type"] == "update" && op["model"] == "task" }
+      .index_by { |op| op["id"] }
+
+    task_create_ops = operations.select { |op| op["type"] == "create" && op["model"] == "task" }
+
+    updated_task_cache = {}
+
     # Build updated objects once per record id, not once per occurrence
     updated_event_cache  = {}
     updated_course_cache = {}
@@ -435,6 +448,26 @@ class CalendarDraft < ApplicationRecord
 
           next WorkShift::Occurrence.new(event: updated, starts_at: new_start, ends_at: new_end, draft_status: "updated")
         end
+      elsif model == "task"
+        if task_deleted_ids.include?(record.id)
+          next Task::Occurrence.new(
+            event: record, starts_at: occ.starts_at, ends_at: occ.ends_at,
+            draft_status: "deleted"
+          )
+        end
+
+        if (update_op = task_update_ops[record.id])
+          updated = updated_task_cache[record.id] ||= begin
+            t = Task.new(record.attributes.except("id", "created_at", "updated_at").merge(update_op["data"]))
+            t.id = record.id
+            t.instance_variable_set(:@new_record, false)
+            t
+          end
+          new_start = updated.scheduled_at || occ.starts_at
+          new_end   = new_start + updated.duration_minutes.to_i.minutes
+          next Task::Occurrence.new(event: updated, starts_at: new_start, ends_at: new_end,
+                                    draft_status: "updated")
+        end
       end
       occ
     end.compact
@@ -455,6 +488,32 @@ class CalendarDraft < ApplicationRecord
     end
     rebuilt_course_occurrences.each_value { |rows| result.concat(rows) }
     rebuilt_shift_occurrences.each_value { |rows| result.concat(rows) }
+
+    # ── Draft-created tasks ──
+    task_create_ops.each do |op|
+      data         = op["data"].symbolize_keys
+      scheduled_at = Time.zone.parse(data[:scheduled_at].to_s) rescue nil
+      next unless scheduled_at
+
+      duration = data[:duration_minutes].to_i
+      duration = 30 if duration <= 0
+
+      proxy = DraftTaskProxy.new(
+        temp_id:          op["temp_id"],
+        title:            data[:title].presence || "(Draft Task)",
+        scheduled_at:     scheduled_at,
+        duration_minutes: duration,
+        color:            data[:color].presence || "#34D399"
+      )
+
+      ends_at = scheduled_at + duration.minutes
+      next if scheduled_at > range_end || ends_at < range_start
+
+      result << Task::Occurrence.new(
+        event: proxy, starts_at: scheduled_at, ends_at: ends_at,
+        draft_status: "created"
+      )
+    end
 
     # ── Draft-created events ──
     event_create_ops.each do |op|
