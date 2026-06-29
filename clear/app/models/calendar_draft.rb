@@ -298,12 +298,11 @@ class CalendarDraft < ApplicationRecord
 
     task_create_ops = operations.select { |op| op["type"] == "create" && op["model"] == "task" }
 
-    updated_task_cache = {}
-
     # Build updated objects once per record id, not once per occurrence
     updated_event_cache  = {}
     updated_course_cache = {}
-    updated_shift_cache = {}
+    updated_shift_cache  = {}
+    updated_task_cache   = {}
     rebuilt_event_occurrences = {}
     rebuilt_course_occurrences = {}
     rebuilt_shift_occurrences = {}
@@ -449,6 +448,7 @@ class CalendarDraft < ApplicationRecord
           next WorkShift::Occurrence.new(event: updated, starts_at: new_start, ends_at: new_end, draft_status: "updated")
         end
       elsif model == "task"
+        # Tasks are non-recurring: no rebuilt-occurrences deduplication needed.
         if task_deleted_ids.include?(record.id)
           next Task::Occurrence.new(
             event: record, starts_at: occ.starts_at, ends_at: occ.ends_at,
