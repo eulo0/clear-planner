@@ -58,6 +58,9 @@ class DashboardController < ApplicationController
     next_occurrences = calendar_occurrences_for_range(now, now + 7.days)
     @next_occurrence = next_occurrences.find { |o| o.starts_at > now }
 
+    # Unscheduled tasks fuel the planner palette (drag onto the calendar).
+    @planner_tasks = current_user.tasks.unscheduled.incomplete.order(created_at: :desc)
+
     render "dashboard/agenda"
   end
 

@@ -25,22 +25,21 @@
         courses: @courses,
         course_filter_id: @course_filter_id %>
     </section>
+    <%# Spacer reserves room in the flow so the calendar is pushed narrower. The
+        real panel (below) is position:fixed so it stays pinned to the viewport
+        as the page scrolls — the weekly/daily calendar page-scrolls by design. %>
+    <div
+      data-agenda-drawer-target="spacer"
+      class="shrink-0 transition-all duration-300 ease-in-out"
+      style="width: 0px;"
+    ></div>
   </div>
-  <!-- Agenda overlay -->
-  <div
-    data-agenda-drawer-target="overlay"
-    data-action="click->agenda-drawer#close"
-    class="absolute inset-0 z-40 bg-black/0 opacity-0 pointer-events-none transition-opacity duration-300">
-  </div>
-  <!-- Agenda panel -->
+  <%# Fixed agenda panel — pinned to the viewport (top below the header, gaps on
+      right/bottom) so it persists in view through page scroll. Width animates. %>
   <div
     data-agenda-drawer-target="panel"
-    role="dialog"
-    aria-modal="true"
-    class="absolute right-4 top-4 bottom-4 z-50 pointer-events-auto
-           overflow-hidden rounded-2xl shadow-2xl
-           translate-x-[120%] transition-transform duration-300 ease-in-out"
-    style="width: 0px; visibility: hidden; border: 1px solid var(--studs-border); background-color: var(--studs-sidebar-bg);"
+    class="fixed right-4 z-30 overflow-hidden rounded-2xl shadow-2xl transition-all duration-300 ease-in-out"
+    style="top: 5rem; bottom: 1rem; width: 0px; visibility: hidden; border: 1px solid var(--studs-border); background-color: var(--studs-sidebar-bg);"
   >
     <%= turbo_frame_tag "agenda_drawer",
           class: "block h-full w-full",

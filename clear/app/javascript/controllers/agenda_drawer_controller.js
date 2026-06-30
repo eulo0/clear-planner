@@ -1,10 +1,13 @@
 import { Controller } from "@hotwired/stimulus";
 
+const PANEL_WIDTH = 360; // fixed: keeps the calendar from reflowing as frame content loads
+const PANEL_GAP = 16;    // gap between the calendar and the fixed panel
+
 export default class extends Controller {
-  static targets = ["overlay", "panel", "frame", "skeleton"];
+  static targets = ["panel", "frame", "skeleton", "spacer"];
   static values = {
     url: String,
-    projectId: Number, 
+    projectId: Number,
   };
 
   connect() {
@@ -26,39 +29,30 @@ export default class extends Controller {
     this.openForDate(date);
   }
 
-    openForDate(date) {
+  openForDate(date) {
     const url = this.buildUrl(date);
 
-    this.overlayTarget.classList.remove("opacity-0", "pointer-events-none");
-    this.overlayTarget.classList.add("opacity-100");
-
-    this.panelTarget.classList.remove("translate-x-[120%]");
-    this.panelTarget.classList.add("translate-x-0");
-
     this.panelTarget.style.visibility = "visible";
-    this.panelTarget.style.width = "360px";
+    this.panelTarget.style.width = `${PANEL_WIDTH}px`;
+    // Reserve the panel's width (plus a gap) in the flow so the calendar is
+    // pushed narrower; the panel itself is position:fixed and pinned.
+    if (this.hasSpacerTarget) this.spacerTarget.style.width = `${PANEL_WIDTH + PANEL_GAP}px`;
 
     if (this.frameTarget.src !== url) {
-        this.frameTarget.src = url;
+      this.frameTarget.src = url;
     } else {
-        this.frameTarget.reload();
+      this.frameTarget.reload();
     }
-    }
+  }
 
-    close() {
-    this.overlayTarget.classList.add("opacity-0", "pointer-events-none");
-    this.overlayTarget.classList.remove("opacity-100");
-
-    this.panelTarget.classList.add("translate-x-[120%]");
-    this.panelTarget.classList.remove("translate-x-0");
-
+  close() {
+    this.panelTarget.style.width = "0px";
+    if (this.hasSpacerTarget) this.spacerTarget.style.width = "0px";
     window.setTimeout(() => {
-        this.panelTarget.style.width = "0px";
-        this.panelTarget.style.visibility = "hidden";
+      this.panelTarget.style.visibility = "hidden";
     }, 300);
-    window.dispatchEvent(new CustomEvent("agenda:clear"))
-    }
-
+    window.dispatchEvent(new CustomEvent("agenda:clear"));
+  }
 
   showSkeleton() {
     if (!this.hasSkeletonTarget) return;
@@ -66,18 +60,7 @@ export default class extends Controller {
   }
 
   frameLoaded() {
-    this.resizeFromFrame();
-  }
-
-  resizeFromFrame() {
-    const countEl = this.frameTarget.querySelector("[data-agenda-count]");
-    const count = countEl ? parseInt(countEl.dataset.agendaCount, 10) : 0;
-
-    const min = 300;
-    const max = 560;
-    const width = Math.max(min, Math.min(max, 320 + count * 28));
-
-    this.panelTarget.style.width = `${width}px`;
+    // Width is fixed; nothing to recompute. Kept so the frame action stays valid.
   }
 
   buildUrl(date) {

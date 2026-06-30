@@ -87,7 +87,17 @@ class TasksController < ApplicationController
       return
     end
     @task.destroy!
-    redirect_back_or_to tasks_path, status: :see_other, notice: "Task deleted."
+    if params[:start_date].present?
+      # Deleted from the calendar popover: re-render the calendar so the band is
+      # removed and the popover cleared. Without this the stale band would 404 on
+      # its next show request.
+      respond_to do |format|
+        format.turbo_stream { render_task_reschedule_stream }
+        format.html { redirect_back_or_to dashboard_path, status: :see_other, notice: "Task deleted." }
+      end
+    else
+      redirect_back_or_to tasks_path, status: :see_other, notice: "Task deleted."
+    end
   end
 
   def toggle
