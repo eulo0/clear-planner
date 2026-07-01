@@ -7,6 +7,11 @@ class Block < ApplicationRecord
 
   Occurrence = Struct.new(:event, :starts_at, :ends_at, :draft_status, keyword_init: true)
 
+  # Virtual (non-persisted) marker set by CalendarDraft#build_block_preview so the
+  # calendar band layer can render a NEW/EDITED pill on a routine being changed in
+  # a draft. nil for committed blocks. See app/models/calendar_draft.rb.
+  attr_accessor :draft_status
+
   validates :label, presence: true
   validates :start_minute, :end_minute, presence: true
   validates :status, inclusion: { in: STATUSES }

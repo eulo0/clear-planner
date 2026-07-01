@@ -1,7 +1,7 @@
 <% draft            = local_assigns[:draft] %>
 <% in_draft         = draft.present? %>
 <% blocked_intervals = local_assigns.fetch(:blocked_intervals, []) %>
-<% availability_blocks = calendar_availability_blocks %>
+<% availability_blocks = draft_availability_blocks %>
 <% course_filter_id = local_assigns[:course_filter_id].presence || params[:filter].presence %>
 <% courses_for_filter = local_assigns[:courses] || course_filter_courses %>
 <% hour_height_px   = 72 %>
@@ -77,6 +77,16 @@
 <% end.compact %>
 <% has_all_day = all_day_spans.any? %>
 <style>
+  /* Routine (availability) bands are a background layer — hidden until the user
+     opts in via the toolbar toggle, which adds .routines-visible to the calendar. */
+  [data-routine-band] { display: none; }
+  .routines-visible [data-routine-band] { display: block; }
+
+  [data-routine-toggle-target="button"][aria-pressed="true"] {
+    color: #6366f1;
+    border-color: #6366f1;
+  }
+
   [data-calendar-event] {
     transition:
       box-shadow 0.2s ease,
@@ -145,7 +155,7 @@
     opacity: 0.45;
   }
 </style>
-<div class="flex h-full min-h-0 flex-col" data-controller="agenda-highlight event-popover recurring-scope-prompt" data-action="event-drag:recurring->recurring-scope-prompt#open" data-calendar-view-target="weeklyContent">
+<div class="flex h-full min-h-0 flex-col" data-controller="agenda-highlight event-popover recurring-scope-prompt routine-toggle" data-action="event-drag:recurring->recurring-scope-prompt#open" data-calendar-view-target="weeklyContent">
   <%= render "draft/banner", start_date: week_start_date.iso8601, active_draft: draft %>
   <!-- Recurring-event reschedule scope prompt -->
   <div data-recurring-scope-prompt-target="overlay"
@@ -218,6 +228,19 @@
           ] + courses_for_filter.map { |c| { label: c.title, value: c.id.to_s } }
         ) %>
         </div>
+        <div class="mx-1 h-5 w-px rounded-full" style="background-color: var(--studs-border);"></div>
+        <%# Routines are a background layer, hidden by default; the routine-toggle controller opts them in (state persisted client-side in localStorage). %>
+        <button type="button"
+                class="studs-nav-btn"
+                aria-pressed="false"
+                title="Show or hide availability routines"
+                data-routine-toggle-target="button"
+                data-action="routine-toggle#toggle">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          Routines
+        </button>
         <div class="mx-1 h-5 w-px rounded-full" style="background-color: var(--studs-border);"></div>
       <% end %>
       <% if @project %>
@@ -566,29 +589,52 @@
               <% blk_top    = blk.start_minute * px_per_minute %>
               <% blk_height = (blk.end_minute - blk.start_minute) * px_per_minute %>
               <% blk_color  = blk.color.presence || "#6366f1" %>
+              <%# Draft state (set by CalendarDraft#build_block_preview): a routine
+                  moved/resized in a draft is "updated"; one created in a draft is
+                  "created". Created bands are proxies with no real id, so they're
+                  display-only until the draft is applied — no drag/resize/delete hooks. %>
+              <% blk_status  = blk.respond_to?(:draft_status) ? blk.draft_status : nil %>
+              <% blk_created = (blk_status == "created") %>
+              <% blk_border  =
+                   case blk_status
+                   when "created" then "1.5px dashed rgba(251,191,36,0.85)"
+                   when "updated" then "1.5px solid rgba(56,189,248,0.85)"
+                   else "1.5px dashed #{blk_color}55"
+                   end %>
               <div class="absolute"
+                   data-routine-band
+                   <% unless blk_created %>
                    data-block-builder-target="band"
                    data-block-id="<%= blk.id %>"
                    data-current-wday="<%= day.wday %>"
                    data-reschedule-url="<%= reschedule_block_path(blk) %>"
                    data-delete-url="<%= block_path(blk) %>"
+                   data-action="pointerdown->block-builder#startMove"
+                   <% end %>
                    data-start-minute="<%= blk.start_minute %>"
                    data-end-minute="<%= blk.end_minute %>"
-                   data-action="pointerdown->block-builder#startMove"
-                   style="top: <%= blk_top %>px; height: <%= blk_height %>px; left: 2px; right: 2px; z-index: 3; cursor: grab; user-select: none; border-radius: 9px; overflow: hidden;
+                   style="top: <%= blk_top %>px; height: <%= blk_height %>px; left: 2px; right: 2px; z-index: 3; cursor: <%= blk_created ? "default" : "grab" %>; user-select: none; border-radius: 9px; overflow: hidden;
                           background: repeating-linear-gradient(45deg,
                             <%= blk_color %>22 0, <%= blk_color %>22 7px,
                             <%= blk_color %>0d 7px, <%= blk_color %>0d 16px);
-                          border: 1.5px dashed <%= blk_color %>55;">
+                          border: <%= blk_border %>;">
                 <span style="position:absolute; top:3px; left:7px; font-size:10px; font-weight:600; letter-spacing:.02em; color: <%= blk_color %>; opacity:.85;"><%= blk.label %></span>
-                <%# Bottom-edge resize handle — taller hit area + hover grip so it's discoverable %>
-                <div class="group/resize absolute bottom-0 left-0 right-0 h-3 flex items-end justify-center pb-0.5"
-                     style="cursor: ns-resize;"
-                     data-action="pointerdown->block-builder#startResize"
-                     data-block-builder-target="resizeHandle">
-                  <div class="h-1 w-6 rounded-full opacity-0 group-hover/resize:opacity-80 transition-opacity"
-                       style="background: <%= blk_color %>;"></div>
-                </div>
+                <% if blk_status.in?(%w[created updated]) %>
+                  <span class="<%= blk_created ? "bg-amber-400/90 text-black/90" : "bg-sky-400/90 text-black/90" %>"
+                        style="position:absolute; top:3px; right:6px; font-size:8px; font-weight:700; letter-spacing:.04em; padding:1px 5px; border-radius:6px;">
+                    <%= blk_created ? "NEW" : "EDITED" %>
+                  </span>
+                <% end %>
+                <% unless blk_created %>
+                  <%# Bottom-edge resize handle — taller hit area + hover grip so it's discoverable %>
+                  <div class="group/resize absolute bottom-0 left-0 right-0 h-3 flex items-end justify-center pb-0.5"
+                       style="cursor: ns-resize;"
+                       data-action="pointerdown->block-builder#startResize"
+                       data-block-builder-target="resizeHandle">
+                    <div class="h-1 w-6 rounded-full opacity-0 group-hover/resize:opacity-80 transition-opacity"
+                         style="background: <%= blk_color %>;"></div>
+                  </div>
+                <% end %>
               </div>
             <% end %>
             <% day_events = events_by_day.fetch(day, []) %>

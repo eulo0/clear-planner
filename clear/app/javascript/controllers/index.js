@@ -154,6 +154,9 @@ application.register("removable-card", RemovableCardController)
 import RoleUpdateController from "./role_update_controller"
 application.register("role-update", RoleUpdateController)
 
+import RoutineToggleController from "./routine_toggle_controller"
+application.register("routine-toggle", RoutineToggleController)
+
 import SearchController from "./search_controller"
 application.register("search", SearchController)
 

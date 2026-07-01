@@ -10,6 +10,13 @@ class BlocksController < ApplicationController
   end
 
   def create
+    # In draft mode, stage the new routine instead of committing it. It renders on
+    # the calendar with a NEW pill and becomes real only when the draft is applied.
+    if in_draft_mode?
+      current_user_draft.add_create("block", block_params.to_h.merge("status" => "active"))
+      return render_blocks_calendar_stream
+    end
+
     block = current_user.blocks.new(block_params)
     if block.save
       respond_to do |format|
@@ -33,6 +40,14 @@ class BlocksController < ApplicationController
   end
 
   def destroy
+    # In draft mode, stage the deletion. The band-delete JS removes the band from the
+    # view immediately (head :ok), matching "deleted is deleted on the view"; the real
+    # block is destroyed only on apply. Discarding the draft brings the routine back.
+    if in_draft_mode?
+      current_user_draft.add_delete("block", @block.id)
+      return head :ok
+    end
+
     @block.destroy
     respond_to do |format|
       format.html { redirect_to blocks_path, notice: "Block removed." }
@@ -41,6 +56,16 @@ class BlocksController < ApplicationController
   end
 
   def reschedule
+    # In draft mode, stage the move/resize and re-render so the band picks up an
+    # EDITED pill. Live mode keeps the lightweight head :ok the drag JS optimistically
+    # applies without a re-render.
+    if in_draft_mode?
+      data = { "start_minute" => params[:start_minute].to_i, "end_minute" => params[:end_minute].to_i }
+      data["repeat_days"] = Array(params[:repeat_days]).map(&:to_i) if params[:repeat_days].present?
+      current_user_draft.add_update("block", @block.id, data)
+      return render_blocks_calendar_stream
+    end
+
     @block.update!(
       start_minute: params[:start_minute].to_i,
       end_minute:   params[:end_minute].to_i,
@@ -62,6 +87,10 @@ class BlocksController < ApplicationController
   end
 
   private
+
+  def in_draft_mode?
+    current_user_draft.present?
+  end
 
   def set_block
     @block = current_user.blocks.find(params[:id])

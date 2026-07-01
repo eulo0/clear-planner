@@ -156,32 +156,40 @@ export default class extends Controller {
       method: "PATCH",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
+        "Accept": "text/vnd.turbo-stream.html, application/json",
         "X-CSRF-Token": this._csrf(),
       },
       credentials: "same-origin",
       body: body.toString(),
     })
-      .then((r) => {
-        if (r.ok) {
-          // Commit the new position, then sync originalHeight so the
-          // _resetEl height restore below is a no-op (not a revert).
-          el.dataset.startMinute = startMinute
-          el.dataset.endMinute   = endMinute
-          if (dayChanged && colEl) {
-            // Reparent into the destination column so the band physically
-            // lives where it now belongs (transform is cleared by _resetEl).
-            el.dataset.currentWday = wday
-            const layer = colEl.querySelector("[data-block-layer]") || colEl
-            layer.appendChild(el)
-          }
-          el.style.top    = `${(startMinute - this.gridStartMinValue) * this.pxPerMinuteValue}px`
-          const newHeight = `${Math.max((endMinute - startMinute) * this.pxPerMinuteValue, 16)}px`
-          el.style.height = newHeight
-          this.originalHeight = newHeight
-          this._resetEl(el)
-        } else {
-          this._resetEl(el)
+      .then(async (r) => {
+        if (!r.ok) { this._resetEl(el); return }
+
+        // Draft mode: the server stages the move/resize and returns a Turbo Stream
+        // re-rendering the calendar, so the band re-appears with an EDITED pill.
+        // Live mode returns an empty 200 and we reposition optimistically in place.
+        const contentType = r.headers.get("Content-Type") || ""
+        if (contentType.includes("turbo-stream")) {
+          Turbo.renderStreamMessage(await r.text())
+          return
         }
+
+        // Commit the new position, then sync originalHeight so the
+        // _resetEl height restore below is a no-op (not a revert).
+        el.dataset.startMinute = startMinute
+        el.dataset.endMinute   = endMinute
+        if (dayChanged && colEl) {
+          // Reparent into the destination column so the band physically
+          // lives where it now belongs (transform is cleared by _resetEl).
+          el.dataset.currentWday = wday
+          const layer = colEl.querySelector("[data-block-layer]") || colEl
+          layer.appendChild(el)
+        }
+        el.style.top    = `${(startMinute - this.gridStartMinValue) * this.pxPerMinuteValue}px`
+        const newHeight = `${Math.max((endMinute - startMinute) * this.pxPerMinuteValue, 16)}px`
+        el.style.height = newHeight
+        this.originalHeight = newHeight
+        this._resetEl(el)
       })
       .catch(() => this._resetEl(el))
   }

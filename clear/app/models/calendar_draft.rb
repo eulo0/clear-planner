@@ -94,6 +94,21 @@ class CalendarDraft < ApplicationRecord
     end
   end
 
+  # Lightweight struct for draft-created availability routines. Routines render on
+  # the calendar's band layer (not the event/occurrence pipeline), so this only
+  # needs the attributes that band loop reads plus a "created" draft_status.
+  DraftBlockProxy = Struct.new(
+    :temp_id, :label, :color, :start_minute, :end_minute, :repeat_days,
+    keyword_init: true
+  ) do
+    def id           = temp_id
+    def to_param     = temp_id
+    def persisted?   = true
+    def to_model     = self
+    def model_name   = Block.model_name
+    def draft_status = "created"
+  end
+
   # --------------------------------------------------------------------------
   # Mutation helpers
   # --------------------------------------------------------------------------
@@ -229,6 +244,12 @@ class CalendarDraft < ApplicationRecord
           when "update" then user.tasks.find(op["id"]).update!(op["data"].symbolize_keys)
           when "delete" then user.tasks.find(op["id"]).destroy!
           end
+        when "block"
+          case op["type"]
+          when "create" then user.blocks.create!(op["data"].symbolize_keys)
+          when "update" then user.blocks.find(op["id"]).update!(op["data"].symbolize_keys)
+          when "delete" then user.blocks.find(op["id"]).destroy!
+          end
         end
       end
     end
@@ -246,6 +267,54 @@ class CalendarDraft < ApplicationRecord
   # --------------------------------------------------------------------------
   # Preview: merge draft ops into a real occurrence list
   # --------------------------------------------------------------------------
+
+  # Merge block draft ops into the active-routine list for the calendar band layer.
+  # Routines are recurring time-of-day bands, not datetime occurrences, so this is a
+  # separate, lighter merge than build_preview_occurrences. Per product decision,
+  # staged-deleted routines are omitted entirely (no REMOVED band — "deleted is
+  # deleted on the view"); moved/resized routines carry draft_status "updated" and
+  # draft-created routines are DraftBlockProxy rows with draft_status "created".
+  def build_block_preview(blocks)
+    deleted_ids = operations
+      .select { |op| op["type"] == "delete" && op["model"] == "block" }
+      .map { |op| op["id"] }
+
+    update_ops = operations
+      .select { |op| op["type"] == "update" && op["model"] == "block" }
+      .index_by { |op| op["id"] }
+
+    create_ops = operations.select { |op| op["type"] == "create" && op["model"] == "block" }
+
+    kept = blocks.reject { |b| deleted_ids.include?(b.id) }.map do |b|
+      op = update_ops[b.id]
+      next b unless op
+
+      data  = op["data"]
+      moved = b.dup
+      moved.id           = b.id
+      moved.start_minute = data["start_minute"] if data.key?("start_minute")
+      moved.end_minute   = data["end_minute"]   if data.key?("end_minute")
+      moved.repeat_days  = data["repeat_days"]   if data.key?("repeat_days")
+      moved.label        = data["label"]         if data.key?("label")
+      moved.color        = data["color"]         if data.key?("color")
+      moved.draft_status = "updated"
+      moved
+    end
+
+    created = create_ops.map do |op|
+      data = op["data"]
+      DraftBlockProxy.new(
+        temp_id:      op["temp_id"],
+        label:        data["label"].presence || "Routine",
+        color:        data["color"].presence || "#6366f1",
+        start_minute: data["start_minute"].to_i,
+        end_minute:   data["end_minute"].to_i,
+        repeat_days:  Array(data["repeat_days"]).map(&:to_i)
+      )
+    end
+
+    kept + created
+  end
 
   def build_preview_occurrences(occurrences, range_start, range_end)
     # ── Event draft ops ──

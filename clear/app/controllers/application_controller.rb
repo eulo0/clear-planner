@@ -134,6 +134,19 @@ class ApplicationController < ActionController::Base
   end
   helper_method :calendar_availability_blocks
 
+  # Availability routines as the calendar band layer should render them: the active
+  # blocks, merged with any block ops staged in the current draft (moved/resized get
+  # a draft_status, staged-deleted are dropped, draft-created are proxies). When no
+  # draft is active this is just calendar_availability_blocks. Personal calendar only.
+  def draft_availability_blocks
+    return [] if @project.present?
+    blocks = calendar_availability_blocks
+    draft  = current_user_draft
+    return blocks unless draft
+    draft.build_block_preview(blocks)
+  end
+  helper_method :draft_availability_blocks
+
   # For showing all the different draft options
   def current_user_drafts
     @current_user_drafts ||= current_user.calendar_drafts.recent

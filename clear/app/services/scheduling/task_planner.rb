@@ -27,8 +27,9 @@ module Scheduling
 
       assignments = []
       unplaceable = []
-      placed      = []  # [start, end] pairs accumulated this run
+      placed      = []          # [start, end] pairs accumulated this run
       busy        = scheduled_task_intervals
+      day_load    = Hash.new(0) # Date => task-minutes placed this run, for spreading
 
       search_start = [ Time.current, @range_start ].max
       # Compute the user's fixed calendar-busy (events/courses/shifts) ONCE for
@@ -38,21 +39,26 @@ module Scheduling
         user: @user, search_starts_at: search_start, search_ends_at: @range_end, buffer_minutes: 0
       )
 
-      sorted_tasks.each do |task|
+      tasks  = sorted_tasks
+      budget = daily_budget(tasks, allowed)
+
+      tasks.each do |task|
         deadline = [ @range_end, task.course_item&.due_at ].compact.min
-        slot = AutoScheduler.new(
-          user:                      @user,
-          duration_minutes:          task.duration_minutes,
-          allowed_intervals:         allowed,
-          search_starts_at:          search_start,
-          search_ends_at:            deadline,
-          extra_busy:                placed + busy,
-          precomputed_calendar_busy: calendar_busy
-        ).find_slot
+        extra    = placed + busy
+
+        # Pass 1: earliest slot among days still under their task-time budget, so
+        # work rolls forward day-by-day instead of stacking on the first days.
+        under_budget = allowed.select { |s, _e| day_load[s.to_date] + task.duration_minutes <= budget }
+        slot = under_budget.empty? ? nil : find_task_slot(task, under_budget, calendar_busy, search_start, deadline, extra)
+        # Pass 2 (overflow): no under-budget day before the deadline — fall back to
+        # the plain earliest slot. Identical to the pre-spread behavior, so
+        # feasibility is never worse than the old greedy planner.
+        slot ||= find_task_slot(task, allowed, calendar_busy, search_start, deadline, extra)
 
         if slot
           assignments << Assignment.new(task: task, starts_at: slot.starts_at, ends_at: slot.ends_at).to_h
           placed << [ slot.starts_at, slot.ends_at ]
+          day_load[slot.starts_at.to_date] += task.duration_minutes
         else
           unplaceable << { task: task, reason: unplaceable_reason(task, allowed, deadline) }
         end
@@ -68,6 +74,31 @@ module Scheduling
         due = t.course_item&.due_at
         [ due ? 0 : 1, due || @range_end, t.id ]
       end
+    end
+
+    # Even-spread target: total task work over the days that have availability,
+    # floored at the longest single task so any task fits on an empty day. The
+    # floor prevents pathological always-overflow when a far-off deadline inflates
+    # the available-day count and pushes the raw average below one task.
+    def daily_budget(tasks, allowed)
+      return 0 if tasks.empty?
+      available_days = allowed.map { |s, _e| s.to_date }.uniq.size
+      available_days = 1 if available_days.zero?
+      total_work   = tasks.sum(&:duration_minutes)
+      longest_task = tasks.map(&:duration_minutes).max
+      [ (total_work.to_f / available_days).ceil, longest_task ].max
+    end
+
+    def find_task_slot(task, allowed_intervals, calendar_busy, search_start, deadline, extra_busy)
+      AutoScheduler.new(
+        user:                      @user,
+        duration_minutes:          task.duration_minutes,
+        allowed_intervals:         allowed_intervals,
+        search_starts_at:          search_start,
+        search_ends_at:            deadline,
+        extra_busy:                extra_busy,
+        precomputed_calendar_busy: calendar_busy
+      ).find_slot
     end
 
     def scheduled_task_intervals
