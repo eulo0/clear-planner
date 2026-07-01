@@ -8,10 +8,10 @@ class CalendarDraft < ApplicationRecord
   validates :name, presence: true, length: { maximum: 32 }
   validate :user_draft_limit, on: :create
 
-  # Operations format (model can be "event" or "course"):
-  #   create: { "type" => "create", "model" => "event"|"course", "temp_id" => "d_abc", "data" => {...} }
-  #   update: { "type" => "update", "model" => "event"|"course", "id" => 42, "data" => {...} }
-  #   delete: { "type" => "delete", "model" => "event"|"course", "id" => 42 }
+  # Operations format (model can be "event", "course", "shift", or "task"):
+  #   create: { "type" => "create", "model" => "event"|"course"|"shift"|"task", "temp_id" => "d_abc", "data" => {...} }
+  #   update: { "type" => "update", "model" => "event"|"course"|"shift"|"task", "id" => 42, "data" => {...} }
+  #   delete: { "type" => "delete", "model" => "event"|"course"|"shift"|"task", "id" => 42 }
 
   # Lightweight struct used to represent draft-created events in the calendar preview.
   # Must respond to the same interface that _calendar.html.erb expects from an Event.
@@ -65,6 +65,48 @@ class CalendarDraft < ApplicationRecord
     def contrast_text_color
       WorkShift.new(color: color.presence || "#34D399").contrast_text_color
     end
+  end
+
+  # Lightweight struct used to represent draft-created tasks in the calendar preview.
+  DraftTaskProxy = Struct.new(
+    :temp_id, :title, :scheduled_at, :duration_minutes, :color,
+    keyword_init: true
+  ) do
+    def id            = temp_id
+    def to_param      = temp_id
+    def persisted?    = true
+    def to_model      = self
+    def model_name    = Task.model_name
+    def location      = nil
+    def description   = nil
+    def course_item   = nil
+
+    def contrast_text_color
+      Task.new(color: color.presence || "#34D399").contrast_text_color
+    end
+
+    def occurrences_between(range_start, range_end)
+      return [] unless scheduled_at
+      starts = scheduled_at
+      ends   = scheduled_at + duration_minutes.to_i.minutes
+      return [] unless starts <= range_end && ends >= range_start
+      [ Task::Occurrence.new(event: self, starts_at: starts, ends_at: ends, draft_status: "created") ]
+    end
+  end
+
+  # Lightweight struct for draft-created availability routines. Routines render on
+  # the calendar's band layer (not the event/occurrence pipeline), so this only
+  # needs the attributes that band loop reads plus a "created" draft_status.
+  DraftBlockProxy = Struct.new(
+    :temp_id, :label, :color, :start_minute, :end_minute, :repeat_days,
+    keyword_init: true
+  ) do
+    def id           = temp_id
+    def to_param     = temp_id
+    def persisted?   = true
+    def to_model     = self
+    def model_name   = Block.model_name
+    def draft_status = "created"
   end
 
   # --------------------------------------------------------------------------
@@ -196,6 +238,18 @@ class CalendarDraft < ApplicationRecord
           when "update" then user.work_shifts.find(op["id"]).update!(op["data"].symbolize_keys)
           when "delete" then user.work_shifts.find(op["id"]).destroy!
           end
+        when "task"
+          case op["type"]
+          when "create" then user.tasks.create!(op["data"].symbolize_keys)
+          when "update" then user.tasks.find(op["id"]).update!(op["data"].symbolize_keys)
+          when "delete" then user.tasks.find(op["id"]).destroy!
+          end
+        when "block"
+          case op["type"]
+          when "create" then user.blocks.create!(op["data"].symbolize_keys)
+          when "update" then user.blocks.find(op["id"]).update!(op["data"].symbolize_keys)
+          when "delete" then user.blocks.find(op["id"]).destroy!
+          end
         end
       end
     end
@@ -213,6 +267,54 @@ class CalendarDraft < ApplicationRecord
   # --------------------------------------------------------------------------
   # Preview: merge draft ops into a real occurrence list
   # --------------------------------------------------------------------------
+
+  # Merge block draft ops into the active-routine list for the calendar band layer.
+  # Routines are recurring time-of-day bands, not datetime occurrences, so this is a
+  # separate, lighter merge than build_preview_occurrences. Per product decision,
+  # staged-deleted routines are omitted entirely (no REMOVED band — "deleted is
+  # deleted on the view"); moved/resized routines carry draft_status "updated" and
+  # draft-created routines are DraftBlockProxy rows with draft_status "created".
+  def build_block_preview(blocks)
+    deleted_ids = operations
+      .select { |op| op["type"] == "delete" && op["model"] == "block" }
+      .map { |op| op["id"] }
+
+    update_ops = operations
+      .select { |op| op["type"] == "update" && op["model"] == "block" }
+      .index_by { |op| op["id"] }
+
+    create_ops = operations.select { |op| op["type"] == "create" && op["model"] == "block" }
+
+    kept = blocks.reject { |b| deleted_ids.include?(b.id) }.map do |b|
+      op = update_ops[b.id]
+      next b unless op
+
+      data  = op["data"]
+      moved = b.dup
+      moved.id           = b.id
+      moved.start_minute = data["start_minute"] if data.key?("start_minute")
+      moved.end_minute   = data["end_minute"]   if data.key?("end_minute")
+      moved.repeat_days  = data["repeat_days"]   if data.key?("repeat_days")
+      moved.label        = data["label"]         if data.key?("label")
+      moved.color        = data["color"]         if data.key?("color")
+      moved.draft_status = "updated"
+      moved
+    end
+
+    created = create_ops.map do |op|
+      data = op["data"]
+      DraftBlockProxy.new(
+        temp_id:      op["temp_id"],
+        label:        data["label"].presence || "Routine",
+        color:        data["color"].presence || "#6366f1",
+        start_minute: data["start_minute"].to_i,
+        end_minute:   data["end_minute"].to_i,
+        repeat_days:  Array(data["repeat_days"]).map(&:to_i)
+      )
+    end
+
+    kept + created
+  end
 
   def build_preview_occurrences(occurrences, range_start, range_end)
     # ── Event draft ops ──
@@ -255,10 +357,22 @@ class CalendarDraft < ApplicationRecord
 
     shift_create_ops = operations.select { |op| op["type"] == "create" && op["model"] == "shift" }
 
+    # ── Task draft ops ──
+    task_deleted_ids = operations
+      .select { |op| op["type"] == "delete" && op["model"] == "task" }
+      .map { |op| op["id"] }
+
+    task_update_ops = operations
+      .select { |op| op["type"] == "update" && op["model"] == "task" }
+      .index_by { |op| op["id"] }
+
+    task_create_ops = operations.select { |op| op["type"] == "create" && op["model"] == "task" }
+
     # Build updated objects once per record id, not once per occurrence
     updated_event_cache  = {}
     updated_course_cache = {}
-    updated_shift_cache = {}
+    updated_shift_cache  = {}
+    updated_task_cache   = {}
     rebuilt_event_occurrences = {}
     rebuilt_course_occurrences = {}
     rebuilt_shift_occurrences = {}
@@ -403,6 +517,27 @@ class CalendarDraft < ApplicationRecord
 
           next WorkShift::Occurrence.new(event: updated, starts_at: new_start, ends_at: new_end, draft_status: "updated")
         end
+      elsif model == "task"
+        # Tasks are non-recurring: no rebuilt-occurrences deduplication needed.
+        if task_deleted_ids.include?(record.id)
+          next Task::Occurrence.new(
+            event: record, starts_at: occ.starts_at, ends_at: occ.ends_at,
+            draft_status: "deleted"
+          )
+        end
+
+        if (update_op = task_update_ops[record.id])
+          updated = updated_task_cache[record.id] ||= begin
+            t = Task.new(record.attributes.except("id", "created_at", "updated_at").merge(update_op["data"]))
+            t.id = record.id
+            t.instance_variable_set(:@new_record, false)
+            t
+          end
+          new_start = updated.scheduled_at || occ.starts_at
+          new_end   = new_start + updated.duration_minutes.to_i.minutes
+          next Task::Occurrence.new(event: updated, starts_at: new_start, ends_at: new_end,
+                                    draft_status: "updated")
+        end
       end
       occ
     end.compact
@@ -423,6 +558,57 @@ class CalendarDraft < ApplicationRecord
     end
     rebuilt_course_occurrences.each_value { |rows| result.concat(rows) }
     rebuilt_shift_occurrences.each_value { |rows| result.concat(rows) }
+
+    # ── Draft-created tasks ──
+    task_create_ops.each do |op|
+      data         = op["data"].symbolize_keys
+      scheduled_at = Time.zone.parse(data[:scheduled_at].to_s) rescue nil
+      next unless scheduled_at
+
+      duration = data[:duration_minutes].to_i
+      duration = 30 if duration <= 0
+
+      proxy = DraftTaskProxy.new(
+        temp_id:          op["temp_id"],
+        title:            data[:title].presence || "(Draft Task)",
+        scheduled_at:     scheduled_at,
+        duration_minutes: duration,
+        color:            data[:color].presence || "#34D399"
+      )
+
+      ends_at = scheduled_at + duration.minutes
+      next if scheduled_at > range_end || ends_at < range_start
+
+      result << Task::Occurrence.new(
+        event: proxy, starts_at: scheduled_at, ends_at: ends_at,
+        draft_status: "created"
+      )
+    end
+
+    # ── Newly-scheduled existing tasks ──
+    # An update op that sets scheduled_at on a task which had no occurrence in the
+    # base set (i.e. was unscheduled) won't be caught by the main loop. Render it
+    # here as a "created" pill. Exclude ids already present to avoid double-render.
+    base_task_ids = occurrences.filter_map do |occ|
+      rec = occ.respond_to?(:event) ? occ.event : occ
+      rec.id if rec.is_a?(Task)
+    end.to_set
+
+    task_update_ops.each_value do |op|
+      next if base_task_ids.include?(op["id"])
+      scheduled_at = (Time.zone.parse(op["data"]["scheduled_at"].to_s) rescue nil)
+      next unless scheduled_at
+      task = user.tasks.find_by(id: op["id"])
+      next unless task
+
+      task.scheduled_at = scheduled_at
+      ends_at = scheduled_at + task.duration_minutes.to_i.minutes
+      next if scheduled_at > range_end || ends_at < range_start
+
+      result << Task::Occurrence.new(
+        event: task, starts_at: scheduled_at, ends_at: ends_at, draft_status: "created"
+      )
+    end
 
     # ── Draft-created events ──
     event_create_ops.each do |op|

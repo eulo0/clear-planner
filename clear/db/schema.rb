@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_27_010000) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_29_042007) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -42,6 +42,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_27_010000) do
     t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
   end
 
+  create_table "blocks", force: :cascade do |t|
+    t.string "color", default: "#6366f1", null: false
+    t.datetime "created_at", null: false
+    t.integer "end_minute", null: false
+    t.string "label", null: false
+    t.integer "position", default: 0, null: false
+    t.integer "repeat_days", default: [], null: false, array: true
+    t.integer "start_minute", null: false
+    t.string "status", default: "active", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "user_id", null: false
+    t.index ["user_id", "status"], name: "index_blocks_on_user_id_and_status"
+    t.index ["user_id"], name: "index_blocks_on_user_id"
+  end
+
   create_table "calendar_drafts", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "name", null: false
@@ -62,6 +77,26 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_27_010000) do
     t.datetime "updated_at", null: false
     t.bigint "user_id", null: false
     t.index ["user_id"], name: "index_canvas_subscriptions_on_user_id", unique: true
+  end
+
+  create_table "capacity_events", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "kind", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "user_id", null: false
+    t.date "week_start", null: false
+    t.index ["user_id", "week_start", "kind"], name: "index_capacity_events_on_user_id_and_week_start_and_kind"
+    t.index ["user_id"], name: "index_capacity_events_on_user_id"
+  end
+
+  create_table "capacity_feedback", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "response", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "user_id", null: false
+    t.date "week_start", null: false
+    t.index ["user_id", "week_start"], name: "index_capacity_feedback_on_user_id_and_week_start", unique: true
+    t.index ["user_id"], name: "index_capacity_feedback_on_user_id"
   end
 
   create_table "course_exceptions", force: :cascade do |t|
@@ -251,6 +286,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_27_010000) do
   end
 
   create_table "tasks", force: :cascade do |t|
+    t.integer "actual_seconds"
+    t.string "color"
     t.datetime "completed_at"
     t.bigint "course_item_id"
     t.datetime "created_at", null: false
@@ -258,12 +295,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_27_010000) do
     t.boolean "done", default: false, null: false
     t.integer "duration_minutes", null: false
     t.datetime "scheduled_at"
+    t.datetime "timer_started_at"
     t.string "title", null: false
     t.datetime "updated_at", null: false
     t.bigint "user_id", null: false
     t.index ["course_item_id"], name: "index_tasks_on_course_item_id"
     t.index ["user_id", "scheduled_at"], name: "index_tasks_on_user_id_and_scheduled_at"
     t.index ["user_id"], name: "index_tasks_on_user_id"
+  end
+
+  create_table "user_preferences", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.float "daily_focus_hours", default: 5.0, null: false
+    t.datetime "updated_at", null: false
+    t.bigint "user_id", null: false
+    t.index ["user_id"], name: "index_user_preferences_on_user_id", unique: true
   end
 
   create_table "users", force: :cascade do |t|
@@ -333,8 +379,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_27_010000) do
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "blocks", "users"
   add_foreign_key "calendar_drafts", "users"
   add_foreign_key "canvas_subscriptions", "users"
+  add_foreign_key "capacity_events", "users"
+  add_foreign_key "capacity_feedback", "users"
   add_foreign_key "course_exceptions", "courses"
   add_foreign_key "course_items", "courses"
   add_foreign_key "courses", "projects"
@@ -355,6 +404,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_27_010000) do
   add_foreign_key "syllabuses", "users"
   add_foreign_key "tasks", "course_items", on_delete: :nullify
   add_foreign_key "tasks", "users"
+  add_foreign_key "user_preferences", "users"
   add_foreign_key "work_shift_exceptions", "work_shifts"
   add_foreign_key "work_shifts", "users"
 end

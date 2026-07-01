@@ -29,8 +29,8 @@ class TasksEditDestroyTest < ActionDispatch::IntegrationTest
     assert_difference("Task.count", -1) { delete task_url(@task) }
   end
 
-  test "GET edit renders only the drawer frame (no app_shell layout, single event_drawer)" do
-    get edit_task_url(@task)
+  test "GET edit via turbo-frame request renders only the drawer frame (no app_shell layout, single event_drawer)" do
+    get edit_task_url(@task), headers: { "Turbo-Frame" => "event_drawer" }
     assert_response :success
     assert_select "turbo-frame#event_drawer", 1
     assert_select "body", false, "edit must render the bare partial, not the full app_shell layout"

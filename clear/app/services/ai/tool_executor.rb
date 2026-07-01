@@ -20,6 +20,8 @@ module Ai
       when "show_schedule"      then show_schedule(args)
       when "show_create_form"   then show_create_form(args)
       when "show_draft_picker"  then show_draft_picker
+      when "propose_routine"    then propose_routine(args)
+      when "plan_tasks"         then plan_tasks(args)
       else
         { error: "Unknown tool: #{name}" }
       end
@@ -289,6 +291,138 @@ module Ai
     def show_draft_picker
       drafts = @user.calendar_drafts.recent.to_a
       { success: true, partial: { name: "ai_chat/draft_select_form", locals: { drafts: drafts, start_date: Date.current.iso8601 } } }
+    end
+
+    def propose_routine(args)
+      intent = args.slice(
+        "study_hours_per_week", "deep_work_hours_per_week", "errand_hours_per_week",
+        "preferred_dayparts", "avoid", "keep_free"
+      )
+
+      if intent.slice("study_hours_per_week", "deep_work_hours_per_week", "errand_hours_per_week")
+                .values.all? { |v| v.to_f <= 0 }
+        return { success: false, errors: [ "No hours specified — provide at least one of study/deep_work/errand hours." ] }
+      end
+
+      busy   = busy_by_wday_for_week
+      result = Scheduling::BlockRoutine.new(user: @user, intent: intent, busy_by_wday: busy).call
+
+      created = []
+      ActiveRecord::Base.transaction do
+        @user.blocks.proposed.delete_all
+        created = result[:blocks].map do |b|
+          @user.blocks.create!(label: b.label, color: b.color, repeat_days: b.repeat_days,
+                               start_minute: b.start_minute, end_minute: b.end_minute, status: "proposed")
+        end
+      end
+
+      { success: true, proposed_count: created.size, unplaceable: result[:unplaceable], review_path: "/blocks" }
+    rescue ActiveRecord::RecordInvalid => e
+      { success: false, errors: [ "Could not save routine: #{e.message}" ] }
+    end
+
+    def plan_tasks(args)
+      range_start, range_end = resolve_plan_range(args)
+      result = Scheduling::TaskPlanner.new(
+        user: @user, range_start: range_start, range_end: range_end
+      ).call
+
+      if result[:needs_blocks]
+        return { success: true,
+                 partial: { name: "ai_chat/plan_needs_blocks",
+                            locals: { reason: result[:needs_blocks] } } }
+      end
+
+      if result[:assignments].empty?
+        return { success: true, placed: 0,
+                 unplaceable: format_unplaceable(result[:unplaceable]),
+                 message: "No unscheduled tasks could be placed." }
+      end
+
+      d = ensure_plan_draft
+      unless d
+        return { success: false,
+                 errors: [ "You already have the maximum of 5 drafts. Free one up, then ask me to plan again." ] }
+      end
+
+      result[:assignments].each do |a|
+        d.add_update("task", a[:task].id, { "scheduled_at" => a[:starts_at].iso8601 })
+      end
+
+      {
+        success: true,
+        placed: result[:assignments].size,
+        refresh_draft_ui: true,
+        partial: {
+          name: "ai_chat/plan_result",
+          locals: {
+            assignments: result[:assignments],
+            unplaceable: format_unplaceable(result[:unplaceable]),
+            draft_name:  draft&.name
+          }
+        }
+      }
+    end
+
+    # now → latest unscheduled-task due_at, capped at +28 days, floored at +7 days.
+    def resolve_plan_range(args)
+      start_date = (Date.parse(args["start_date"]) rescue nil) || Date.current
+      range_start = start_date.beginning_of_day.in_time_zone
+
+      explicit_end = (Date.parse(args["end_date"]) rescue nil)
+      latest_due = @user.tasks.unscheduled.incomplete
+                        .joins(:course_item).maximum("course_items.due_at")
+      default_end = [ (latest_due&.to_date || (start_date + 7)), start_date + 28 ].min
+      default_end = [ default_end, start_date + 7 ].max
+      range_end = (explicit_end || default_end).end_of_day.in_time_zone
+
+      [ range_start, range_end ]
+    end
+
+    # Use the active draft if any; otherwise reuse/create an "AI Plan" draft and
+    # switch the session into draft mode so the chat lands in the preview.
+    def ensure_plan_draft
+      return draft if in_draft_mode?
+
+      d = @user.calendar_drafts.find_by("LOWER(name) = ?", "ai plan") ||
+          @user.calendar_drafts.create!(name: "AI Plan")
+      @session[:calendar_draft_mode] = true
+      @session[:active_calendar_draft_id] = d.id
+      @ctx.draft = d
+      d
+    rescue ActiveRecord::RecordInvalid
+      nil # hit MAX_DRAFTS_PER_USER and no existing "AI Plan" to reuse
+    end
+
+    UNPLACEABLE_REASONS = {
+      past_deadline: "its deadline has already passed",
+      too_long:      "it's longer than any single availability block",
+      no_room:       "there wasn't an open slot before its deadline"
+    }.freeze
+
+    def format_unplaceable(list)
+      list.map do |u|
+        { title: u[:task].title, reason: UNPLACEABLE_REASONS[u[:reason]] || "it couldn't be placed" }
+      end
+    end
+
+    # Builds { wday => [[start_min, end_min], ...] } of fixed commitments for the
+    # current week from the occurrences fetcher (classes, shifts, events).
+    def busy_by_wday_for_week
+      week_start = Date.current.beginning_of_week(:monday).beginning_of_day
+      week_end   = (Date.current.beginning_of_week(:monday) + 6.days).end_of_day
+      occurrences = @ctx.occurrences_fetcher.call(week_start, week_end, draft: nil)
+
+      busy = Hash.new { |h, k| h[k] = [] }
+      occurrences.each do |occ|
+        next unless occ.respond_to?(:starts_at) && occ.respond_to?(:ends_at) && occ.starts_at && occ.ends_at
+        wday  = occ.starts_at.wday
+        s_min = occ.starts_at.hour * 60 + occ.starts_at.min
+        raw_e = occ.ends_at.hour * 60 + occ.ends_at.min
+        e_min = occ.ends_at.to_date > occ.starts_at.to_date ? 24 * 60 : raw_e
+        busy[wday] << [ s_min, e_min ]
+      end
+      busy
     end
 
     # Builds a string-keyed hash of only the args keys that were explicitly

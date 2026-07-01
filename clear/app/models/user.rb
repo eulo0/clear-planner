@@ -12,6 +12,7 @@ class User < ApplicationRecord
   has_many :sent_project_invitations, class_name: "ProjectInvitation", foreign_key: :sender_id, dependent: :destroy
   has_one :canvas_subscription, dependent: :destroy
   has_many :tasks, dependent: :destroy
+  has_many :blocks, dependent: :destroy
 
   devise :invitable, :database_authenticatable, :registerable,
          :recoverable, :rememberable, :validatable, :confirmable,

@@ -1,20 +1,17 @@
 <% occs = Array(occurrences) %>
+<% planner_tasks = Array(local_assigns[:planner_tasks]) %>
 <style>
-  [data-agenda-item-card] {
+  [data-planner-chip] {
     background-color: var(--bg-normal);
     transition:
       background-color 0.15s ease,
       box-shadow 0.15s ease,
-      transform 0.15s ease;
+      filter 0.15s ease;
   }
 
-  [data-agenda-item-card]:hover {
+  [data-planner-chip]:hover {
     background-color: var(--bg-hover);
-  }
-
-  [data-agenda-item-card].is-selected {
-    background-color: var(--bg-hover);
-    transform: translateX(10px);
+    filter: brightness(1.08);
   }
 </style>
 <div class="h-full w-full flex flex-col"
@@ -58,135 +55,98 @@
     </div>
   </div>
   <!-- Body -->
-  <div class="flex-1 min-h-0 bg-zinc-950/95">
-    <div class="h-full overflow-auto px-3 py-3">
-      <% if occs.empty? %>
-        <div class="rounded-2xl border bg-zinc-900/40 px-4 py-4 text-sm text-zinc-200"
-             style="border-color: var(--studs-border);">
-          Nothing scheduled.
+  <div class="flex-1 min-h-0 bg-zinc-950/95 flex flex-col">
+    <%# Tabbed planner palette: switch between dragging unscheduled Tasks and
+        Routine blocks onto the calendar. The whole widget self-hides unless a
+        day/week grid is visible (see palette_tabs_controller). %>
+    <div data-controller="palette-tabs" data-palette-tabs-active-value="tasks"
+         class="flex-1 min-h-0 flex flex-col">
+      <div data-palette-tabs-target="widget" class="flex-1 min-h-0 flex flex-col px-3 pt-3 pb-3">
+        <%# Segmented control — matches the analytics/dashboard page tabs %>
+        <div class="mb-3 flex items-center justify-between gap-2 shrink-0">
+          <div class="flex gap-1 rounded-xl p-1"
+               style="background-color: var(--studs-panel-bg); border: 1px solid var(--studs-border);">
+            <button type="button"
+                    data-palette-tabs-target="tab" data-tab="tasks"
+                    data-action="click->palette-tabs#select"
+                    class="rounded-lg px-3 py-1 text-sm transition-colors">
+              Tasks
+            </button>
+            <button type="button"
+                    data-palette-tabs-target="tab" data-tab="blocks"
+                    data-action="click->palette-tabs#select"
+                    class="rounded-lg px-3 py-1 text-sm transition-colors">
+              Routine blocks
+            </button>
+          </div>
+          <div class="text-[11px] text-zinc-500 shrink-0">drag onto calendar</div>
         </div>
-      <% else %>
-        <div class="space-y-2">
-          <% occs.each do |o| %>
-            <% is_course_item =
-              o.respond_to?(:model_name) && o.model_name.singular == "course_item"
-            %>
-            <% record =
-              if is_course_item
-                o
-              elsif o.respond_to?(:event) && o.event.present?
-                o.event
-              elsif o.respond_to?(:course) && o.course.present?
-                o.course
-              else
-                o
-              end
-            %>
-            <% next unless o.respond_to?(:starts_at) &&
-              o.starts_at.present? &&
-              o.starts_at.in_time_zone.to_date == Time.zone.today %>
-            <% model     = record.respond_to?(:model_name) ? record.model_name.singular : nil %>
-            <% is_course = (model == "course") %>
-            <% is_due    = (model == "course_item") %>
-            <% start_at  = o.starts_at.in_time_zone %>
-            <% end_at =
-              if o.respond_to?(:ends_at) && o.ends_at.present?
-                o.ends_at.in_time_zone
-              else
-                start_at + 1.hour
-              end
-            %>
-            <% base_bg     = record.respond_to?(:color) && record.color.present? ? record.color : "#34D399" %>
-            <% tint_bg     = rgba(base_bg, 0.14) %>
-            <% tint_hover  = rgba(base_bg, 0.20) %>
-            <% tint_border = rgba(base_bg, 0.35) %>
-            <% tint_bar    = rgba(base_bg, 0.90) %>
-            <% meta =
-              if is_due && record.respond_to?(:kind) && record.kind.present?
-                record.kind.humanize
-              elsif is_course && record.respond_to?(:professor) && record.professor.present?
-                record.professor
-              elsif record.respond_to?(:location) && record.location.present?
-                record.location
-              end
-            %>
-            <% highlight_id =
-              if record.respond_to?(:model_name) && record.id.present?
-                "#{record.model_name.singular}-#{record.id}-#{start_at.to_date.iso8601}"
-              else
-                "occ-#{o.object_id}-#{start_at.to_date.iso8601}"
-              end
-            %>
-            <% time_label =
-              if is_due
-                "Due #{start_at.strftime("%-I:%M %p")}"
-              else
-                "#{start_at.strftime("%-I:%M %p")} – #{end_at.strftime("%-I:%M %p")}"
-              end
-            %>
-            <% is_work_shift = (model == "work_shift") %>
-            <% type_label =
-              if is_due
-                "Due"
-              elsif is_work_shift
-                "Shift"
-              elsif is_course
-                "Course"
-              else
-                "Event"
-              end
-            %>
-            <% open_path =
-              if is_due
-                course_course_item_path(record.course, record, start_date: start_at.to_date.iso8601)
-              else
-                polymorphic_path(record, start_date: start_at.to_date.iso8601)
-              end
-            %>
-            <div
-              id="agenda-item-<%= highlight_id %>"
-              data-agenda-item-card
-              class="rounded-2xl border p-3 transition cursor-pointer"
-              data-action="click->agenda-highlight#selectFromAgenda"
-              data-agenda-id="<%= highlight_id %>"
-              style="
-              --bg-normal: <%= tint_bg %>;
-              --bg-hover:  <%= tint_hover %>;
-              border-color: <%= tint_border %>;
-              border-left: 6px solid <%= tint_bar %>;
-              "
-              >
-              <div class="flex items-start justify-between gap-3">
-                <div class="min-w-0">
-                  <div class="flex items-center gap-2 min-w-0">
-                    <span class="shrink-0 inline-flex h-2.5 w-2.5 rounded-full" style="background-color: <%= tint_bar %>"></span>
-                    <div class="truncate text-sm font-semibold text-zinc-50">
-                      <%= record.respond_to?(:title) ? (record.title.presence || "(Untitled)") : "(Untitled)" %>
+
+        <%# Tasks panel — glassy, color-tinted cards (same look as the calendar),
+            draggable onto the grid. %>
+        <div data-palette-tabs-target="panel" data-tab="tasks" class="flex-1 min-h-0 overflow-auto">
+          <div data-controller="task-palette"
+               data-task-palette-hour-height-value="72"
+               data-task-palette-snap-minutes-value="15">
+            <div data-task-palette-target="palette">
+              <% if planner_tasks.empty? %>
+                <div class="rounded-xl border px-3 py-2 text-xs text-zinc-400"
+                     style="border-color: var(--studs-border);">
+                  No unscheduled tasks.
+                </div>
+              <% else %>
+                <div class="space-y-2">
+                  <% planner_tasks.each do |task| %>
+                    <% c = task.color.presence || "#34D399" %>
+                    <div
+                      data-task-palette-target="chip"
+                      data-task-id="<%= task.id %>"
+                      data-duration-minutes="<%= task.duration_minutes %>"
+                      data-reschedule-url="<%= reschedule_task_path(task) %>"
+                      data-action="pointerdown->task-palette#startDrag"
+                      data-planner-chip
+                      class="cursor-grab select-none rounded-2xl border p-3 backdrop-blur-sm"
+                      style="--bg-normal: <%= rgba(c, 0.14) %>; --bg-hover: <%= rgba(c, 0.20) %>; border-color: <%= rgba(c, 0.35) %>; border-left: 6px solid <%= rgba(c, 0.90) %>;"
+                    >
+                      <div class="flex items-center gap-2 min-w-0">
+                        <span class="shrink-0 inline-flex h-2.5 w-2.5 rounded-full" style="background-color: <%= rgba(c, 0.90) %>"></span>
+                        <div class="truncate text-sm font-semibold text-zinc-50"><%= task.title.presence || "(Untitled)" %></div>
+                      </div>
+                      <div class="mt-1 text-xs font-medium text-zinc-200/90"><%= task.duration_minutes %> min</div>
                     </div>
-                  </div>
-                  <div class="mt-1 text-xs font-medium text-zinc-200/90">
-                    <%= time_label %>
-                    <span class="mx-1 text-zinc-300/60">•</span>
-                    <%= type_label %>
-                  </div>
-                  <% if meta.present? %>
-                    <div class="mt-1 truncate text-xs text-zinc-300/80"><%= meta %></div>
                   <% end %>
                 </div>
-                <%= link_to "View",
-                  open_path,
-                  class: "shrink-0 rounded-xl border px-3 py-1.5 text-xs font-semibold text-zinc-50 transition hover:brightness-110",
-                  style: "border-color: #{tint_border}; background-color: #{rgba(base_bg, 0.18)};",
-                  data: {
-                    turbo_frame: "event_drawer",
-                    action: "click->drawer#start click->agenda-drawer#close",
-                    turbo_prefetch: false
-                  } %>
+              <% end %>
+            </div>
+          </div>
+        </div>
+
+        <%# Routine blocks panel — dashed-hatch template chips, draggable %>
+        <div data-palette-tabs-target="panel" data-tab="blocks" class="flex-1 min-h-0 overflow-auto">
+          <div data-controller="block-palette"
+               data-block-palette-create-url-value="<%= blocks_path %>"
+               data-block-palette-hour-height-value="72"
+               data-block-palette-snap-minutes-value="15">
+            <div data-block-palette-target="palette">
+              <div class="space-y-2">
+                <% [["Study", "#6366f1", 120], ["Deep Work", "#10b981", 120], ["Errands", "#f59e0b", 60]].each do |blk_label, blk_color, blk_dur| %>
+                  <div
+                    data-block-palette-target="chip"
+                    data-label="<%= blk_label %>"
+                    data-color="<%= blk_color %>"
+                    data-duration-minutes="<%= blk_dur %>"
+                    data-action="pointerdown->block-palette#startDrag"
+                    class="cursor-grab select-none rounded-xl px-3 py-2 text-sm font-medium text-zinc-100"
+                    style="border: 1.5px dashed <%= blk_color %>88; background: repeating-linear-gradient(45deg, <%= blk_color %>22 0, <%= blk_color %>22 7px, <%= blk_color %>0d 7px, <%= blk_color %>0d 16px);">
+                    <span class="align-middle"><%= blk_label %></span>
+                    <span class="ml-1 align-middle text-xs text-zinc-400"><%= blk_dur %>m</span>
+                  </div>
+                <% end %>
               </div>
             </div>
-          <% end %>
+          </div>
         </div>
-      <% end %>
+      </div>
     </div>
   </div>
 </div>

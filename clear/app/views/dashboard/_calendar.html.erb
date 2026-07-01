@@ -1,6 +1,7 @@
 <% draft            = local_assigns[:draft] %>
 <% in_draft         = draft.present? %>
 <% blocked_intervals = local_assigns.fetch(:blocked_intervals, []) %>
+<% availability_blocks = draft_availability_blocks %>
 <% course_filter_id = local_assigns[:course_filter_id].presence || params[:filter].presence %>
 <% courses_for_filter = local_assigns[:courses] || course_filter_courses %>
 <% hour_height_px   = 72 %>
@@ -76,6 +77,16 @@
 <% end.compact %>
 <% has_all_day = all_day_spans.any? %>
 <style>
+  /* Routine (availability) bands are a background layer — hidden until the user
+     opts in via the toolbar toggle, which adds .routines-visible to the calendar. */
+  [data-routine-band] { display: none; }
+  .routines-visible [data-routine-band] { display: block; }
+
+  [data-routine-toggle-target="button"][aria-pressed="true"] {
+    color: #6366f1;
+    border-color: #6366f1;
+  }
+
   [data-calendar-event] {
     transition:
       box-shadow 0.2s ease,
@@ -144,7 +155,7 @@
     opacity: 0.45;
   }
 </style>
-<div class="flex h-full min-h-0 flex-col" data-controller="agenda-highlight event-popover recurring-scope-prompt" data-action="event-drag:recurring->recurring-scope-prompt#open" data-calendar-view-target="weeklyContent">
+<div class="flex h-full min-h-0 flex-col" data-controller="agenda-highlight event-popover recurring-scope-prompt routine-toggle" data-action="event-drag:recurring->recurring-scope-prompt#open" data-calendar-view-target="weeklyContent">
   <%= render "draft/banner", start_date: week_start_date.iso8601, active_draft: draft %>
   <!-- Recurring-event reschedule scope prompt -->
   <div data-recurring-scope-prompt-target="overlay"
@@ -217,6 +228,19 @@
           ] + courses_for_filter.map { |c| { label: c.title, value: c.id.to_s } }
         ) %>
         </div>
+        <div class="mx-1 h-5 w-px rounded-full" style="background-color: var(--studs-border);"></div>
+        <%# Routines are a background layer, hidden by default; the routine-toggle controller opts them in (state persisted client-side in localStorage). %>
+        <button type="button"
+                class="studs-nav-btn"
+                aria-pressed="false"
+                title="Show or hide availability routines"
+                data-routine-toggle-target="button"
+                data-action="routine-toggle#toggle">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          Routines
+        </button>
         <div class="mx-1 h-5 w-px rounded-full" style="background-color: var(--studs-border);"></div>
       <% end %>
       <% if @project %>
@@ -432,9 +456,28 @@
     <% end %>
     <!-- Body grid -->
     <div class="grid" style="grid-template-columns: <%= time_col_px %>px repeat(<%= col_count %>, minmax(0, 1fr));"
-         data-controller="event-drag"
+         data-controller="event-drag block-builder block-popover"
          data-event-drag-hour-height-value="<%= hour_height_px %>"
-         data-event-drag-snap-minutes-value="30">
+         data-event-drag-snap-minutes-value="30"
+         data-block-builder-px-per-minute-value="<%= px_per_minute %>"
+         data-block-builder-grid-start-min-value="0"
+         data-block-builder-snap-minutes-value="15"
+         data-block-builder-allow-day-change-value="true"
+         data-action="block-builder:requestMenu->block-popover#open">
+      <!-- Availability block delete popover -->
+      <div data-block-popover-target="menu"
+           class="hidden absolute z-[110] rounded-xl border border-zinc-700 overflow-hidden"
+           style="background-color:#18181b; box-shadow:0 8px 30px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.06);">
+        <button type="button"
+                data-action="click->block-popover#delete"
+                class="flex w-full items-center gap-2 px-4 py-2.5 text-left text-[13px] font-semibold text-red-400 hover:bg-red-500/10">
+          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M6 7h12M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m-7 0v12a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V7"/>
+          </svg>
+          Delete block
+        </button>
+      </div>
       <!-- Hours gutter -->
       <div style="border-right: 1px solid var(--studs-border); background-color: var(--studs-panel-bg-soft);">
         <% 24.times do |h| %>
@@ -467,6 +510,7 @@
              data-action="click->agenda-highlight#clearFromDay"
              data-event-drag-target="day"
              data-date="<%= day.iso8601 %>"
+             data-wday="<%= day.wday %>"
           style="border-right: 1px solid var(--studs-divider);">
           <!-- Clickable time slots -->
           <% can_create_event = @project ? @project.membership_for(current_user)&.can_edit_content? : true %>
@@ -537,7 +581,62 @@
             </div>
           <% end %>
           <!-- Unified Event layer -->
-          <div class="relative" style="height: <%= day_height_px %>px;">
+          <div class="relative" style="height: <%= day_height_px %>px;" data-block-layer>
+            <%# Availability bands — drag to move/resize, click to open the delete
+                popover. They sit above grid/blocked layers but below events
+                (z-3 vs z-10+), so overlapping events stay grabbable first. %>
+            <% availability_blocks.select { |b| Array(b.repeat_days).include?(day.wday) }.each do |blk| %>
+              <% blk_top    = blk.start_minute * px_per_minute %>
+              <% blk_height = (blk.end_minute - blk.start_minute) * px_per_minute %>
+              <% blk_color  = blk.color.presence || "#6366f1" %>
+              <%# Draft state (set by CalendarDraft#build_block_preview): a routine
+                  moved/resized in a draft is "updated"; one created in a draft is
+                  "created". Created bands are proxies with no real id, so they're
+                  display-only until the draft is applied — no drag/resize/delete hooks. %>
+              <% blk_status  = blk.respond_to?(:draft_status) ? blk.draft_status : nil %>
+              <% blk_created = (blk_status == "created") %>
+              <% blk_border  =
+                   case blk_status
+                   when "created" then "1.5px dashed rgba(251,191,36,0.85)"
+                   when "updated" then "1.5px solid rgba(56,189,248,0.85)"
+                   else "1.5px dashed #{blk_color}55"
+                   end %>
+              <div class="absolute"
+                   data-routine-band
+                   <% unless blk_created %>
+                   data-block-builder-target="band"
+                   data-block-id="<%= blk.id %>"
+                   data-current-wday="<%= day.wday %>"
+                   data-reschedule-url="<%= reschedule_block_path(blk) %>"
+                   data-delete-url="<%= block_path(blk) %>"
+                   data-action="pointerdown->block-builder#startMove"
+                   <% end %>
+                   data-start-minute="<%= blk.start_minute %>"
+                   data-end-minute="<%= blk.end_minute %>"
+                   style="top: <%= blk_top %>px; height: <%= blk_height %>px; left: 2px; right: 2px; z-index: 3; cursor: <%= blk_created ? "default" : "grab" %>; user-select: none; border-radius: 9px; overflow: hidden;
+                          background: repeating-linear-gradient(45deg,
+                            <%= blk_color %>22 0, <%= blk_color %>22 7px,
+                            <%= blk_color %>0d 7px, <%= blk_color %>0d 16px);
+                          border: <%= blk_border %>;">
+                <span style="position:absolute; top:3px; left:7px; font-size:10px; font-weight:600; letter-spacing:.02em; color: <%= blk_color %>; opacity:.85;"><%= blk.label %></span>
+                <% if blk_status.in?(%w[created updated]) %>
+                  <span class="<%= blk_created ? "bg-amber-400/90 text-black/90" : "bg-sky-400/90 text-black/90" %>"
+                        style="position:absolute; top:3px; right:6px; font-size:8px; font-weight:700; letter-spacing:.04em; padding:1px 5px; border-radius:6px;">
+                    <%= blk_created ? "NEW" : "EDITED" %>
+                  </span>
+                <% end %>
+                <% unless blk_created %>
+                  <%# Bottom-edge resize handle — taller hit area + hover grip so it's discoverable %>
+                  <div class="group/resize absolute bottom-0 left-0 right-0 h-3 flex items-end justify-center pb-0.5"
+                       style="cursor: ns-resize;"
+                       data-action="pointerdown->block-builder#startResize"
+                       data-block-builder-target="resizeHandle">
+                    <div class="h-1 w-6 rounded-full opacity-0 group-hover/resize:opacity-80 transition-opacity"
+                         style="background: <%= blk_color %>;"></div>
+                  </div>
+                <% end %>
+              </div>
+            <% end %>
             <% day_events = events_by_day.fetch(day, []) %>
             <% due_height_px = 28 %>
             <% due_min_minutes = 10 %>
@@ -614,7 +713,7 @@
             <% segments.each do |seg| %>
               <% record    = seg[:record]; model = seg[:model] %>
               <% draft_status = seg[:draft_status] %>
-              <% is_course = (model == "course"); is_due = (model == "course_item"); is_work_shift = (model == "work_shift") %>
+              <% is_course = (model == "course"); is_due = (model == "course_item"); is_work_shift = (model == "work_shift"); is_task = (model == "task") %>
               <% is_draft_created = (draft_status == "created") %>
               <% is_draft_updated = (draft_status == "updated") %>
               <% is_draft_deleted = (draft_status == "deleted") %>
@@ -656,6 +755,8 @@
                   "SHIFT"
                 elsif is_course
                   "COURSE"
+                elsif is_task
+                  "TASK"
                 else
                   "EVENT"
                 end
@@ -685,7 +786,7 @@
                 "#{draft_style_extra}"
               %>
               <% highlight_id = "#{model}-#{record.id}-#{seg[:seg_start].to_date.iso8601}" %>
-              <% draft_created_editable = is_draft_created && (model == "event" || model == "course" || model == "work_shift") %>
+              <% draft_created_editable = is_draft_created && model.in?(%w[event course work_shift task]) %>
               <% popover_enabled = !is_draft_deleted && (!is_draft_created || draft_created_editable) %>
               <% href =
                 if is_draft_deleted
@@ -700,8 +801,8 @@
               <%# Move: events, courses, and course items. Resize: events and
                   courses only (a course item is a point-in-time due date with no
                   real duration). Neither on a draft-deleted block. %>
-              <% movable   = !is_draft_deleted && (model == "event" || model == "course" || model == "course_item") %>
-              <% resizable = !is_draft_deleted && (model == "event" || model == "course") %>
+              <% movable   = !is_draft_deleted && (model == "event" || model == "course" || model == "course_item" || model == "task") %>
+              <% resizable = !is_draft_deleted && (model == "event" || model == "course" || model == "task") %>
               <% base_action = popover_enabled ? "click->agenda-highlight#selectFromCalendar click->event-popover#show" : nil %>
               <% drag_action  = movable ? "#{base_action} pointerdown->event-drag#startMove".strip : base_action %>
               <% drag_data =
@@ -736,6 +837,15 @@
                   {
                     event_drag_target: "event",
                     reschedule_url: reschedule_course_course_item_path(record.course, record),
+                    occurrence_date: seg[:seg_start].to_date.iso8601,
+                    event_start: seg[:seg_start].iso8601,
+                    event_end: seg[:seg_end].iso8601
+                  }
+                elsif movable && model == "task"
+                  # Tasks are non-recurring: direct-submit branch, no anchor_date.
+                  {
+                    event_drag_target: "event",
+                    reschedule_url: reschedule_task_path(record),
                     occurrence_date: seg[:seg_start].to_date.iso8601,
                     event_start: seg[:seg_start].iso8601,
                     event_end: seg[:seg_end].iso8601

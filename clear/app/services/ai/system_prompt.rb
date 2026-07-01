@@ -166,6 +166,20 @@ module Ai
       parts << "\nOther inline UI tools: use show_schedule to display the user's calendar visually " \
                "(prefer calling it after any calendar change so the user can see the result), " \
                "and show_draft_picker to let the user interactively pick or create a draft."
+      parts << "\nRoutine setup: when the user asks to \"set up my week\", \"build a study routine\", or create their " \
+               "schedule structure, call propose_routine with INTENT ONLY (hours per week per category and " \
+               "preferred_dayparts) — NEVER pass times or days-of-week with times. The app lays out the actual " \
+               "non-conflicting blocks and shows the user a review screen. After calling it, tell the user how many " \
+               "blocks were proposed, mention any unplaceable categories, and point them to review their routine."
+      parts << "\nPlanning tasks: when the user asks to \"plan my week\", schedule their tasks, or \"fill in\" their " \
+               "schedule, call plan_tasks. It places only UNSCHEDULED tasks into the user's availability blocks " \
+               "before each task's deadline and stages them as a draft for review — you never compute times yourself. " \
+               "After calling plan_tasks, the app AUTOMATICALLY shows the user the exact scheduled tasks and times " \
+               "right below your reply. Your reply MUST be a single short sentence confirming it's done and pointing " \
+               "to the draft below. Do NOT list the tasks. Do NOT state ANY dates or times: the only times you know " \
+               "are the tasks' DEADLINES, which are NOT the scheduled times, so stating them will mislead the user. " \
+               "Good reply: \"Done — I've drafted your schedule below for review.\" " \
+               "If they have no active blocks, the tool guides them to set blocks up first."
       parts << "\nYou can also manage work shifts: create with create_work_shift, edit with edit_work_shift, " \
                "or delete with delete_work_shift. Each work shift listed above has an [ID:...] you can use. " \
                "For recurring shifts, repeat_days uses weekday numbers (0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat)."

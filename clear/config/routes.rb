@@ -180,11 +180,22 @@ Rails.application.routes.draw do
   # Helper names (analytics / analytics_compare) are kept stable.
   get "/dashboard",         to: "analytics#show",    as: "analytics"
   get "/dashboard/compare", to: "analytics#compare", as: "analytics_compare"
-  resources :tasks, only: %i[index new create edit update destroy] do
+  resources :tasks, only: %i[index new create show edit update destroy] do
     member do
       patch :toggle
+      patch :reschedule
     end
   end
+  resources :blocks, only: %i[index create update destroy] do
+    member do
+      patch :reschedule
+    end
+    collection do
+      post :accept
+      delete :discard_proposed
+    end
+  end
+
   get "/schedule",       to: "schedule#week"
   get "/schedule/week",  to: "schedule#week"
 

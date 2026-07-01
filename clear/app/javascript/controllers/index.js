@@ -46,6 +46,15 @@ application.register("auto-schedule-toggle", AutoScheduleToggleController)
 import AvatarCropController from "./avatar_crop_controller"
 application.register("avatar-crop", AvatarCropController)
 
+import BlockBuilderController from "./block_builder_controller"
+application.register("block-builder", BlockBuilderController)
+
+import BlockPaletteController from "./block_palette_controller"
+application.register("block-palette", BlockPaletteController)
+
+import BlockPopoverController from "./block_popover_controller"
+application.register("block-popover", BlockPopoverController)
+
 import CalendarViewController from "./calendar_view_controller"
 application.register("calendar-view", CalendarViewController)
 
@@ -121,6 +130,9 @@ application.register("notifications-dropdown", NotificationsDropdownController)
 import OnboardingController from "./onboarding_controller"
 application.register("onboarding", OnboardingController)
 
+import PaletteTabsController from "./palette_tabs_controller"
+application.register("palette-tabs", PaletteTabsController)
+
 import PdfPreviewController from "./pdf_preview_controller"
 application.register("pdf-preview", PdfPreviewController)
 
@@ -142,6 +154,9 @@ application.register("removable-card", RemovableCardController)
 import RoleUpdateController from "./role_update_controller"
 application.register("role-update", RoleUpdateController)
 
+import RoutineToggleController from "./routine_toggle_controller"
+application.register("routine-toggle", RoutineToggleController)
+
 import SearchController from "./search_controller"
 application.register("search", SearchController)
 
@@ -150,6 +165,9 @@ application.register("sidebar", SidebarController)
 
 import TaskFormController from "./task_form_controller"
 application.register("task-form", TaskFormController)
+
+import TaskPaletteController from "./task_palette_controller"
+application.register("task-palette", TaskPaletteController)
 
 import TasksPageController from "./tasks_page_controller"
 application.register("tasks-page", TasksPageController)

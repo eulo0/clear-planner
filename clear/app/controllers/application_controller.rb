@@ -91,7 +91,18 @@ class ApplicationController < ActionController::Base
       course_items       = []
     end
 
-    result = (event_occurrences + course_occurrences + work_shift_occurrences + course_items).sort_by(&:starts_at)
+    # Tasks only appear in the default "all" view; per-filter support is deferred to Phase 2.
+    if filter.blank?
+      task_occurrences =
+        current_user.tasks.scheduled
+          .where("scheduled_at <= ?", range_end)
+          .where("scheduled_at + (duration_minutes * interval '1 minute') >= ?", range_start)
+          .flat_map { |t| t.occurrences_between(range_start, range_end) }
+    else
+      task_occurrences = []
+    end
+
+    result = (event_occurrences + course_occurrences + work_shift_occurrences + course_items + task_occurrences).sort_by(&:starts_at)
 
     draft&.operation_count&.positive? ? draft.build_preview_occurrences(result, range_start, range_end) : result
   end
@@ -112,6 +123,29 @@ class ApplicationController < ActionController::Base
     @_course_filter_courses ||= current_user.courses.order(:title)
   end
   helper_method :course_filter_courses
+
+  # Active availability blocks for the PERSONAL calendar only (never group/project
+  # calendars, which set @project). Loaded here — not in a single controller action —
+  # so the hatch bands render in every calendar path: the dashboard show AND the
+  # drag/reschedule turbo-stream re-renders from EventsController/TasksController.
+  def calendar_availability_blocks
+    return [] if @project.present?
+    @_calendar_availability_blocks ||= (current_user&.blocks&.active&.to_a || [])
+  end
+  helper_method :calendar_availability_blocks
+
+  # Availability routines as the calendar band layer should render them: the active
+  # blocks, merged with any block ops staged in the current draft (moved/resized get
+  # a draft_status, staged-deleted are dropped, draft-created are proxies). When no
+  # draft is active this is just calendar_availability_blocks. Personal calendar only.
+  def draft_availability_blocks
+    return [] if @project.present?
+    blocks = calendar_availability_blocks
+    draft  = current_user_draft
+    return blocks unless draft
+    draft.build_block_preview(blocks)
+  end
+  helper_method :draft_availability_blocks
 
   # For showing all the different draft options
   def current_user_drafts

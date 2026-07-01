@@ -211,9 +211,10 @@ class DraftController < ApplicationController
 
   def draft_record_for(model, id)
     case model
-    when "event" then current_user.events.find_by(id: id)
+    when "event"  then current_user.events.find_by(id: id)
     when "course" then current_user.courses.find_by(id: id)
-    when "shift" then current_user.work_shifts.find_by(id: id)
+    when "shift"  then current_user.work_shifts.find_by(id: id)
+    when "task"   then current_user.tasks.find_by(id: id)
     end
   end
 

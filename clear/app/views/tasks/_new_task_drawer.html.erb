@@ -62,6 +62,12 @@
       <div class="tsk-field">When</div>
       <input type="datetime-local" name="task[scheduled_at]" class="tsk-input">
       <p class="mt-2 text-xs text-zinc-500">Leave blank to add to the backlog.</p>
+
+      <div class="mt-5">
+        <label for="task_color" class="tsk-field">Color</label>
+        <%= color_field_tag "task[color]", "#34D399",
+              class: "h-10 w-14 cursor-pointer rounded-xl border border-zinc-800 bg-zinc-950/40" %>
+      </div>
     </div>
 
     <div class="flex items-center gap-2.5 p-4" style="border-top:1px solid var(--studs-border); background:var(--studs-panel-header);">
