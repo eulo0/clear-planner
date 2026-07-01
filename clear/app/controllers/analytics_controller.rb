@@ -4,12 +4,14 @@ class AnalyticsController < ApplicationController
   before_action :set_week_range
 
   MAX_DAILY_MINUTES = 16 * 60 # 16-hour day = 100%
+  STRESS_NORMALIZATION_CAP = 3.0 # 3 deadlines at max proximity = 100% stress
 
   def show
     range_start = @week_start.beginning_of_day
     range_end   = @week_end.end_of_day
 
-    stats = compute_analytics(occurrences_for_selection("current", range_start, range_end))
+    current_occurrences = occurrences_for_selection("current", range_start, range_end)
+    stats = compute_analytics(current_occurrences)
 
     @event_count        = stats[:event_count]
     @course_count       = stats[:course_count]
@@ -33,6 +35,17 @@ class AnalyticsController < ApplicationController
       @draft_stats = compute_analytics(occurrences_for_selection(current_user_draft.id.to_s, range_start, range_end))
       @draft_name  = current_user_draft.name
     end
+
+    @stress_data = compute_stress_scores
+    @stress_peak = compute_stress_peak(@stress_data)
+
+    tasks       = weekly_tasks
+    @task_count = tasks.size
+    done        = tasks.count(&:done)
+    @completion = { done: done, total: tasks.size,
+                    pct: tasks.empty? ? 0 : (done.to_f / tasks.size * 100).round }
+
+    @up_next = compute_up_next(current_occurrences)
   end
 
   def compare
@@ -57,6 +70,77 @@ class AnalyticsController < ApplicationController
     @days       = (@week_start..@week_end).to_a
   end
 
+  # Tasks relevant to the current week: scheduled within the week, OR
+  # unscheduled but linked to a deadline (CourseItem) due this week.
+  def weekly_tasks
+    @weekly_tasks ||= begin
+      range = @week_start.beginning_of_day..@week_end.end_of_day
+      scheduled = Task.where(user_id: current_user.id, scheduled_at: range)
+      deadline_linked = Task.where(user_id: current_user.id, scheduled_at: nil)
+                            .joins(:course_item)
+                            .where(course_items: { due_at: range })
+      (scheduled.to_a + deadline_linked.to_a).uniq(&:id)
+    end
+  end
+
+  def compute_up_next(occurrences, limit: 6)
+    now       = Time.current
+    range_end = @week_end.end_of_day
+    rows = []
+
+    occurrences.each do |o|
+      next unless o.starts_at && o.starts_at > now && o.starts_at <= range_end
+      rows << case o
+              when CourseItem
+                { at: o.starts_at, title: o.title,
+                  subtitle: "#{o.course.title} · Deadline", type: :deadline }
+              when Course::Occurrence
+                { at: o.starts_at, title: o.title, subtitle: "Course", type: :course }
+              when Event::Occurrence
+                { at: o.starts_at, title: o.title, subtitle: "Event", type: :event }
+              when WorkShift::Occurrence
+                { at: o.starts_at, title: o.title, subtitle: "Work shift", type: :event }
+              end
+    end
+
+    Task.where(user_id: current_user.id, scheduled_at: now..range_end)
+        .includes(course_item: :course).find_each do |t|
+      label = t.course_item&.course&.title || "Task"
+      rows << { at: t.scheduled_at, title: t.title, subtitle: "#{label} · Task", type: :task }
+    end
+
+    rows.compact.sort_by { |r| r[:at] }.first(limit)
+  end
+
+  # The worst stress day + the deadlines/tasks driving it (due within 7 days
+  # of that day). Returns nil when there is no stress to show.
+  def compute_stress_peak(stress_data)
+    return nil if stress_data.blank?
+    peak = stress_data.max_by { |s| s[:score] }
+    return nil if peak[:score].to_i.zero?
+
+    items = CourseItem.joins(:course)
+                      .where(courses: { user_id: current_user.id })
+                      .where(due_at: peak[:date].beginning_of_day..(peak[:date] + 7.days).end_of_day)
+                      .includes(:tasks, :course)
+                      .order(:due_at)
+
+    rows = []
+    items.each do |ci|
+      if ci.tasks.any?
+        ci.tasks.each do |t|
+          rows << { title: t.title, course: ci.course.title, due: ci.due_at.to_date,
+                    needs: t.duration_minutes, planned: t.scheduled? }
+        end
+      else
+        rows << { title: ci.title, course: ci.course.title, due: ci.due_at.to_date,
+                  needs: nil, planned: nil }
+      end
+    end
+
+    { date: peak[:date], score: peak[:score], rows: rows.first(4) }
+  end
+
   def label_for(selection_id, drafts)
     return "Current Calendar" if selection_id == "current"
     drafts.find { |d| d.id.to_s == selection_id }&.name || "Unknown"
@@ -71,6 +155,36 @@ class AnalyticsController < ApplicationController
 
       raw = calendar_occurrences_for_range(range_start, range_end, draft: draft)
       raw.reject { |o| o.respond_to?(:draft_status) && o.draft_status == "deleted" }
+    end
+  end
+
+  def compute_stress_scores
+    # Fetch all CourseItems for the current user with due dates within the
+    # stress window (week start through week end + 7 days). A single query
+    # avoids N+1 per day.
+    window_end = (@week_end + 7.days).end_of_day
+    items = CourseItem
+              .joins(:course)
+              .where(courses: { user_id: current_user.id })
+              .where.not(due_at: nil)
+              .where(due_at: Date.current.beginning_of_day..window_end)
+              .to_a
+
+    @days.map do |day|
+      window_start = day
+      window_close = day + 7.days
+
+      relevant = items.select { |item| item.due_at.to_date.between?(window_start, window_close) }
+
+      raw_sum = relevant.sum do |item|
+        days_until_due = (item.due_at.to_date - day).to_i.clamp(0, 7) # overdue items treated as max proximity
+        1.0 - (days_until_due / 7.0)
+      end
+
+      score          = [ ((raw_sum / STRESS_NORMALIZATION_CAP) * 100), 100 ].min.round
+      deadline_count = items.count { |item| item.due_at.to_date == day }
+
+      { date: day, score: score, deadline_count: deadline_count }
     end
   end
 

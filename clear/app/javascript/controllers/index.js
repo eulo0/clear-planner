@@ -163,6 +163,9 @@ application.register("search", SearchController)
 import SidebarController from "./sidebar_controller"
 application.register("sidebar", SidebarController)
 
+import StressGraphController from "./stress_graph_controller"
+application.register("stress-graph", StressGraphController)
+
 import TaskFormController from "./task_form_controller"
 application.register("task-form", TaskFormController)
 

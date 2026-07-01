@@ -1,0 +1,37 @@
+<%#
+  4 stat cards: Events / Courses / Tasks / Deadlines — markup mirrors
+  Analytics Dashboard Prototype.html (view-week). Keeps draft-delta chips.
+%>
+<div class="grid grid-cols-1 gap-4 mb-6 md:grid-cols-2 lg:grid-cols-4">
+  <%
+    cards = [
+      { label: "Events",    count: @event_count,    color: AnalyticsHelper::TYPE_COLORS[:event],    icon: "timeline-event-stroke-rounded", draft_key: :event_count },
+      { label: "Courses",   count: @course_count,   color: AnalyticsHelper::TYPE_COLORS[:course],   icon: "course-stroke-rounded",         draft_key: :course_count },
+      { label: "Tasks",     count: @task_count,     color: AnalyticsHelper::TYPE_COLORS[:task],     icon: "task-done-01-stroke-rounded",   draft_key: nil },
+      { label: "Deadlines", count: @deadline_count, color: AnalyticsHelper::TYPE_COLORS[:deadline], icon: "calendar-03-stroke-rounded",    draft_key: :deadline_count },
+    ]
+  %>
+  <% cards.each do |card| %>
+    <% draft_count = card[:draft_key] && @draft_stats&.dig(card[:draft_key]) %>
+    <% delta = draft_count ? draft_count - card[:count] : nil %>
+    <div class="an-card p-5">
+      <div class="flex items-center gap-3">
+        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
+             style="background-color: <%= card[:color] %>1f; color: <%= card[:color] %>;">
+          <span class="[&>svg]:h-5 [&>svg]:w-5"><%= icon card[:icon] %></span>
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-baseline gap-2 flex-wrap">
+            <p class="text-2xl font-bold text-zinc-100 leading-none"><%= card[:count] %></p>
+            <% if delta && delta != 0 %>
+              <span class="text-xs font-bold rounded-md px-1.5 py-0.5 leading-none <%= delta > 0 ? 'an-chip-up' : 'an-chip-down' %>">
+                <%= delta > 0 ? "+#{delta}" : delta %> in draft
+              </span>
+            <% end %>
+          </div>
+          <p class="text-xs font-medium text-zinc-300 mt-1"><%= card[:label] %></p>
+        </div>
+      </div>
+    </div>
+  <% end %>
+</div>

@@ -1,0 +1,160 @@
+<% has_data = @stress_data&.any? { |s| s[:score].to_i.positive? || s[:deadline_count].to_i.positive? } %>
+
+<style>
+  /* ── Stress Forecast (Cushion-style SVG) — ported from Analytics Dashboard Prototype.html ── */
+  .stress-chart { position: relative; width: 100%; margin-top: 10px; }
+  #stressGraph > svg { width: 100%; height: auto; display: block; overflow: visible; }
+  .watermark { font-weight: 800; letter-spacing: 0.04em; }
+  .sg-xaxis { display:flex; justify-content:space-between; margin-top: 8px; padding: 0 5.5% 0 6.7%; }
+  .sg-xaxis span { font-size: 10px; font-weight: 600; color: #a1a1aa; }
+  .sg-xaxis .today { color: var(--studs-accent); }
+  .sg-tip { position:absolute; transform:translateX(-50%); background:rgba(9,9,11,0.95); color:#f4f4f5;
+    font-size:11px; font-weight:500; padding:5px 9px; border-radius:7px; border:1px solid rgba(255,255,255,0.12);
+    pointer-events:none; white-space:nowrap; display:none; z-index:20; box-shadow:0 4px 14px rgba(0,0,0,0.45); }
+  .sg-callout { position:absolute; --ac:#ef4444; background:rgba(9,9,11,0.96); border:1px solid var(--ac);
+    border-radius:12px; padding:11px 12px; width:248px; z-index:15;
+    box-shadow:0 8px 24px rgba(0,0,0,0.55), 0 0 0 4px color-mix(in srgb, var(--ac) 9%, transparent); }
+  .sg-callout::after { content:''; position:absolute; left:var(--arrow-x,50%); margin-left:-5px;
+    width:10px; height:10px; background:rgba(9,9,11,0.96); transform:rotate(45deg); }
+  .sg-callout.above::after { bottom:-6px; border-right:1px solid var(--ac); border-bottom:1px solid var(--ac); }
+  .sg-callout.below::after { top:-6px; border-left:1px solid var(--ac); border-top:1px solid var(--ac); }
+  .sg-callout .c-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
+  .sg-callout .c-day { font-size:12px; font-weight:700; color:#f4f4f5; }
+  .sg-callout .c-badge { font-size:10px; font-weight:700; padding:2px 7px; border-radius:6px; }
+  .sg-callout .c-meta { font-size:11px; font-weight:500; color:#a1a1aa; }
+  .sg-callout .c-meta b { color:#d4d4d8; font-weight:600; }
+  .sg-callout svg { width:13px; height:13px; flex:none; }
+  .sg-tasks { margin-top:9px; display:flex; flex-direction:column; gap:6px; }
+  .sg-task { display:flex; flex-direction:column; gap:3px; padding:7px 9px; border-radius:9px;
+    background:rgba(255,255,255,0.035); border:1px solid var(--studs-border); }
+  .sg-task .t-name { font-size:11px; font-weight:600; color:#e4e4e7; line-height:1.2; }
+  .sg-task .t-meta { font-size:10px; color:#a1a1aa; display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+  .sg-task .t-dot { width:5px; height:5px; border-radius:9999px; flex:none; }
+  .sg-task .t-tag { font-size:9px; font-weight:700; padding:1px 6px; border-radius:5px; margin-left:auto; }
+  .sg-task .t-tag.unplanned { color:#fca5a5; background:rgba(239,68,68,0.16); }
+  .sg-task .t-tag.needs { color:#fcd34d; background:rgba(245,158,11,0.16); }
+  /* CTA reuses the app's theme-aware accent button (.studs-btn-accent); these
+     overrides only reshape it to the prototype's full-width rounded-rect form. */
+  .sg-cta { width:100%; margin-top:10px; border-radius:9px; padding:8px 10px; font-size:11px; font-weight:700; }
+  .sg-cta:hover { filter:brightness(1.08); }
+</style>
+
+<div class="an-card p-6 mb-6">
+  <div class="flex items-center justify-between mb-1">
+    <span class="an-title">Stress Forecast</span>
+    <span class="flex items-center gap-3 text-[10px] font-medium">
+      <span class="flex items-center gap-1.5 text-zinc-400"><span class="inline-block h-2 w-3 rounded-full" style="background: var(--studs-accent);"></span>calm</span>
+      <span class="flex items-center gap-1.5 text-zinc-400"><span class="inline-block h-2 w-3 rounded-full" style="background:#f59e0b;"></span>moderate</span>
+      <span class="flex items-center gap-1.5 text-zinc-400"><span class="inline-block h-2 w-3 rounded-full" style="background:#ef4444;"></span>heavy</span>
+    </span>
+  </div>
+
+  <% unless has_data %>
+    <p class="text-sm text-zinc-400 text-center py-6">No upcoming deadlines — connect your Canvas calendar to see your stress forecast.</p>
+  <% else %>
+    <%
+      pad   = { top: 16, bot: 196, left: 48, right: 680 }
+      y_for = ->(s) { (pad[:bot] - (s.to_f / 100) * (pad[:bot] - pad[:top])).round(2) }
+      x_for = ->(i) { (pad[:left] + i * ((pad[:right] - pad[:left]) / 6.0)).round(2) }
+      points = @stress_data.each_with_index.map { |s, i| [ x_for.call(i), y_for.call(s[:score]) ] }
+      line_path = stress_smooth_path(points)
+      area_path = "#{line_path} L #{x_for.call(@stress_data.size - 1)} #{pad[:bot]} L #{x_for.call(0)} #{pad[:bot]} Z"
+      peak_idx = @stress_data.each_with_index.max_by { |s, _| s[:score] }.last
+    %>
+
+    <div class="stress-chart" id="stressGraph" data-controller="stress-graph">
+      <svg id="sg-svg" viewBox="0 0 720 240" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+        <defs>
+          <linearGradient id="sgLineGrad" gradientUnits="userSpaceOnUse" x1="0" y1="16" x2="0" y2="196">
+            <stop offset="0%" stop-color="#ef4444"/><stop offset="28%" stop-color="#ef4444"/>
+            <stop offset="46%" stop-color="#f59e0b"/><stop offset="62%" stop-color="#f59e0b"/>
+            <stop offset="80%" stop-color="#10b981"/><stop offset="100%" stop-color="#10b981"/>
+          </linearGradient>
+          <linearGradient id="sgAreaGrad" gradientUnits="userSpaceOnUse" x1="0" y1="16" x2="0" y2="196">
+            <stop offset="0%" stop-color="#ef4444" stop-opacity="0.30"/>
+            <stop offset="46%" stop-color="#f59e0b" stop-opacity="0.16"/>
+            <stop offset="100%" stop-color="#10b981" stop-opacity="0.05"/>
+          </linearGradient>
+          <filter id="sgGlow" x="-10%" y="-30%" width="120%" height="160%">
+            <feDropShadow dx="0" dy="1.5" stdDeviation="2.5" flood-color="#000" flood-opacity="0.45"/>
+          </filter>
+        </defs>
+        <rect x="42" y="16" width="678" height="45" fill="rgba(239,68,68,0.07)"/>
+        <rect x="42" y="61" width="678" height="45" fill="rgba(245,158,11,0.06)"/>
+        <rect x="42" y="106" width="678" height="90" fill="rgba(16,185,129,0.06)"/>
+        <line x1="42" y1="16"  x2="720" y2="16"  stroke="var(--studs-divider)" stroke-width="1" opacity="0.5"/>
+        <line x1="42" y1="61"  x2="720" y2="61"  stroke="var(--studs-border)"  stroke-dasharray="3,4" stroke-width="1"/>
+        <line x1="42" y1="106" x2="720" y2="106" stroke="var(--studs-border)"  stroke-dasharray="3,4" stroke-width="1"/>
+        <line x1="42" y1="151" x2="720" y2="151" stroke="var(--studs-divider)" stroke-dasharray="2,5" stroke-width="0.75" opacity="0.6"/>
+        <line x1="42" y1="196" x2="720" y2="196" stroke="var(--studs-divider)" stroke-width="1"/>
+        <line x1="42" y1="16" x2="42" y2="196" stroke="var(--studs-divider)" stroke-width="1"/>
+        <g font-size="9" font-weight="600" fill="#71717a" text-anchor="end">
+          <text x="35" y="19">100</text><text x="35" y="64">75</text><text x="35" y="109">50</text><text x="35" y="154">25</text><text x="35" y="199">0</text>
+        </g>
+        <text x="14" y="106" font-size="9" font-weight="700" fill="#52525b" text-anchor="middle" transform="rotate(-90 14 106)" letter-spacing="0.08em">STRESS %</text>
+        <text class="watermark" x="381" y="46"  text-anchor="middle" font-size="20" fill="rgba(239,68,68,0.13)">HEAVY</text>
+        <text class="watermark" x="381" y="178" text-anchor="middle" font-size="20" fill="rgba(16,185,129,0.13)">CALM</text>
+        <path d="<%= area_path %>" fill="url(#sgAreaGrad)" stroke="none"/>
+        <path d="<%= line_path %>" fill="none" stroke="url(#sgLineGrad)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" filter="url(#sgGlow)"/>
+        <g>
+          <% @stress_data.each_with_index do |s, i| %>
+            <% x = points[i][0]; y = points[i][1]; c = stress_color(s[:score]); is_peak = (i == peak_idx) %>
+            <% if is_peak %>
+              <circle cx="<%= x %>" cy="<%= y %>" r="8" fill="none" stroke="<%= c %>" stroke-width="1.5" opacity="0.5"/>
+            <% end %>
+            <circle cx="<%= x %>" cy="<%= y %>" r="<%= is_peak ? 4.5 : 3.2 %>" fill="<%= c %>"
+                    stroke="#09090b" stroke-width="2" style="cursor:pointer"
+                    data-stress-graph-target="<%= is_peak ? "dot peak" : "dot" %>"
+                    data-label="<%= s[:date].strftime("%a") %> · Score <%= s[:score] %> · <%= s[:deadline_count] %> due"/>
+          <% end %>
+        </g>
+      </svg>
+
+      <div class="sg-tip" data-stress-graph-target="tip"></div>
+
+      <% if @stress_peak %>
+        <% pc = stress_color(@stress_peak[:score]); plevel = stress_level(@stress_peak[:score]).to_s.capitalize %>
+        <div class="sg-callout" data-stress-graph-target="callout" style="display:none; --ac: <%= pc %>;">
+          <div class="c-top">
+            <span class="c-day"><%= @stress_peak[:date].strftime("%a") %></span>
+            <span class="c-badge" style="color: <%= pc %>; background: color-mix(in srgb, <%= pc %> 16%, transparent);"><%= plevel %></span>
+          </div>
+          <div class="c-meta">Score <b><%= @stress_peak[:score] %></b> · driven by <b><%= @stress_peak[:rows].size %></b> deadline<%= @stress_peak[:rows].size == 1 ? "" : "s" %></div>
+          <% if @stress_peak[:rows].any? %>
+            <div class="sg-tasks">
+              <% @stress_peak[:rows].each do |r| %>
+                <div class="sg-task">
+                  <span class="t-name"><%= r[:title] %></span>
+                  <span class="t-meta">
+                    <span class="t-dot" style="background: <%= pc %>;"></span>
+                    <%= r[:course] %> · due <%= r[:due].strftime("%a") %>
+                    <% if r[:needs] %>
+                      <% if r[:planned] %>
+                        <span class="t-tag needs">needs <%= format_duration_short(r[:needs]) %></span>
+                      <% else %>
+                        <span class="t-tag unplanned">not planned · <%= format_duration_short(r[:needs]) %></span>
+                      <% end %>
+                    <% end %>
+                  </span>
+                </div>
+              <% end %>
+            </div>
+            <% unplanned = @stress_peak[:rows].count { |r| r[:needs] && !r[:planned] } %>
+            <% if unplanned.positive? %>
+              <button class="studs-btn-accent sg-cta" type="button" data-stress-graph-target="cta">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.3L19 10l-5.1 1.7L12 17l-1.9-5.3L5 10l5.1-1.7z"/></svg>
+                <span>Plan <%= unplanned == 1 ? "this" : "these #{unplanned}" %> in a draft</span>
+              </button>
+            <% end %>
+          <% end %>
+        </div>
+      <% end %>
+
+      <div class="sg-xaxis">
+        <% @stress_data.each do |s| %>
+          <span class="<%= "today" if s[:date] == Date.current %>"><%= s[:date].strftime("%a") %></span>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+</div>

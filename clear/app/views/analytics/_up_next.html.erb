@@ -1,0 +1,28 @@
+<%# Up Next timeline — markup mirrors Analytics Dashboard Prototype.html (view-week). %>
+<div class="an-card p-6 lg:col-span-2">
+  <div class="an-head">
+    <span class="an-title">Up Next</span>
+    <span class="an-kpi">rest of this week</span>
+  </div>
+
+  <% if @up_next.blank? %>
+    <p class="text-sm text-zinc-500 py-6 text-center">Nothing else scheduled this week</p>
+  <% else %>
+    <div class="an-tl an-tl-compact">
+      <% @up_next.each do |row| %>
+        <% color = AnalyticsHelper::TYPE_COLORS[row[:type]] %>
+        <div class="an-tl-item">
+          <div class="an-tl-time" style="width:78px;">
+            <span class="block text-zinc-300 font-semibold"><%= row[:at].strftime("%a") %></span>
+            <span class="block text-[11px] font-medium text-zinc-500"><%= relative_day_label(row[:at]) %></span>
+          </div>
+          <div class="an-tl-rail"><span class="an-tl-dot" style="background: <%= color %>;"></span></div>
+          <div class="an-tl-body">
+            <p class="an-tl-title truncate"><%= row[:title] %></p>
+            <p class="text-xs text-zinc-500 mt-0.5"><%= row[:subtitle] %></p>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+</div>

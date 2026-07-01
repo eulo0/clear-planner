@@ -8,11 +8,28 @@
   .analytics-bar {
     animation: bar-grow 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
   }
-  .donut-segment {
-    animation: none;
-    transition: stroke-dashoffset 0.6s cubic-bezier(0.22, 1, 0.36, 1),
-                stroke-dasharray 0.6s cubic-bezier(0.22, 1, 0.36, 1);
-  }
+
+  /* ── restyle component classes — ported verbatim from Analytics Dashboard Prototype.html ── */
+  .an-card { border-radius: 16px; border: 1px solid var(--studs-border); background-color: var(--studs-panel-bg); box-shadow: 0 1px 3px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.04); }
+  .an-head { display:flex; align-items:center; gap:8px; margin-bottom:16px; }
+  .an-title { font-size:16px; font-weight:600; color:#f4f4f5; letter-spacing:0.01em; }
+  .an-kpi  { margin-left:auto; font-size:12px; font-weight:600; color:#a1a1aa; display:flex; align-items:center; gap:5px; }
+  .an-tile { border-radius:12px; background-color: var(--studs-panel-bg-2); border:1px solid var(--studs-border); }
+  .an-chip-up { color:#6ee7b7; background: rgba(16,185,129,0.15); }
+  .an-chip-down { color:#fca5a5; background: rgba(239,68,68,0.15); }
+
+  .an-progress-track { height:8px; border-radius:9999px; background:var(--studs-border); overflow:hidden; }
+  .an-progress-fill  { height:100%; border-radius:9999px; background:var(--studs-accent); }
+
+  .an-tl { position:relative; }
+  .an-tl-item { display:flex; gap:14px; padding:9px 0; }
+  .an-tl-compact .an-tl-item { padding:6px 0; }
+  .an-tl-time { width:62px; flex-shrink:0; text-align:right; font-size:12px; font-weight:600; color:#a1a1aa; padding-top:1px; }
+  .an-tl-rail { position:relative; width:14px; flex-shrink:0; display:flex; justify-content:center; }
+  .an-tl-rail::before { content:''; position:absolute; top:0; bottom:0; width:2px; background:var(--studs-divider); }
+  .an-tl-dot { position:relative; width:11px; height:11px; border-radius:50%; margin-top:4px; border:2px solid #0f1a14; z-index:1; }
+  .an-tl-body { flex:1; min-width:0; padding-bottom:2px; }
+  .an-tl-title { font-size:14px; font-weight:600; color:#f4f4f5; }
 </style>
 
 <!-- Tabs -->
@@ -28,233 +45,18 @@
 <div data-controller="analytics-draft" data-analytics-draft-url-value="<%= analytics_path %>">
 <%= turbo_frame_tag "analytics_content" do %>
 
-<!-- Stat Cards Row -->
-<div class="grid grid-cols-2 gap-4 mb-6 lg:grid-cols-4">
-  <%
-    stat_cards = [
-      { label: "Events",          count: @event_count,    past: @events_past,     upcoming: @events_upcoming,    color: "#60a5fa", icon: "timeline-event-stroke-rounded", draft_key: :event_count },
-      { label: "Course Sessions", count: @course_count,   past: @courses_past,    upcoming: @courses_upcoming,   color: "#34d399", icon: "course-stroke-rounded",          draft_key: :course_count },
-      { label: "Deadlines",       count: @deadline_count, past: @deadlines_past,  upcoming: @deadlines_upcoming, color: "#fbbf24", icon: "task-done-01-stroke-rounded",    draft_key: :deadline_count },
-    ]
-  %>
-  <% stat_cards.each do |card| %>
-    <% draft_count = @draft_stats&.dig(card[:draft_key]) %>
-    <% delta = draft_count ? draft_count - card[:count] : nil %>
-    <div class="rounded-2xl p-5"
-         style="border: 1px solid var(--studs-border); background-color: var(--studs-panel-bg);">
-      <!-- Header row: icon + total -->
-      <div class="flex items-center gap-3 mb-4">
-        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
-             style="background-color: <%= card[:color] %>18; color: <%= card[:color] %>;">
-          <span class="[&>svg]:h-5 [&>svg]:w-5"><%= icon card[:icon] %></span>
-        </div>
-        <div class="flex-1 min-w-0">
-          <div class="flex items-baseline gap-2 flex-wrap">
-            <p class="text-2xl font-bold text-zinc-100 leading-none"><%= card[:count] %></p>
-            <% if delta && delta != 0 %>
-              <span class="text-xs font-bold rounded-md px-1.5 py-0.5 leading-none
-                           <%= delta > 0 ? 'text-emerald-300 bg-emerald-500/15' : 'text-red-300 bg-red-500/15' %>">
-                <%= delta > 0 ? "+#{delta}" : delta %> in draft
-              </span>
-            <% end %>
-          </div>
-          <p class="text-xs font-medium text-zinc-300 mt-1"><%= card[:label] %></p>
-        </div>
-      </div>
-      <!-- Past / Upcoming split -->
-      <div class="grid grid-cols-2 gap-2 pt-3" style="border-top: 1px solid var(--studs-divider);">
-        <div class="rounded-lg px-3 py-2" style="background-color: var(--studs-panel-bg-2);">
-          <p class="text-base font-bold text-zinc-300 leading-none"><%= card[:past] %></p>
-          <p class="text-[10px] font-medium text-zinc-500 mt-1">Past</p>
-        </div>
-        <div class="rounded-lg px-3 py-2" style="background-color: var(--studs-panel-bg-2);">
-          <p class="text-base font-bold leading-none" style="color: <%= card[:color] %>;"><%= card[:upcoming] %></p>
-          <p class="text-[10px] font-medium text-zinc-500 mt-1">Upcoming</p>
-        </div>
-      </div>
-    </div>
-  <% end %>
-</div>
+<%= render "stat_cards" %>
 
-<!-- Main Content: Donut Chart + Summary -->
-<div class="grid grid-cols-1 gap-4 mb-6 lg:grid-cols-2">
-
-  <!-- Donut Chart -->
-  <div class="rounded-2xl p-6 flex flex-col" style="border: 1px solid var(--studs-border); background-color: var(--studs-panel-bg);">
-    <h2 class="text-sm font-semibold text-zinc-100 mb-4 shrink-0">This Week's Breakdown</h2>
-
-    <% if @total_count.zero? %>
-      <div class="flex flex-col items-center justify-center flex-1 text-center">
-        <div class="opacity-20 mb-3"><%= icon "eye-stroke-rounded", class: "h-10 w-10 text-zinc-300" %></div>
-        <p class="text-sm text-zinc-400">Nothing scheduled this week</p>
-      </div>
-    <% else %>
-      <div class="flex items-center gap-6 flex-1 min-h-0">
-        <div class="relative shrink-0 h-full aspect-square">
-          <svg viewBox="0 0 42 42" class="w-full h-full -rotate-90">
-            <circle cx="21" cy="21" r="15.915"
-                    fill="none" stroke-width="3"
-                    style="stroke: var(--studs-border);"/>
-            <%
-              cumulative_pct = 0
-              total = @total_count.to_f
-            %>
-            <% @chart_segments.each do |seg| %>
-              <% pct = (seg[:count] / total * 100).round(2) %>
-              <circle cx="21" cy="21" r="15.915"
-                      fill="none"
-                      stroke="<%= seg[:color] %>"
-                      stroke-width="3"
-                      stroke-dasharray="<%= pct %> <%= 100 - pct %>"
-                      stroke-dashoffset="<%= 100 - cumulative_pct %>"
-                      stroke-linecap="butt"
-                      class="donut-segment"/>
-              <% cumulative_pct += pct %>
-            <% end %>
-          </svg>
-          <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-            <span class="text-2xl font-bold text-zinc-100"><%= @total_count %></span>
-            <span class="text-xs font-medium text-zinc-300 mt-0.5">total</span>
-          </div>
-        </div>
-
-        <!-- Legend -->
-        <div class="flex flex-col justify-center gap-2.5 flex-1">
-          <% @chart_segments.each do |seg| %>
-            <% pct = (@total_count > 0 ? (seg[:count].to_f / @total_count * 100).round : 0) %>
-            <div class="flex items-center gap-2.5">
-              <span class="h-2.5 w-2.5 rounded-full shrink-0" style="background-color: <%= seg[:color] %>;"></span>
-              <span class="flex-1 text-sm font-medium text-zinc-200"><%= seg[:label] %></span>
-              <span class="text-sm font-semibold text-zinc-100"><%= seg[:count] %></span>
-              <span class="text-xs font-medium text-zinc-400 w-10 text-right"><%= pct %>%</span>
-            </div>
-          <% end %>
-        </div>
-      </div>
-    <% end %>
-  </div>
-
-  <!-- Week Summary Stats -->
-  <div class="rounded-2xl p-6" style="border: 1px solid var(--studs-border); background-color: var(--studs-panel-bg);">
-    <div class="flex items-center justify-between mb-4">
-      <h2 class="text-sm font-semibold text-zinc-100">Week Summary</h2>
-      <% if @draft_stats %>
-        <span class="inline-flex items-center gap-1.5 text-[10px] font-semibold text-amber-300 rounded-lg border border-amber-300/30 bg-amber-500/10 px-2 py-1">
-          <span class="h-1.5 w-1.5 rounded-full bg-amber-300 shrink-0"></span>
-          <%= @draft_name %>
-        </span>
-      <% end %>
-    </div>
-
-    <div class="space-y-4">
-      <!-- Total scheduled time -->
-      <div class="rounded-xl p-4" style="background-color: var(--studs-panel-bg-2); border: 1px solid var(--studs-border);">
-        <p class="text-xs font-semibold text-zinc-300 mb-1">Scheduled Time</p>
-        <%
-          total_h  = @total_minutes / 60
-          total_m  = @total_minutes % 60
-          time_str = total_h > 0 ? "#{total_h}h#{total_m > 0 ? " #{total_m}m" : ""}" : (total_m > 0 ? "#{total_m}m" : "0m")
-        %>
-        <% if @draft_stats %>
-          <%
-            d_h    = @draft_stats[:total_minutes] / 60
-            d_m    = @draft_stats[:total_minutes] % 60
-            td     = @draft_stats[:total_minutes] - @total_minutes
-            a_h    = td.abs / 60; a_m = td.abs % 60
-            d_str  = d_h > 0 ? "#{d_h}h#{d_m > 0 ? " #{d_m}m" : ""}" : (d_m > 0 ? "#{d_m}m" : "0m")
-            td_str = (td > 0 ? "+" : "-") + (a_h > 0 ? "#{a_h}h#{a_m > 0 ? " #{a_m}m" : ""}" : "#{a_m}m")
-          %>
-          <div class="flex items-center gap-2 flex-wrap">
-            <p class="text-xl font-bold text-zinc-500"><%= time_str %></p>
-            <span class="text-zinc-600 text-sm">&rarr;</span>
-            <p class="text-xl font-bold text-zinc-100"><%= d_str %></p>
-            <% if td != 0 %>
-              <span class="text-xs font-bold rounded-md px-1.5 py-0.5 <%= td > 0 ? 'text-emerald-300 bg-emerald-500/15' : 'text-red-300 bg-red-500/15' %>"><%= td_str %></span>
-            <% end %>
-          </div>
-          <p class="text-xs font-medium text-zinc-400 mt-1"><%= @total_count %> now &rarr; <%= @draft_stats[:total_count] %> items in draft</p>
-        <% else %>
-          <p class="text-xl font-bold text-zinc-100"><%= time_str %></p>
-          <p class="text-xs font-medium text-zinc-400 mt-1">across <%= @total_count %> items</p>
-        <% end %>
-      </div>
-
-      <!-- Busiest day -->
-      <% if @busiest_day && @busiest_day[:minutes] > 0 %>
-        <div class="rounded-xl p-4" style="background-color: var(--studs-panel-bg-2); border: 1px solid var(--studs-border);">
-          <p class="text-xs font-semibold text-zinc-300 mb-1">Busiest Day</p>
-          <% bh = @busiest_day[:minutes] / 60; bm = @busiest_day[:minutes] % 60 %>
-          <% if @draft_stats %>
-            <% d_busy = @draft_stats[:busiest_day] %>
-            <div class="flex items-center gap-2 flex-wrap">
-              <p class="text-xl font-bold text-zinc-500"><%= @busiest_day[:date].strftime("%A") %></p>
-              <span class="text-zinc-600 text-sm">&rarr;</span>
-              <p class="text-xl font-bold text-zinc-100"><%= d_busy&.dig(:minutes).to_i > 0 ? d_busy[:date].strftime("%A") : "None" %></p>
-              <% if d_busy && @busiest_day[:date] != d_busy[:date] %>
-                <span class="text-xs font-bold rounded-md px-1.5 py-0.5 text-amber-300 bg-amber-500/15">changed</span>
-              <% end %>
-            </div>
-          <% else %>
-            <p class="text-xl font-bold text-zinc-100"><%= @busiest_day[:date].strftime("%A") %></p>
-          <% end %>
-          <p class="text-xs font-medium text-zinc-400 mt-1">
-            <% if bh > 0 %><%= bh %>h <% if bm > 0 %><%= bm %>m<% end %><% else %><%= bm %>m<% end %>
-            scheduled &bull; <%= @busiest_day[:item_count] %> item<%= @busiest_day[:item_count] == 1 ? "" : "s" %>
-          </p>
-        </div>
-      <% else %>
-        <div class="rounded-xl p-4 flex flex-col items-center justify-center py-6" style="background-color: var(--studs-panel-bg-2); border: 1px solid var(--studs-border);">
-          <p class="text-sm text-zinc-500">No timed events this week</p>
-        </div>
-      <% end %>
-
-      <!-- Week fill bar -->
-      <div>
-        <div class="flex items-center justify-between mb-1.5">
-          <span class="text-xs font-semibold text-zinc-300">Week Load</span>
-          <span class="text-xs font-semibold" style="color: var(--studs-accent);">
-            <%= [ (@total_minutes.to_f / (AnalyticsController::MAX_DAILY_MINUTES * 5) * 100), 100 ].min.round %>% of a typical 5-day week
-          </span>
-        </div>
-        <% week_pct = [ (@total_minutes.to_f / (AnalyticsController::MAX_DAILY_MINUTES * 5) * 100), 100 ].min.round(1) %>
-        <% if @draft_stats %>
-          <% d_week_pct = [ (@draft_stats[:total_minutes].to_f / (AnalyticsController::MAX_DAILY_MINUTES * 5) * 100), 100 ].min.round(1) %>
-          <div class="space-y-1.5">
-            <div class="flex items-center gap-1.5">
-              <span class="text-[9px] font-semibold text-zinc-500 w-8 shrink-0 text-right">Now</span>
-              <div class="flex-1 h-2 rounded-full overflow-hidden" style="background-color: var(--studs-border);">
-                <div class="analytics-bar h-full rounded-full"
-                     style="width: <%= week_pct %>%;
-                            background-color: <%= week_pct >= 80 ? '#ef4444' : week_pct >= 50 ? '#f59e0b' : 'var(--studs-accent)' %>;
-                            opacity: 0.45;"></div>
-              </div>
-            </div>
-            <div class="flex items-center gap-1.5">
-              <span class="text-[9px] font-semibold text-amber-300/60 w-8 shrink-0 text-right">Draft</span>
-              <div class="flex-1 h-2 rounded-full overflow-hidden" style="background-color: var(--studs-border);">
-                <div class="analytics-bar h-full rounded-full"
-                     style="width: <%= d_week_pct %>%;
-                            background-color: <%= d_week_pct >= 80 ? '#ef4444' : d_week_pct >= 50 ? '#f59e0b' : 'var(--studs-accent)' %>;"></div>
-              </div>
-            </div>
-          </div>
-        <% else %>
-          <div class="h-2 w-full rounded-full overflow-hidden" style="background-color: var(--studs-border);">
-            <div class="analytics-bar h-full rounded-full transition-all duration-700"
-                 style="width: <%= week_pct %>%;
-                        background-color: <%= week_pct >= 80 ? '#ef4444' : week_pct >= 50 ? '#f59e0b' : 'var(--studs-accent)' %>;">
-            </div>
-          </div>
-        <% end %>
-      </div>
-    </div>
-  </div>
+<!-- Up Next + Weekly Completion -->
+<div class="grid grid-cols-1 gap-4 mb-6 lg:grid-cols-3">
+  <%= render "up_next" %>
+  <%= render "completion" %>
 </div>
 
 <!-- Daily Load Bars -->
-<div class="rounded-2xl p-6" style="border: 1px solid var(--studs-border); background-color: var(--studs-panel-bg);">
+<div class="an-card p-6 mb-4">
   <div class="flex items-center justify-between mb-5">
-    <h2 class="text-sm font-semibold text-zinc-100">Daily Schedule Load</h2>
+    <span class="an-title">Daily Schedule Load</span>
     <% if @draft_stats %>
       <div class="flex items-center gap-3 text-[10px] font-medium">
         <span class="flex items-center gap-1.5 text-zinc-500">
@@ -265,7 +67,11 @@
         </span>
       </div>
     <% else %>
-      <span class="text-xs font-medium text-zinc-400">based on a 16-hour day</span>
+      <span class="flex items-center gap-3 text-[10px] font-medium">
+        <span class="flex items-center gap-1.5 text-zinc-400"><span class="inline-block h-2 w-3 rounded-full" style="background: var(--studs-accent);"></span>light</span>
+        <span class="flex items-center gap-1.5 text-zinc-400"><span class="inline-block h-2 w-3 rounded-full" style="background:#f59e0b;"></span>moderate</span>
+        <span class="flex items-center gap-1.5 text-zinc-400"><span class="inline-block h-2 w-3 rounded-full" style="background:#ef4444;"></span>heavy</span>
+      </span>
     <% end %>
   </div>
 
@@ -418,6 +224,8 @@
     </div>
   </div>
 </div>
+
+<%= render "stress_forecast" %>
 
 <% end %>
 </div>
