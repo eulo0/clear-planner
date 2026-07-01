@@ -1,0 +1,62 @@
+<%# Weekly completion — markup mirrors Analytics Dashboard Prototype.html; ring is SVG (no Chart.js). %>
+<div class="an-card p-6 flex flex-col">
+  <div class="an-head">
+    <span class="an-title">Completion</span>
+    <span class="an-kpi">this week</span>
+  </div>
+
+  <div class="flex-1 flex flex-col">
+    <div class="flex flex-col items-center pt-1">
+      <%# Ring matches the Chart.js doughnut from the prototype: two round-capped %>
+      <%# arcs (completed + remaining track) with a small gap at each junction %>
+      <%# (Chart.js borderRadius + spacing). Each arc is a full circle rotated so %>
+      <%# its dash pattern reveals only its own segment. r=15.915 gives a %>
+      <%# circumference of ~100, so 1 dash unit is ~1 percent, i.e. 3.6 degrees. %>
+      <% pct = @completion[:pct].to_i.clamp(0, 100) %>
+      <% gap = 5.0 %>
+      <% deg = ->(units) { (units * 3.6 - 90).round(2) } %>
+      <div class="relative" style="width:120px;height:120px;">
+        <svg viewBox="0 0 42 42" class="w-full h-full">
+          <% if pct <= 0 %>
+            <circle cx="21" cy="21" r="15.915" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="3"/>
+          <% elsif pct >= 100 %>
+            <circle cx="21" cy="21" r="15.915" fill="none" stroke="<%= AnalyticsHelper::TYPE_COLORS[:event] %>" stroke-width="3"/>
+          <% else %>
+            <% fill_len  = [ pct - gap, 0.1 ].max %>
+            <% track_len = [ 100 - pct - gap, 0.1 ].max %>
+            <circle cx="21" cy="21" r="15.915" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="3"
+                    stroke-linecap="round" stroke-dasharray="<%= track_len %> <%= 100 - track_len %>"
+                    transform="rotate(<%= deg.call(pct + gap / 2) %> 21 21)"/>
+            <circle cx="21" cy="21" r="15.915" fill="none" stroke="<%= AnalyticsHelper::TYPE_COLORS[:event] %>" stroke-width="3"
+                    stroke-linecap="round" stroke-dasharray="<%= fill_len %> <%= 100 - fill_len %>"
+                    transform="rotate(<%= deg.call(gap / 2) %> 21 21)"/>
+          <% end %>
+        </svg>
+        <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+          <span class="text-2xl font-bold text-zinc-100 leading-none"><%= pct %><span class="text-base">%</span></span>
+          <span class="text-[11px] font-medium text-zinc-400 mt-0.5">complete</span>
+        </div>
+      </div>
+      <p class="text-sm text-zinc-300 mt-3">
+        <span class="font-bold text-zinc-100"><%= @completion[:done] %></span> of <%= @completion[:total] %> tasks done
+      </p>
+    </div>
+
+    <div class="grid grid-cols-2 gap-2.5 mt-auto pt-5">
+      <div class="an-tile px-3 py-3 flex items-center gap-2.5">
+        <span class="h-2.5 w-2.5 rounded-full shrink-0" style="background:#34d399;"></span>
+        <div>
+          <p class="text-lg font-bold leading-none text-zinc-100"><%= @completion[:done] %></p>
+          <p class="text-[11px] font-medium text-zinc-500 mt-1">Completed</p>
+        </div>
+      </div>
+      <div class="an-tile px-3 py-3 flex items-center gap-2.5">
+        <span class="h-2.5 w-2.5 rounded-full shrink-0" style="background:#52525b;"></span>
+        <div>
+          <p class="text-lg font-bold leading-none text-zinc-300"><%= @completion[:total] - @completion[:done] %></p>
+          <p class="text-[11px] font-medium text-zinc-500 mt-1">Remaining</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
