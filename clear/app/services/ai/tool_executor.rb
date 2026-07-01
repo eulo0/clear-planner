@@ -21,6 +21,7 @@ module Ai
       when "show_create_form"   then show_create_form(args)
       when "show_draft_picker"  then show_draft_picker
       when "propose_routine"    then propose_routine(args)
+      when "plan_tasks"         then plan_tasks(args)
       else
         { error: "Unknown tool: #{name}" }
       end
@@ -318,6 +319,91 @@ module Ai
       { success: true, proposed_count: created.size, unplaceable: result[:unplaceable], review_path: "/blocks" }
     rescue ActiveRecord::RecordInvalid => e
       { success: false, errors: [ "Could not save routine: #{e.message}" ] }
+    end
+
+    def plan_tasks(args)
+      range_start, range_end = resolve_plan_range(args)
+      result = Scheduling::TaskPlanner.new(
+        user: @user, range_start: range_start, range_end: range_end
+      ).call
+
+      if result[:needs_blocks]
+        return { success: true,
+                 partial: { name: "ai_chat/plan_needs_blocks",
+                            locals: { reason: result[:needs_blocks] } } }
+      end
+
+      if result[:assignments].empty?
+        return { success: true, placed: 0,
+                 unplaceable: format_unplaceable(result[:unplaceable]),
+                 message: "No unscheduled tasks could be placed." }
+      end
+
+      d = ensure_plan_draft
+      unless d
+        return { success: false,
+                 errors: [ "You already have the maximum of 5 drafts. Free one up, then ask me to plan again." ] }
+      end
+
+      result[:assignments].each do |a|
+        d.add_update("task", a[:task].id, { "scheduled_at" => a[:starts_at].iso8601 })
+      end
+
+      {
+        success: true,
+        placed: result[:assignments].size,
+        refresh_draft_ui: true,
+        partial: {
+          name: "ai_chat/plan_result",
+          locals: {
+            assignments: result[:assignments],
+            unplaceable: format_unplaceable(result[:unplaceable]),
+            draft_name:  draft&.name
+          }
+        }
+      }
+    end
+
+    # now → latest unscheduled-task due_at, capped at +28 days, floored at +7 days.
+    def resolve_plan_range(args)
+      start_date = (Date.parse(args["start_date"]) rescue nil) || Date.current
+      range_start = start_date.beginning_of_day.in_time_zone
+
+      explicit_end = (Date.parse(args["end_date"]) rescue nil)
+      latest_due = @user.tasks.unscheduled.incomplete
+                        .joins(:course_item).maximum("course_items.due_at")
+      default_end = [ (latest_due&.to_date || (start_date + 7)), start_date + 28 ].min
+      default_end = [ default_end, start_date + 7 ].max
+      range_end = (explicit_end || default_end).end_of_day.in_time_zone
+
+      [ range_start, range_end ]
+    end
+
+    # Use the active draft if any; otherwise reuse/create an "AI Plan" draft and
+    # switch the session into draft mode so the chat lands in the preview.
+    def ensure_plan_draft
+      return draft if in_draft_mode?
+
+      d = @user.calendar_drafts.find_by("LOWER(name) = ?", "ai plan") ||
+          @user.calendar_drafts.create!(name: "AI Plan")
+      @session[:calendar_draft_mode] = true
+      @session[:active_calendar_draft_id] = d.id
+      @ctx.draft = d
+      d
+    rescue ActiveRecord::RecordInvalid
+      nil # hit MAX_DRAFTS_PER_USER and no existing "AI Plan" to reuse
+    end
+
+    UNPLACEABLE_REASONS = {
+      past_deadline: "its deadline has already passed",
+      too_long:      "it's longer than any single availability block",
+      no_room:       "there wasn't an open slot before its deadline"
+    }.freeze
+
+    def format_unplaceable(list)
+      list.map do |u|
+        { title: u[:task].title, reason: UNPLACEABLE_REASONS[u[:reason]] || "it couldn't be placed" }
+      end
     end
 
     # Builds { wday => [[start_min, end_min], ...] } of fixed commitments for the

@@ -516,6 +516,31 @@ class CalendarDraft < ApplicationRecord
       )
     end
 
+    # ── Newly-scheduled existing tasks ──
+    # An update op that sets scheduled_at on a task which had no occurrence in the
+    # base set (i.e. was unscheduled) won't be caught by the main loop. Render it
+    # here as a "created" pill. Exclude ids already present to avoid double-render.
+    base_task_ids = occurrences.filter_map do |occ|
+      rec = occ.respond_to?(:event) ? occ.event : occ
+      rec.id if rec.is_a?(Task)
+    end.to_set
+
+    task_update_ops.each_value do |op|
+      next if base_task_ids.include?(op["id"])
+      scheduled_at = (Time.zone.parse(op["data"]["scheduled_at"].to_s) rescue nil)
+      next unless scheduled_at
+      task = user.tasks.find_by(id: op["id"])
+      next unless task
+
+      task.scheduled_at = scheduled_at
+      ends_at = scheduled_at + task.duration_minutes.to_i.minutes
+      next if scheduled_at > range_end || ends_at < range_start
+
+      result << Task::Occurrence.new(
+        event: task, starts_at: scheduled_at, ends_at: ends_at, draft_status: "created"
+      )
+    end
+
     # ── Draft-created events ──
     event_create_ops.each do |op|
       data = op["data"].symbolize_keys

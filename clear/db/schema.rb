@@ -20,8 +20,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_29_042007) do
     t.string "name", null: false
     t.bigint "record_id", null: false
     t.string "record_type", null: false
-    t.index [ "blob_id" ], name: "index_active_storage_attachments_on_blob_id"
-    t.index [ "record_type", "record_id", "name", "blob_id" ], name: "index_active_storage_attachments_uniqueness", unique: true
+    t.index ["blob_id"], name: "index_active_storage_attachments_on_blob_id"
+    t.index ["record_type", "record_id", "name", "blob_id"], name: "index_active_storage_attachments_uniqueness", unique: true
   end
 
   create_table "active_storage_blobs", force: :cascade do |t|
@@ -33,13 +33,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_29_042007) do
     t.string "key", null: false
     t.text "metadata"
     t.string "service_name", null: false
-    t.index [ "key" ], name: "index_active_storage_blobs_on_key", unique: true
+    t.index ["key"], name: "index_active_storage_blobs_on_key", unique: true
   end
 
   create_table "active_storage_variant_records", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.string "variation_digest", null: false
-    t.index [ "blob_id", "variation_digest" ], name: "index_active_storage_variant_records_uniqueness", unique: true
+    t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
   end
 
   create_table "blocks", force: :cascade do |t|
@@ -53,8 +53,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_29_042007) do
     t.string "status", default: "active", null: false
     t.datetime "updated_at", null: false
     t.bigint "user_id", null: false
-    t.index [ "user_id", "status" ], name: "index_blocks_on_user_id_and_status"
-    t.index [ "user_id" ], name: "index_blocks_on_user_id"
+    t.index ["user_id", "status"], name: "index_blocks_on_user_id_and_status"
+    t.index ["user_id"], name: "index_blocks_on_user_id"
   end
 
   create_table "calendar_drafts", force: :cascade do |t|
@@ -64,7 +64,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_29_042007) do
     t.jsonb "previous_operations", default: [], null: false
     t.datetime "updated_at", null: false
     t.bigint "user_id", null: false
-    t.index [ "user_id" ], name: "index_calendar_drafts_on_user_id"
+    t.index ["user_id"], name: "index_calendar_drafts_on_user_id"
   end
 
   create_table "canvas_subscriptions", force: :cascade do |t|
@@ -76,7 +76,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_29_042007) do
     t.string "status", default: "idle", null: false
     t.datetime "updated_at", null: false
     t.bigint "user_id", null: false
-    t.index [ "user_id" ], name: "index_canvas_subscriptions_on_user_id", unique: true
+    t.index ["user_id"], name: "index_canvas_subscriptions_on_user_id", unique: true
   end
 
   create_table "capacity_events", force: :cascade do |t|
@@ -85,8 +85,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_29_042007) do
     t.datetime "updated_at", null: false
     t.bigint "user_id", null: false
     t.date "week_start", null: false
-    t.index [ "user_id", "week_start", "kind" ], name: "index_capacity_events_on_user_id_and_week_start_and_kind"
-    t.index [ "user_id" ], name: "index_capacity_events_on_user_id"
+    t.index ["user_id", "week_start", "kind"], name: "index_capacity_events_on_user_id_and_week_start_and_kind"
+    t.index ["user_id"], name: "index_capacity_events_on_user_id"
   end
 
   create_table "capacity_feedback", force: :cascade do |t|
@@ -95,8 +95,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_29_042007) do
     t.datetime "updated_at", null: false
     t.bigint "user_id", null: false
     t.date "week_start", null: false
-    t.index [ "user_id", "week_start" ], name: "index_capacity_feedback_on_user_id_and_week_start", unique: true
-    t.index [ "user_id" ], name: "index_capacity_feedback_on_user_id"
+    t.index ["user_id", "week_start"], name: "index_capacity_feedback_on_user_id_and_week_start", unique: true
+    t.index ["user_id"], name: "index_capacity_feedback_on_user_id"
   end
 
   create_table "course_exceptions", force: :cascade do |t|
@@ -104,8 +104,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_29_042007) do
     t.datetime "created_at", null: false
     t.date "excluded_date", null: false
     t.datetime "updated_at", null: false
-    t.index [ "course_id", "excluded_date" ], name: "index_course_exceptions_on_course_id_and_excluded_date", unique: true
-    t.index [ "course_id" ], name: "index_course_exceptions_on_course_id"
+    t.index ["course_id", "excluded_date"], name: "index_course_exceptions_on_course_id_and_excluded_date", unique: true
+    t.index ["course_id"], name: "index_course_exceptions_on_course_id"
   end
 
   create_table "course_items", force: :cascade do |t|
@@ -120,9 +120,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_29_042007) do
     t.integer "source", default: 0, null: false
     t.string "title", null: false
     t.datetime "updated_at", null: false
-    t.index [ "course_id", "canvas_uid" ], name: "index_course_items_on_course_and_canvas_uid", unique: true, where: "(canvas_uid IS NOT NULL)"
-    t.index [ "course_id", "due_at" ], name: "index_course_items_on_course_id_and_due_at"
-    t.index [ "course_id" ], name: "index_course_items_on_course_id"
+    t.index ["course_id", "canvas_uid"], name: "index_course_items_on_course_and_canvas_uid", unique: true, where: "(canvas_uid IS NOT NULL)"
+    t.index ["course_id", "due_at"], name: "index_course_items_on_course_id_and_due_at"
+    t.index ["course_id"], name: "index_course_items_on_course_id"
   end
 
   create_table "courses", force: :cascade do |t|
@@ -153,10 +153,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_29_042007) do
     t.string "title"
     t.datetime "updated_at", null: false
     t.bigint "user_id", null: false
-    t.index [ "project_id" ], name: "index_courses_on_project_id"
-    t.index [ "user_id", "repeat_until" ], name: "index_courses_on_user_id_and_repeat_until"
-    t.index [ "user_id", "start_date" ], name: "index_courses_on_user_id_and_start_date"
-    t.index [ "user_id" ], name: "index_courses_on_user_id"
+    t.index ["project_id"], name: "index_courses_on_project_id"
+    t.index ["user_id", "repeat_until"], name: "index_courses_on_user_id_and_repeat_until"
+    t.index ["user_id", "start_date"], name: "index_courses_on_user_id_and_start_date"
+    t.index ["user_id"], name: "index_courses_on_user_id"
   end
 
   create_table "documents", force: :cascade do |t|
@@ -164,7 +164,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_29_042007) do
     t.string "title", null: false
     t.datetime "updated_at", null: false
     t.bigint "user_id", null: false
-    t.index [ "user_id" ], name: "index_documents_on_user_id"
+    t.index ["user_id"], name: "index_documents_on_user_id"
   end
 
   create_table "event_exceptions", force: :cascade do |t|
@@ -174,8 +174,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_29_042007) do
     t.datetime "override_ends_at"
     t.datetime "override_starts_at"
     t.datetime "updated_at", null: false
-    t.index [ "event_id", "excluded_date" ], name: "index_event_exceptions_on_event_id_and_excluded_date", unique: true
-    t.index [ "event_id" ], name: "index_event_exceptions_on_event_id"
+    t.index ["event_id", "excluded_date"], name: "index_event_exceptions_on_event_id_and_excluded_date", unique: true
+    t.index ["event_id"], name: "index_event_exceptions_on_event_id"
   end
 
   create_table "events", force: :cascade do |t|
@@ -195,10 +195,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_29_042007) do
     t.string "title"
     t.datetime "updated_at", null: false
     t.bigint "user_id", null: false
-    t.index [ "project_id" ], name: "index_events_on_project_id"
-    t.index [ "user_id", "repeat_until" ], name: "index_events_on_user_id_and_repeat_until"
-    t.index [ "user_id", "starts_at" ], name: "index_events_on_user_id_and_starts_at"
-    t.index [ "user_id" ], name: "index_events_on_user_id"
+    t.index ["project_id"], name: "index_events_on_project_id"
+    t.index ["user_id", "repeat_until"], name: "index_events_on_user_id_and_repeat_until"
+    t.index ["user_id", "starts_at"], name: "index_events_on_user_id_and_starts_at"
+    t.index ["user_id"], name: "index_events_on_user_id"
   end
 
   create_table "notifications", force: :cascade do |t|
@@ -211,10 +211,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_29_042007) do
     t.datetime "scheduled_for"
     t.datetime "updated_at", null: false
     t.bigint "user_id", null: false
-    t.index [ "notifiable_type", "notifiable_id", "category", "scheduled_for" ], name: "idx_notifications_reminder_dedup", unique: true, where: "(scheduled_for IS NOT NULL)"
-    t.index [ "notifiable_type", "notifiable_id" ], name: "index_notifications_on_notifiable"
-    t.index [ "user_id", "read_at" ], name: "index_notifications_on_user_id_and_read_at"
-    t.index [ "user_id" ], name: "index_notifications_on_user_id"
+    t.index ["notifiable_type", "notifiable_id", "category", "scheduled_for"], name: "idx_notifications_reminder_dedup", unique: true, where: "(scheduled_for IS NOT NULL)"
+    t.index ["notifiable_type", "notifiable_id"], name: "index_notifications_on_notifiable"
+    t.index ["user_id", "read_at"], name: "index_notifications_on_user_id_and_read_at"
+    t.index ["user_id"], name: "index_notifications_on_user_id"
   end
 
   create_table "project_invitations", force: :cascade do |t|
@@ -225,9 +225,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_29_042007) do
     t.bigint "sender_id", null: false
     t.string "token"
     t.datetime "updated_at", null: false
-    t.index [ "project_id" ], name: "index_project_invitations_on_project_id"
-    t.index [ "sender_id" ], name: "index_project_invitations_on_sender_id"
-    t.index [ "token" ], name: "index_project_invitations_on_token", unique: true
+    t.index ["project_id"], name: "index_project_invitations_on_project_id"
+    t.index ["sender_id"], name: "index_project_invitations_on_sender_id"
+    t.index ["token"], name: "index_project_invitations_on_token", unique: true
   end
 
   create_table "project_memberships", force: :cascade do |t|
@@ -236,8 +236,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_29_042007) do
     t.integer "role", default: 1, null: false
     t.datetime "updated_at", null: false
     t.bigint "user_id", null: false
-    t.index [ "project_id" ], name: "index_project_memberships_on_project_id"
-    t.index [ "user_id" ], name: "index_project_memberships_on_user_id"
+    t.index ["project_id"], name: "index_project_memberships_on_project_id"
+    t.index ["user_id"], name: "index_project_memberships_on_user_id"
   end
 
   create_table "project_messages", force: :cascade do |t|
@@ -246,8 +246,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_29_042007) do
     t.bigint "project_id", null: false
     t.datetime "updated_at", null: false
     t.bigint "user_id", null: false
-    t.index [ "project_id" ], name: "index_project_messages_on_project_id"
-    t.index [ "user_id" ], name: "index_project_messages_on_user_id"
+    t.index ["project_id"], name: "index_project_messages_on_project_id"
+    t.index ["user_id"], name: "index_project_messages_on_user_id"
   end
 
   create_table "projects", force: :cascade do |t|
@@ -267,8 +267,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_29_042007) do
     t.datetime "updated_at", null: false
     t.bigint "user_id", null: false
     t.integer "week_starts_on", default: 1, null: false
-    t.index [ "user_id", "name" ], name: "index_schedules_on_user_id_and_name", unique: true
-    t.index [ "user_id" ], name: "index_schedules_on_user_id"
+    t.index ["user_id", "name"], name: "index_schedules_on_user_id_and_name", unique: true
+    t.index ["user_id"], name: "index_schedules_on_user_id"
   end
 
   create_table "syllabuses", force: :cascade do |t|
@@ -281,8 +281,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_29_042007) do
     t.text "parsed_text"
     t.string "title", null: false
     t.bigint "user_id", null: false
-    t.index [ "course_id" ], name: "index_syllabuses_on_course_id"
-    t.index [ "user_id" ], name: "index_syllabuses_on_user_id"
+    t.index ["course_id"], name: "index_syllabuses_on_course_id"
+    t.index ["user_id"], name: "index_syllabuses_on_user_id"
   end
 
   create_table "tasks", force: :cascade do |t|
@@ -299,9 +299,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_29_042007) do
     t.string "title", null: false
     t.datetime "updated_at", null: false
     t.bigint "user_id", null: false
-    t.index [ "course_item_id" ], name: "index_tasks_on_course_item_id"
-    t.index [ "user_id", "scheduled_at" ], name: "index_tasks_on_user_id_and_scheduled_at"
-    t.index [ "user_id" ], name: "index_tasks_on_user_id"
+    t.index ["course_item_id"], name: "index_tasks_on_course_item_id"
+    t.index ["user_id", "scheduled_at"], name: "index_tasks_on_user_id_and_scheduled_at"
+    t.index ["user_id"], name: "index_tasks_on_user_id"
   end
 
   create_table "user_preferences", force: :cascade do |t|
@@ -309,7 +309,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_29_042007) do
     t.float "daily_focus_hours", default: 5.0, null: false
     t.datetime "updated_at", null: false
     t.bigint "user_id", null: false
-    t.index [ "user_id" ], name: "index_user_preferences_on_user_id", unique: true
+    t.index ["user_id"], name: "index_user_preferences_on_user_id", unique: true
   end
 
   create_table "users", force: :cascade do |t|
@@ -339,15 +339,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_29_042007) do
     t.string "unconfirmed_email"
     t.datetime "updated_at", null: false
     t.string "username", null: false
-    t.index [ "confirmation_token" ], name: "index_users_on_confirmation_token", unique: true
-    t.index [ "email" ], name: "index_users_on_email", unique: true
-    t.index [ "invitation_token" ], name: "index_users_on_invitation_token", unique: true
-    t.index [ "invited_by_id" ], name: "index_users_on_invited_by_id"
-    t.index [ "invited_by_type", "invited_by_id" ], name: "index_users_on_invited_by"
-    t.index [ "provider", "uid" ], name: "index_users_on_provider_and_uid", unique: true
-    t.index [ "reset_password_token" ], name: "index_users_on_reset_password_token", unique: true
-    t.index [ "role" ], name: "index_users_on_role"
-    t.index [ "username" ], name: "index_users_on_username"
+    t.index ["confirmation_token"], name: "index_users_on_confirmation_token", unique: true
+    t.index ["email"], name: "index_users_on_email", unique: true
+    t.index ["invitation_token"], name: "index_users_on_invitation_token", unique: true
+    t.index ["invited_by_id"], name: "index_users_on_invited_by_id"
+    t.index ["invited_by_type", "invited_by_id"], name: "index_users_on_invited_by"
+    t.index ["provider", "uid"], name: "index_users_on_provider_and_uid", unique: true
+    t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
+    t.index ["role"], name: "index_users_on_role"
+    t.index ["username"], name: "index_users_on_username"
   end
 
   create_table "work_shift_exceptions", force: :cascade do |t|
@@ -355,8 +355,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_29_042007) do
     t.date "excluded_date", null: false
     t.datetime "updated_at", null: false
     t.bigint "work_shift_id", null: false
-    t.index [ "work_shift_id", "excluded_date" ], name: "index_work_shift_exceptions_on_work_shift_id_and_excluded_date", unique: true
-    t.index [ "work_shift_id" ], name: "index_work_shift_exceptions_on_work_shift_id"
+    t.index ["work_shift_id", "excluded_date"], name: "index_work_shift_exceptions_on_work_shift_id_and_excluded_date", unique: true
+    t.index ["work_shift_id"], name: "index_work_shift_exceptions_on_work_shift_id"
   end
 
   create_table "work_shifts", force: :cascade do |t|
@@ -374,7 +374,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_29_042007) do
     t.string "title"
     t.datetime "updated_at", null: false
     t.bigint "user_id", null: false
-    t.index [ "user_id" ], name: "index_work_shifts_on_user_id"
+    t.index ["user_id"], name: "index_work_shifts_on_user_id"
   end
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"

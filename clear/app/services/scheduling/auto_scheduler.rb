@@ -19,7 +19,7 @@ module Scheduling
                    search_starts_at: nil, search_ends_at: nil,
                    work_day_start: DEFAULT_WORK_DAY_START, work_day_end: DEFAULT_WORK_DAY_END,
                    exclude_event_id: nil, allow_displacement: true,
-                   extra_busy: nil, allowed_intervals: nil)
+                   extra_busy: nil, allowed_intervals: nil, precomputed_calendar_busy: nil)
       @user = user
       @duration_minutes = duration_minutes.to_i
       @priority = priority
@@ -34,6 +34,19 @@ module Scheduling
       @allow_displacement = allow_displacement
       @extra_busy = Array(extra_busy)
       @allowed_intervals = Array(allowed_intervals).map { |s, e| [ s, e ] }.sort_by(&:first)
+      @precomputed_calendar_busy = precomputed_calendar_busy
+    end
+
+    # Build the user's fixed calendar-busy intervals (events + courses + work
+    # shifts) once, so callers placing many items over the same range (e.g.
+    # TaskPlanner) can compute them a single time and inject via
+    # `precomputed_calendar_busy:` instead of re-querying per placement.
+    def self.calendar_busy_for(user:, search_starts_at:, search_ends_at:,
+                               buffer_minutes: 0, exclude_event_id: nil, allow_displacement: false)
+      new(user: user, duration_minutes: 0,
+          search_starts_at: search_starts_at, search_ends_at: search_ends_at,
+          exclude_event_id: exclude_event_id, allow_displacement: allow_displacement)
+        .send(:calendar_busy_intervals, buffer_minutes)
     end
 
     def find_slot
@@ -179,6 +192,15 @@ module Scheduling
     end
 
     def busy_intervals
+      calendar = @precomputed_calendar_busy || calendar_busy_intervals(effective_buffer)
+      (calendar + extra_busy_intervals).sort_by(&:starts_at)
+    end
+
+    # The user's fixed commitments (events + courses + work shifts) as busy
+    # intervals over the search range. Expensive (queries + occurrence
+    # expansion); callers that place many items reuse this via
+    # `precomputed_calendar_busy:`. Excludes @extra_busy (added separately).
+    def calendar_busy_intervals(buffer)
       intervals = []
 
       @user.events
@@ -192,7 +214,7 @@ module Scheduling
 
         event.occurrences_between(@search_starts_at, @search_ends_at).each do |occ|
           next unless occ.ends_at
-          buf_start, buf_end = buffered(occ.starts_at, occ.ends_at, DEFAULT_BUFFER_MINUTES)
+          buf_start, buf_end = buffered(occ.starts_at, occ.ends_at, buffer)
           intervals << BusyInterval.new(
             starts_at: buf_start, ends_at: buf_end,
             movable: movable, event: movable ? event : nil
@@ -206,7 +228,7 @@ module Scheduling
            .each do |course|
         course.occurrences_between(@search_starts_at, @search_ends_at).each do |occ|
           next unless occ.ends_at
-          buf_start, buf_end = buffered(occ.starts_at, occ.ends_at, DEFAULT_BUFFER_MINUTES)
+          buf_start, buf_end = buffered(occ.starts_at, occ.ends_at, buffer)
           intervals << BusyInterval.new(starts_at: buf_start, ends_at: buf_end, movable: false, event: nil)
         end
       end
@@ -217,16 +239,18 @@ module Scheduling
            .each do |shift|
         shift.occurrences_between(@search_starts_at, @search_ends_at).each do |occ|
           next unless occ.ends_at
-          buf_start, buf_end = buffered(occ.starts_at, occ.ends_at, DEFAULT_BUFFER_MINUTES)
+          buf_start, buf_end = buffered(occ.starts_at, occ.ends_at, buffer)
           intervals << BusyInterval.new(starts_at: buf_start, ends_at: buf_end, movable: false, event: nil)
         end
       end
 
-      @extra_busy.each do |b_start, b_end|
-        intervals << BusyInterval.new(starts_at: b_start, ends_at: b_end, movable: false, event: nil)
-      end
+      intervals
+    end
 
-      intervals.sort_by(&:starts_at)
+    def extra_busy_intervals
+      @extra_busy.map do |b_start, b_end|
+        BusyInterval.new(starts_at: b_start, ends_at: b_end, movable: false, event: nil)
+      end
     end
 
     def can_displace?(existing_priority)
@@ -241,6 +265,13 @@ module Scheduling
 
     def buffered(starts_at, ends_at, minutes)
       [ starts_at - minutes.minutes, ends_at + minutes.minutes ]
+    end
+
+    # A block is the user's chosen availability; don't carve the 30-min moat out of
+    # its edges. Suppress the buffer whenever placement is constrained to allowed
+    # windows; keep it for the open 8am-10pm fallback path.
+    def effective_buffer
+      @allowed_intervals.any? ? 0 : DEFAULT_BUFFER_MINUTES
     end
 
     def round_up(time)

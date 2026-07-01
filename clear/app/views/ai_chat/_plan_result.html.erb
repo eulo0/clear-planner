@@ -1,0 +1,48 @@
+<%
+  assignments = local_assigns[:assignments] || []
+  unplaceable = local_assigns[:unplaceable] || []
+  draft_name  = local_assigns[:draft_name]
+%>
+<div class="flex items-start justify-start ai-chat-pop mt-4" data-testid="plan-result">
+  <div class="self-start inline-flex flex-col w-full max-w-[62%] rounded-2xl px-4 py-3 text-sm leading-relaxed"
+       style="background-color: var(--studs-panel-bg-2); border: 1px solid var(--studs-border); color: #f4f4f5;">
+    <div class="mb-1.5">
+      <span class="text-[10px] font-bold uppercase tracking-widest"
+            style="color: color-mix(in srgb, var(--studs-accent) 60%, #a1a1aa);">Assistant</span>
+    </div>
+
+    <% if assignments.any? %>
+      <p class="font-medium mb-2">
+        Scheduled <%= pluralize(assignments.size, "task") %> into your availability blocks<%= " in “#{draft_name}”" if draft_name.present? %>:
+      </p>
+      <ul class="space-y-1 mb-1">
+        <% assignments.each do |a| %>
+          <li>
+            <span class="font-medium"><%= a[:task].title %></span>
+            <% unless a[:task].course_item&.due_at %>
+              <span class="opacity-60 text-xs">(no deadline)</span>
+            <% end %>
+            <span class="opacity-80">
+              — <%= a[:starts_at].strftime("%a %b %-d, %-l:%M %p") %> to <%= a[:ends_at].strftime("%-l:%M %p") %>
+            </span>
+          </li>
+        <% end %>
+      </ul>
+    <% else %>
+      <p class="font-medium mb-2">No unscheduled tasks could be placed.</p>
+    <% end %>
+
+    <% if unplaceable.any? %>
+      <p class="mt-3 text-sm opacity-80"><%= pluralize(unplaceable.size, "task") %> couldn’t be placed:</p>
+      <ul class="text-sm opacity-80">
+        <% unplaceable.each do |u| %>
+          <li>• <span class="font-medium"><%= u[:title] %></span> — <%= u[:reason] %></li>
+        <% end %>
+      </ul>
+    <% end %>
+
+    <% if assignments.any? %>
+      <p class="mt-3 text-xs opacity-70">Review the draft below, then apply it to commit these to your calendar.</p>
+    <% end %>
+  </div>
+</div>
