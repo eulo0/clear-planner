@@ -91,16 +91,16 @@ class AnalyticsController < ApplicationController
     occurrences.each do |o|
       next unless o.starts_at && o.starts_at > now && o.starts_at <= range_end
       rows << case o
-              when CourseItem
+      when CourseItem
                 { at: o.starts_at, title: o.title,
                   subtitle: "#{o.course.title} · Deadline", type: :deadline }
-              when Course::Occurrence
+      when Course::Occurrence
                 { at: o.starts_at, title: o.title, subtitle: "Course", type: :course }
-              when Event::Occurrence
+      when Event::Occurrence
                 { at: o.starts_at, title: o.title, subtitle: "Event", type: :event }
-              when WorkShift::Occurrence
+      when WorkShift::Occurrence
                 { at: o.starts_at, title: o.title, subtitle: "Work shift", type: :event }
-              end
+      end
     end
 
     Task.where(user_id: current_user.id, scheduled_at: now..range_end)
